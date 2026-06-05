@@ -10,13 +10,16 @@ const SME_COST = 6;
 
 // Nodes
 const complexityRouter = async (state: typeof GraphState.State) => {
-    const label = await callLlm("router", "Classify task complexity.", state.originalTask);
+    const { content, cost, tokens } = await callLlm("router", "Classify task complexity.", state.originalTask);
     return {
         complexity: "tool_complex" as any, // stub
         routeConfidence: 0.9,
         tokenBudget: state.tokenBudget || 50,
         debateIterations: 0,
         consensusReached: false,
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "router": { cost, tokens } }
     };
 };
 
@@ -25,32 +28,52 @@ const firewall = async (state: typeof GraphState.State) => {
 };
 
 const claudeArchitect = async (state: typeof GraphState.State) => {
-    const draft = await callLlm("architect", "Architect.", `${state.originalTask}\n${state.compressedContext}\n${state.verificationReport || ""}\n${state.debateSummary || ""}`);
+    const { content, cost, tokens } = await callLlm("architect", "Architect. Write a technical specification.", `${state.originalTask}\n${state.compressedContext}\n${state.verificationReport || ""}`);
     return {
-        currentDraft: draft,
+        architectureSpec: content,
         tokenBudget: state.tokenBudget - ARCHITECT_COST,
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "architect": { cost, tokens } }
+    };
+};
+
+const claudeCoder = async (state: typeof GraphState.State) => {
+    const { content, cost, tokens } = await callLlm("coder", "Coder. Write code based on spec.", `Spec:\n${state.architectureSpec}\n\nCritiques to fix:\n${state.debateSummary || "None"}`);
+    return {
+        currentDraft: content,
+        tokenBudget: state.tokenBudget - 3, // Assuming Coder cost is 3
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "coder": { cost, tokens } }
     };
 };
 
 const openaiCritic = async (state: typeof GraphState.State) => {
-    const critique = await callLlm("critic", "Critique, do not rewrite.", state.currentDraft);
-    const consensus = critique.includes("LGTM");
+    const { content, cost, tokens } = await callLlm("critic", "Critique, do not rewrite.", state.currentDraft);
+    const consensus = content.includes("LGTM");
     return {
-        debateThread: [{ round: state.debateIterations, critique }],
+        debateThread: [{ round: state.debateIterations, critique: content }],
         debateSummary: "<<rolling windowed summary>>",
         debateIterations: state.debateIterations + 1,
         consensusReached: consensus,
         needsMoreContext: false,
         tokenBudget: state.tokenBudget - CRITIC_COST,
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "critic": { cost, tokens } }
     };
 };
 
 const smeTiebreaker = async (state: typeof GraphState.State) => {
-    const ruling = await callLlm("sme", "Make the final call.", `${state.currentDraft}\n${state.debateSummary}`);
+    const { content, cost, tokens } = await callLlm("sme", "Make the final call.", `${state.currentDraft}\n${state.debateSummary}`);
     return {
-        currentDraft: ruling,
+        currentDraft: content,
         consensusReached: true,
         tokenBudget: state.tokenBudget - SME_COST,
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "sme": { cost, tokens } }
     };
 };
 
@@ -85,12 +108,12 @@ const routeDebate = (state: typeof GraphState.State): string => {
     if (state.needsMoreContext) return "swarm";
     if (state.consensusReached) return "verify";
     if (state.debateIterations >= MAX_DEBATE_ITERATIONS) return "smeTiebreaker";
-    return "claudeArchitect";
+    return "claudeCoder"; // Loop back to the Coder on rejection
 };
 
 const routeAfterVerify = (state: typeof GraphState.State): string => {
     if (state.verificationPassed || (state.tokenBudget || 0) <= 0) return "finalize";
-    return "claudeArchitect";
+    return "claudeCoder"; // Failures in verification go to Coder
 };
 
 // Assembly
@@ -101,6 +124,7 @@ export const buildMainGraph = () => {
         .addNode("swarm", swarm as any) // langgraph sub-graph mapping handling
         .addNode("firewall", firewall)
         .addNode("claudeArchitect", claudeArchitect)
+        .addNode("claudeCoder", claudeCoder)
         .addNode("openaiCritic", openaiCritic)
         .addNode("smeTiebreaker", smeTiebreaker)
         .addNode("verify", verify)
@@ -113,9 +137,10 @@ export const buildMainGraph = () => {
         })
         .addEdge("swarm", "firewall")
         .addEdge("firewall", "claudeArchitect")
-        .addEdge("claudeArchitect", "openaiCritic")
+        .addEdge("claudeArchitect", "claudeCoder")
+        .addEdge("claudeCoder", "openaiCritic")
         .addConditionalEdges("openaiCritic", routeDebate, {
-            "claudeArchitect": "claudeArchitect",
+            "claudeCoder": "claudeCoder",
             "swarm": "swarm",
             "smeTiebreaker": "smeTiebreaker",
             "verify": "verify"
@@ -123,7 +148,7 @@ export const buildMainGraph = () => {
         .addEdge("smeTiebreaker", "verify")
         .addConditionalEdges("verify", routeAfterVerify, {
             "finalize": "finalize",
-            "claudeArchitect": "claudeArchitect"
+            "claudeCoder": "claudeCoder"
         })
         .addEdge("finalize", END);
 

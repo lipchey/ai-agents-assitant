@@ -1,0 +1,13 @@
+{
+  gateway: {
+    auth: {
+      mode: "token",
+      token: "dev_token_123"
+    },
+    http: {
+      endpoints: {
+        chatCompletions: { enabled: true }
+      }
+    }
+  }
+}

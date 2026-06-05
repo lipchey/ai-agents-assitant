@@ -48,10 +48,13 @@ const infraOps = (state: typeof SwarmWorkerState.State) => _runWorker(state, "sh
 const webResearcher = (state: typeof SwarmWorkerState.State) => _runWorker(state, "web_lookup");
 
 const smeOracle = async (state: typeof SwarmWorkerState.State) => {
-    const answer = await callLlm("sme", "You are a subject-matter expert.", state.escalationQuery || "");
+    const { content, cost, tokens } = await callLlm("sme", "You are a subject-matter expert.", state.escalationQuery || "");
     return {
-        escalationResponse: answer,
+        escalationResponse: content,
         escalationAttempts: (state.escalationAttempts || 0) + 1,
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "sme": { cost, tokens } }
     };
 };
 
@@ -64,8 +67,13 @@ const humanGate = (state: typeof SwarmWorkerState.State) => {
 };
 
 const workerCompress = async (state: typeof SwarmWorkerState.State) => {
-    const summary = await callLlm("firewall", "Summarize for a reasoning model, JSON.", state.rawToolOutput || JSON.stringify(state.toolCalls));
-    return { workerSummary: summary };
+    const { content, cost, tokens } = await callLlm("firewall", "Summarize for a reasoning model, JSON.", state.rawToolOutput || JSON.stringify(state.toolCalls));
+    return { 
+        workerSummary: content,
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { "firewall": { cost, tokens } }
+    };
 };
 
 // Routing

@@ -11,6 +11,30 @@ const concatArrays = (left: any[] | undefined, right: any[] | undefined) => {
     return [...(left || []), ...(right || [])];
 };
 
+// Utility to sum numbers
+const sumNumbers = (left: number | undefined, right: number | undefined) => {
+    return (left || 0) + (right || 0);
+};
+
+// Utility to merge usage stats
+const mergeUsageStats = (
+    left: Record<string, { cost: number; tokens: number }> | undefined, 
+    right: Record<string, { cost: number; tokens: number }> | undefined
+) => {
+    const res = { ...(left || {}) };
+    for (const [key, val] of Object.entries(right || {})) {
+        if (!res[key]) {
+            res[key] = { cost: val.cost, tokens: val.tokens };
+        } else {
+            res[key] = {
+                cost: res[key].cost + val.cost,
+                tokens: res[key].tokens + val.tokens
+            };
+        }
+    }
+    return res;
+};
+
 export const GraphState = Annotation.Root({
     originalTask: Annotation<string>,
     complexity: Annotation<"trivial" | "tool_complex" | "pure_reasoning">,
@@ -20,6 +44,7 @@ export const GraphState = Annotation.Root({
         reducer: mergeDicts,
         default: () => ({}),
     }),
+    architectureSpec: Annotation<string>,
     currentDraft: Annotation<string>,
     bestDraft: Annotation<string>,
     debateThread: Annotation<Array<Record<string, any>>>({
@@ -34,6 +59,20 @@ export const GraphState = Annotation.Root({
     verificationReport: Annotation<string>,
     tokenBudget: Annotation<number>,
     finalAnswer: Annotation<string>,
+    
+    // Telemetry fields
+    totalCost: Annotation<number>({
+        reducer: sumNumbers,
+        default: () => 0
+    }),
+    totalTokens: Annotation<number>({
+        reducer: sumNumbers,
+        default: () => 0
+    }),
+    usageStats: Annotation<Record<string, { cost: number; tokens: number }>>({
+        reducer: mergeUsageStats,
+        default: () => ({})
+    })
 });
 
 export const SwarmWorkerState = Annotation.Root({
@@ -55,4 +94,18 @@ export const SwarmWorkerState = Annotation.Root({
         reducer: mergeDicts,
         default: () => ({}),
     }),
+    
+    // Telemetry fields
+    totalCost: Annotation<number>({
+        reducer: sumNumbers,
+        default: () => 0
+    }),
+    totalTokens: Annotation<number>({
+        reducer: sumNumbers,
+        default: () => 0
+    }),
+    usageStats: Annotation<Record<string, { cost: number; tokens: number }>>({
+        reducer: mergeUsageStats,
+        default: () => ({})
+    })
 });

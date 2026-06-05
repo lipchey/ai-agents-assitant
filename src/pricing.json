@@ -1,0 +1,18 @@
+{
+  "claude-4-8-opus-20260528": {
+    "inputPer1M": 15,
+    "outputPer1M": 75
+  },
+  "claude-4-6-sonnet-2026": {
+    "inputPer1M": 3,
+    "outputPer1M": 15
+  },
+  "gpt-5.5": {
+    "inputPer1M": 5,
+    "outputPer1M": 15
+  },
+  "deepseek-chat": {
+    "inputPer1M": 0.14,
+    "outputPer1M": 0.28
+  }
+}

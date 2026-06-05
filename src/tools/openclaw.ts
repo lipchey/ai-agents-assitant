@@ -1,10 +1,8 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-
-const execAsync = promisify(exec);
+import { ChatOpenAI } from "@langchain/openai";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 
 export class OpenClawError extends Error {
     constructor(message: string) {
@@ -13,120 +11,89 @@ export class OpenClawError extends Error {
     }
 }
 
-// In-memory cache for idempotency
-const idempotencyCache = new Map<string, any>();
-
-// Helper for timeout
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
-    return Promise.race([
-        promise,
-        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs))
-    ]);
-};
-
-// Tool implementations
-const handlers: Record<string, (args: any) => Promise<any>> = {
-    "ast_read": async (args: any) => {
-        const filepath = args.path || args.subtask;
-        if (!filepath) throw new OpenClawError("ast_read requires 'path'");
-        try {
-            const content = await fs.readFile(filepath, "utf-8");
-            return { raw: content };
-        } catch (e: any) {
-            throw new OpenClawError(`ast_read failed: ${e.message}`);
-        }
-    },
-    "shell_exec": async (args: any) => {
-        const command = args.command || args.subtask;
-        if (!command) throw new OpenClawError("shell_exec requires 'command'");
-        
-        // DeepSeek / LLM decides if HITL is required via parameter
-        if (args.requireConfirmation) {
-            throw new OpenClawError(`HITL_REQUIRED: The LLM requested confirmation for command: ${command}`);
-        }
-        
-        try {
-            const { stdout, stderr } = await execAsync(command);
-            return { raw: `STDOUT:\n${stdout}\nSTDERR:\n${stderr}` };
-        } catch (e: any) {
-            return { raw: `EXEC_ERROR:\n${e.message}\nSTDOUT:\n${e.stdout}\nSTDERR:\n${e.stderr}` };
-        }
-    },
-    "run_tests": async (args: any) => {
-        const testCommand = args.command || "npm test";
-        try {
-            const { stdout, stderr } = await execAsync(testCommand);
-            return { raw: `STDOUT:\n${stdout}\nSTDERR:\n${stderr}`, passed: true };
-        } catch (e: any) {
-            return { raw: `TEST_ERROR:\n${e.message}`, passed: false };
-        }
-    },
-    "web_lookup": async (args: any) => {
-        const query = args.query || args.subtask;
-        if (!query) throw new OpenClawError("web_lookup requires 'query'");
-
-        const cx = process.env.GOOGLE_SEARCH_CX;
-        const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
-        
-        // Generic placeholder if Google credentials are missing
-        if (!cx || !apiKey) {
-            return { raw: `[Mock Google Search Result for: ${query}]` };
-        }
-        
-        const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&cx=${cx}&key=${apiKey}`;
-        const response = await fetch(url);
+export const startOpenClawGateway = async (): Promise<void> => {
+    // OpenClaw is assumed to be running externally.
+    // We can do a quick probe to ensure it's up.
+    try {
+        const response = await fetch("http://127.0.0.1:18789/v1/models", {
+            headers: {
+                "Authorization": `Bearer ${process.env.OPENCLAW_GATEWAY_TOKEN || "dev_token_123"}`
+            }
+        });
         if (!response.ok) {
-            throw new Error(`Google Search API error: ${response.statusText}`);
+            console.warn("OpenClaw HTTP endpoint is reachable but returned non-OK status. It might not be fully ready.");
         }
-        const data = await response.json();
-        const results = data.items?.map((item: any) => ({
-            title: item.title,
-            link: item.link,
-            snippet: item.snippet
-        })) || [];
-        return { raw: JSON.stringify(results, null, 2) };
+    } catch (e: any) {
+        throw new OpenClawError(`OpenClaw Gateway is not reachable at http://127.0.0.1:18789: ${e.message}`);
     }
 };
 
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatOpenAI } from "@langchain/openai";
-import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+export const stopOpenClawGateway = () => {
+    // No-op since we don't manage the process
+};
 
-export const callLlm = async (modelKey: string, system: string, user: string): Promise<string> => {
+export const callLlm = async (
+    modelKey: string,
+    system: string,
+    user: string
+): Promise<{ content: string; tokens: number; cost: number }> => {
     const messages = [new SystemMessage(system), new HumanMessage(user)];
     
-    // Check keys safely without crashing if they aren't filled yet
+    // Read dynamic pricing
+    let pricingData: any = {};
     try {
-        let response: any;
+        const pricingFile = await fs.readFile(path.join(process.cwd(), "src/pricing.json"), "utf8");
+        pricingData = JSON.parse(pricingFile);
+    } catch (e) {
+        console.warn("Could not read pricing.json, using fallback prices.");
+    }
+
+    try {
+        let modelName = "";
+        let temperature = 0.2;
+
         if (modelKey === "architect" || modelKey === "sme") {
-            const model = new ChatAnthropic({
-                modelName: "claude-3-opus-20240229",
-                temperature: 0.2,
-                anthropicApiKey: process.env.ANTHROPIC_API_KEY || "missing",
-            });
-            response = await model.invoke(messages);
+            modelName = "claude-4-8-opus-20260528";
+        } else if (modelKey === "coder") {
+            modelName = "claude-4-6-sonnet-2026";
         } else if (modelKey === "critic") {
-            const model = new ChatOpenAI({
-                modelName: "gpt-5.5",
-                temperature: 0.1,
-                openAIApiKey: process.env.OPENAI_API_KEY || "missing",
-            });
-            response = await model.invoke(messages);
+            modelName = "gpt-5.5";
+            temperature = 0.1;
         } else {
-            // Router / Swarm uses DeepSeek
-            const model = new ChatOpenAI({
-                modelName: "deepseek-chat",
-                temperature: 0.2,
-                configuration: {
-                    baseURL: "https://api.deepseek.com",
-                },
-                openAIApiKey: process.env.DEEPSEEK_API_KEY || "missing",
-            });
-            response = await model.invoke(messages);
+            modelName = "deepseek-chat";
         }
-        return response.content.toString();
+
+        // Use OpenAI-compatible Chat Completions from OpenClaw
+        const model = new ChatOpenAI({
+            modelName: "openclaw/default",
+            temperature,
+            openAIApiKey: process.env.OPENCLAW_GATEWAY_TOKEN || "dev_token_123",
+            configuration: {
+                baseURL: "http://127.0.0.1:18789/v1",
+                defaultHeaders: {
+                    "x-openclaw-model": modelName
+                }
+            }
+        });
+
+        const response = await model.invoke(messages);
+        
+        // Extract usage
+        const usage: any = response.usage_metadata || response.response_metadata?.tokenUsage || { input_tokens: 0, output_tokens: 0 };
+        const inputTokens = usage.input_tokens || usage.promptTokens || 0;
+        const outputTokens = usage.output_tokens || usage.completionTokens || 0;
+        const totalTokens = usage.total_tokens || usage.totalTokens || (inputTokens + outputTokens);
+
+        // Compute Cost
+        let cost = 0;
+        const modelPricing = pricingData[modelName];
+        if (modelPricing) {
+            cost = (inputTokens / 1_000_000) * modelPricing.inputPer1M + (outputTokens / 1_000_000) * modelPricing.outputPer1M;
+        }
+
+        return { content: response.content.toString(), tokens: totalTokens, cost };
     } catch (e: any) {
-        return `[LLM Error for ${modelKey}: ${e.message}]`;
+        return { content: `[LLM Error for ${modelKey}: ${e.message}]`, tokens: 0, cost: 0 };
     }
 };
 
@@ -135,42 +102,52 @@ export const openclawRpc = async (
     args: Record<string, any>,
     options?: { timeoutS?: number; idempotencyKey?: string; maxRetries?: number }
 ): Promise<Record<string, any>> => {
-    const { timeoutS = 30, idempotencyKey, maxRetries = 2 } = options || {};
-
-    if (idempotencyKey && idempotencyCache.has(idempotencyKey)) {
-        return idempotencyCache.get(idempotencyKey);
+    if (args.requireConfirmation) {
+        throw new OpenClawError(`HITL_REQUIRED: The LLM requested confirmation for tool execution: ${tool}`);
     }
 
-    const handler = handlers[tool];
-    if (!handler) {
-        throw new OpenClawError(`Tool ${tool} not found in OpenClaw module.`);
+    let method = tool;
+    let openclawArgs: any = args;
+
+    // Remap our internal tool names to standard gateway tools if needed
+    if (tool === "shell_exec" || tool === "run_tests") {
+        method = "system.run";
+        openclawArgs = { command: args.command || args.subtask };
+    } else if (tool === "ast_read") {
+        method = "system.read";
+        openclawArgs = { path: args.path || args.subtask };
+    } else if (tool === "web_lookup") {
+        method = "browser.search";
+        openclawArgs = { query: args.query || args.subtask };
     }
 
-    let attempt = 0;
-    while (attempt <= maxRetries) {
-        try {
-            const result = await withTimeout(handler(args), timeoutS * 1000);
-            
-            if (idempotencyKey) {
-                idempotencyCache.set(idempotencyKey, result);
-            }
-            return result;
-        } catch (error: any) {
-            // Throw immediately if it's an explicit HITL request from the LLM
-            if (error instanceof OpenClawError && error.message.includes("HITL_REQUIRED")) {
-                throw error;
-            }
-            
-            attempt++;
-            if (attempt > maxRetries) {
-                throw new OpenClawError(`Tool ${tool} failed after ${maxRetries} retries: ${error.message}`);
-            }
-            // Exponential backoff
-            await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1000));
+    const payload = {
+        tool: method,
+        args: openclawArgs,
+        sessionKey: "main",
+    };
+
+    try {
+        const response = await fetch("http://127.0.0.1:18789/tools/invoke", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${process.env.OPENCLAW_GATEWAY_TOKEN || "dev_token_123"}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout((options?.timeoutS || 30) * 1000)
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok || !data.ok) {
+            throw new OpenClawError(data.error?.message || JSON.stringify(data));
         }
+
+        return data.result;
+    } catch (e: any) {
+        throw new OpenClawError(`Failed to invoke tool ${tool}: ${e.message}`);
     }
-    
-    throw new OpenClawError("Unexpected error in openclawRpc.");
 };
 
 export const storeArtifact = async (blob: string): Promise<string> => {
