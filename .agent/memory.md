@@ -44,11 +44,10 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 
 - **Language:** TypeScript (ESM)
 - **Framework:** `@langchain/langgraph`
-- **Orchestrator Tooling Bridge:** OpenClaw RPC
+- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). Handles tool execution. Includes idempotency, retry/backoff, timeouts, and artifact storage to `.openclaw_artifacts`. Destructive operations require confirmation via LLM `requireConfirmation` argument.
 
 ---
 
 ## 4. Pending / Open Context
 
 - Plumb the LLM `callLlm` stubs with real implementations (e.g. `@langchain/anthropic`, `@langchain/openai`, `@langchain/deepseek`).
-- Complete OpenClaw RPC tool integration with retry, timeout, and idempotency features.
