@@ -1,111 +1,244 @@
 import { END, START, StateGraph, interrupt } from "@langchain/langgraph";
 import { FailureType, WorkerKind, WorkerStatus } from "./enums.js";
-import { SwarmWorkerState } from "./state.js";
-import { callLlm, openclawRpc, storeArtifact, OpenClawError } from "./tools/openclaw.js";
+import { SwarmWorkerState, type ToolCallRecord } from "./state.js";
+import { callLlm, openclawRpc, storeArtifact, type OpenClawRpcArgs } from "./tools/openclaw.js";
 
 const MAX_ESCALATION_ATTEMPTS = 2;
 
-// Nodes
-const leadDelegator = async (state: typeof SwarmWorkerState.State) => {
+type WorkerState = typeof SwarmWorkerState.State;
+
+type WorkerToolPlan = {
+    tool: string;
+    args: OpenClawRpcArgs;
+};
+
+const stringifyToolResult = (value: unknown): string => {
+    if (typeof value === "string") {
+        return value;
+    }
+    try {
+        return JSON.stringify(value, null, 2);
+    } catch {
+        return String(value);
+    }
+};
+
+const readRecord = (value: unknown): Record<string, unknown> | null => {
+    return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+};
+
+const readExitCode = (value: unknown): number | undefined => {
+    const record = readRecord(value);
+    const details = readRecord(record?.details);
+    const exitCode = details?.exitCode ?? record?.exitCode;
+    return typeof exitCode === "number" && Number.isFinite(exitCode) ? exitCode : undefined;
+};
+
+const classifyFailure = (errorMessage: string): FailureType => {
+    const normalized = errorMessage.toLowerCase();
+    if (
+        normalized.includes("not available")
+        || normalized.includes("not found")
+        || normalized.includes("unauthorized")
+        || normalized.includes("permission")
+        || normalized.includes("gateway")
+        || normalized.includes("timeout")
+    ) {
+        return FailureType.ENVIRONMENT;
+    }
+    return FailureType.REASONING;
+};
+
+const SAFE_INFRA_COMMANDS = new Set([
+    "git status --short",
+    "npm run build",
+    "npm run test",
+    "npm run typecheck",
+    "npm test",
+    "npx tsc --noEmit",
+]);
+
+const parseInfraCommand = (subtask: string): string => {
+    const trimmed = subtask.trim();
+    const explicit = /^(?:command|shell)\s*:\s*(.+)$/iu.exec(trimmed)?.[1]?.trim();
+    const candidate = explicit ?? trimmed;
+    return SAFE_INFRA_COMMANDS.has(candidate) ? candidate : "npm run typecheck";
+};
+
+const leadDelegator = async (state: WorkerState) => {
     return {
+        workerKind: state.workerKind,
         status: WorkerStatus.WORKING,
-        attempts: 0,
-        escalationAttempts: 0,
+        attempts: state.attempts ?? 0,
+        escalationAttempts: state.escalationAttempts ?? 0,
         failureType: FailureType.NONE,
     };
 };
 
-const _runWorker = async (state: typeof SwarmWorkerState.State, tool: string) => {
-    if (state.status === WorkerStatus.ESCALATING && state.escalationResponse) {
-        // apply advice
-    }
+const runWorkerPlan = async (state: WorkerState, plans: WorkerToolPlan[]) => {
+    const rawOutputs: string[] = [];
+    const producedArtifacts: Record<string, string> = {};
+    const toolCalls: ToolCallRecord[] = [];
 
     try {
-        const result = await openclawRpc(tool, { subtask: state.subtask });
-        const handle = await storeArtifact(result.raw || "");
+        for (const [index, plan] of plans.entries()) {
+            const result = await openclawRpc(plan.tool, plan.args, {
+                timeoutS: plan.tool === "shell_exec" ? 120 : 45,
+                idempotencyKey: `${state.workerKind}-${state.attempts ?? 0}-${index}`,
+                maxRetries: 1,
+            });
+            const exitCode = readExitCode(result);
+            if (plan.tool === "shell_exec" && exitCode !== undefined && exitCode !== 0) {
+                throw new Error(`shell_exec exited with code ${exitCode}: ${stringifyToolResult(result)}`);
+            }
+
+            const serialized = stringifyToolResult(result);
+            const artifact = await storeArtifact(serialized);
+            const artifactKey = `${plan.tool}-${index}`;
+
+            rawOutputs.push(`## ${plan.tool}\n${serialized}`);
+            producedArtifacts[artifactKey] = artifact;
+            toolCalls.push({ tool: plan.tool, ok: true, artifact });
+        }
+
         return {
             status: WorkerStatus.DONE,
             failureType: FailureType.NONE,
-            attempts: (state.attempts || 0) + 1,
-            producedArtifacts: { [tool]: handle },
-            toolCalls: [{ tool, ok: true }],
+            attempts: (state.attempts ?? 0) + 1,
+            rawToolOutput: rawOutputs.join("\n\n"),
+            producedArtifacts,
+            toolCalls,
         };
-    } catch (e: any) {
-        const ft = FailureType.REASONING; // stub logic
-        const essence: string = e && e.message ? String(e.message) : "Unknown error"; 
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const failedTool = plans[toolCalls.length]?.tool ?? "unknown";
         return {
             status: WorkerStatus.ESCALATING,
-            failureType: ft,
-            attempts: (state.attempts || 0) + 1,
-            escalationQuery: essence,
-            toolCalls: [{ tool, ok: false }],
+            failureType: classifyFailure(message),
+            attempts: (state.attempts ?? 0) + 1,
+            escalationQuery: message,
+            rawToolOutput: rawOutputs.join("\n\n"),
+            producedArtifacts,
+            toolCalls: [...toolCalls, { tool: failedTool, ok: false, error: message }],
         };
     }
 };
 
-const codeExplorer = (state: typeof SwarmWorkerState.State) => _runWorker(state, "ast_read");
-const infraOps = (state: typeof SwarmWorkerState.State) => _runWorker(state, "shell_exec");
-const webResearcher = (state: typeof SwarmWorkerState.State) => _runWorker(state, "web_lookup");
+const codeExplorer = (state: WorkerState) => {
+    const plans: WorkerToolPlan[] = [
+        {
+            tool: "find_files",
+            args: { path: ".", pattern: "src/**/*.ts", limit: 100 },
+        },
+        {
+            tool: "grep_code",
+            args: {
+                path: ".",
+                pattern: "OpenClaw|openclawRpc|callLlm|StateGraph|Annotation",
+                ignoreCase: false,
+                limit: 80,
+            },
+        },
+    ];
+    return runWorkerPlan(state, plans);
+};
 
-const smeOracle = async (state: typeof SwarmWorkerState.State) => {
-    const { content, cost, tokens } = await callLlm("sme", "You are a subject-matter expert.", state.escalationQuery || "");
+const infraOps = (state: WorkerState) => {
+    const command = parseInfraCommand(state.subtask);
+    return runWorkerPlan(state, [{ tool: "shell_exec", args: { command, timeout: 120 } }]);
+};
+
+const webResearcher = (state: WorkerState) => {
+    return runWorkerPlan(state, [{ tool: "web_lookup", args: { query: state.subtask } }]);
+};
+
+const smeOracle = async (state: WorkerState) => {
+    const { content, cost, tokens } = await callLlm(
+        "sme",
+        "You are a subject-matter expert. Return concise recovery advice for the worker.",
+        state.escalationQuery,
+    );
     return {
         escalationResponse: content,
-        escalationAttempts: (state.escalationAttempts || 0) + 1,
+        escalationAttempts: (state.escalationAttempts ?? 0) + 1,
         totalCost: cost,
         totalTokens: tokens,
-        usageStats: { "sme": { cost, tokens } }
+        usageStats: { sme: { cost, tokens } },
     };
 };
 
-const humanGate = (state: typeof SwarmWorkerState.State) => {
-    const decision: any = interrupt({ reason: state.failureType, query: state.escalationQuery });
+const humanGate = (state: WorkerState) => {
+    const decision = interrupt({
+        reason: state.failureType,
+        query: state.escalationQuery,
+    }) as { resolved?: boolean; fix?: string } | undefined;
+
     if (decision?.resolved) {
-        return { status: WorkerStatus.WORKING, escalationResponse: decision.fix };
+        return {
+            status: WorkerStatus.WORKING,
+            escalationResponse: decision.fix ?? "",
+        };
     }
+
     return { status: WorkerStatus.BLOCKED };
 };
 
-const workerCompress = async (state: typeof SwarmWorkerState.State) => {
-    const { content, cost, tokens } = await callLlm("firewall", "Summarize for a reasoning model, JSON.", state.rawToolOutput || JSON.stringify(state.toolCalls));
-    return { 
+const workerCompress = async (state: WorkerState) => {
+    const { content, cost, tokens } = await callLlm(
+        "firewall",
+        [
+            "Summarize raw tool output for a reasoning model.",
+            "Preserve file paths, commands, exit statuses, errors, and artifact handles.",
+            "Return compact JSON with keys: findings, evidence, risks, artifacts.",
+        ].join(" "),
+        state.rawToolOutput || JSON.stringify(state.toolCalls),
+    );
+    return {
         workerSummary: content,
         totalCost: cost,
         totalTokens: tokens,
-        usageStats: { "firewall": { cost, tokens } }
+        usageStats: { firewall: { cost, tokens } },
     };
 };
 
-// Routing
-const delegateToWorker = (state: typeof SwarmWorkerState.State): string => {
-    const mapping: Record<string, string> = {
+const delegateToWorker = (state: WorkerState): string => {
+    const mapping: Record<WorkerKind, string> = {
         [WorkerKind.CODE_EXPLORER]: "codeExplorer",
         [WorkerKind.INFRA_OPS]: "infraOps",
         [WorkerKind.WEB_RESEARCHER]: "webResearcher",
     };
-    return mapping[state.workerKind as string] || "codeExplorer";
+    return mapping[state.workerKind] ?? "codeExplorer";
 };
 
-const routeAfterWorker = (state: typeof SwarmWorkerState.State): string => {
-    if (state.status === WorkerStatus.DONE) return "workerCompress";
-    if ((state.escalationAttempts || 0) >= MAX_ESCALATION_ATTEMPTS) return "__blocked__";
-    if (state.failureType === FailureType.REASONING) return "smeOracle";
+const routeAfterWorker = (state: WorkerState): string => {
+    if (state.status === WorkerStatus.DONE) {
+        return "workerCompress";
+    }
+    if ((state.escalationAttempts ?? 0) >= MAX_ESCALATION_ATTEMPTS) {
+        return "__blocked__";
+    }
+    if (state.failureType === FailureType.REASONING) {
+        return "smeOracle";
+    }
     return "humanGate";
 };
 
-const routeAfterSme = (state: typeof SwarmWorkerState.State): string => {
-    if (!state.escalationResponse) return "__blocked__";
+const routeAfterSme = (state: WorkerState): string => {
+    if (!state.escalationResponse) {
+        return "__blocked__";
+    }
     return delegateToWorker(state);
 };
 
-const routeAfterHuman = (state: typeof SwarmWorkerState.State): string => {
-    if (state.status === WorkerStatus.BLOCKED) return "__blocked__";
+const routeAfterHuman = (state: WorkerState): string => {
+    if (state.status === WorkerStatus.BLOCKED) {
+        return "__blocked__";
+    }
     return delegateToWorker(state);
 };
 
-// Assembly
 export const buildSwarm = () => {
-    const g = new StateGraph(SwarmWorkerState)
+    const graph = new StateGraph(SwarmWorkerState)
         .addNode("leadDelegator", leadDelegator)
         .addNode("codeExplorer", codeExplorer)
         .addNode("infraOps", infraOps)
@@ -114,32 +247,35 @@ export const buildSwarm = () => {
         .addNode("humanGate", humanGate)
         .addNode("workerCompress", workerCompress)
         .addEdge(START, "leadDelegator")
-        .addConditionalEdges("leadDelegator", delegateToWorker as any, {
-            "codeExplorer": "codeExplorer",
-            "infraOps": "infraOps",
-            "webResearcher": "webResearcher"
-        } as any);
+        .addConditionalEdges("leadDelegator", delegateToWorker, {
+            codeExplorer: "codeExplorer",
+            infraOps: "infraOps",
+            webResearcher: "webResearcher",
+        });
 
-    const afterWorkerTargets: Record<string, string> = {
-        "smeOracle": "smeOracle",
-        "humanGate": "humanGate",
-        "workerCompress": "workerCompress",
-        "__blocked__": END
-    };
+    const afterWorkerTargets = {
+        smeOracle: "smeOracle",
+        humanGate: "humanGate",
+        workerCompress: "workerCompress",
+        __blocked__: END,
+    } as const;
 
-    g.addConditionalEdges("codeExplorer", routeAfterWorker as any, afterWorkerTargets as any)
-     .addConditionalEdges("infraOps", routeAfterWorker as any, afterWorkerTargets as any)
-     .addConditionalEdges("webResearcher", routeAfterWorker as any, afterWorkerTargets as any);
+    graph
+        .addConditionalEdges("codeExplorer", routeAfterWorker, afterWorkerTargets)
+        .addConditionalEdges("infraOps", routeAfterWorker, afterWorkerTargets)
+        .addConditionalEdges("webResearcher", routeAfterWorker, afterWorkerTargets);
 
-    const workerTargets: Record<string, string> = {
-        "codeExplorer": "codeExplorer",
-        "infraOps": "infraOps",
-        "webResearcher": "webResearcher",
-        "__blocked__": END
-    };
-    g.addConditionalEdges("smeOracle", routeAfterSme as any, workerTargets as any)
-     .addConditionalEdges("humanGate", routeAfterHuman as any, workerTargets as any)
-     .addEdge("workerCompress", END);
+    const workerTargets = {
+        codeExplorer: "codeExplorer",
+        infraOps: "infraOps",
+        webResearcher: "webResearcher",
+        __blocked__: END,
+    } as const;
 
-    return g.compile();
+    graph
+        .addConditionalEdges("smeOracle", routeAfterSme, workerTargets)
+        .addConditionalEdges("humanGate", routeAfterHuman, workerTargets)
+        .addEdge("workerCompress", END);
+
+    return graph.compile();
 };

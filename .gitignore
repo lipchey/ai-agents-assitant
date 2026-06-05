@@ -3,3 +3,5 @@ dist/
 .env
 .env.local
 .openclaw_artifacts/
+.openclaw_state/
+*.last-good

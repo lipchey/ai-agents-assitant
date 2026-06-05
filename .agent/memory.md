@@ -18,7 +18,7 @@ The system is built on a strict separation of orchestration and execution layers
 ### Reasoning Layer (Main Graph)
 Handles high-level cognitive work without touching raw execution data.
 - **Router (`complexityRouter`):** A pre-filter heuristic that delegates subtasks either immediately (trivial), skips to reasoning (pure reasoning), or routes to the Swarm.
-- **Context Firewall (`firewall`):** Compresses raw execution details into structured summaries, isolating expensive reasoning models from verbose tool outputs.
+- **Context Firewall (`firewall`):** Passes the Swarm's compressed summary into the reasoning layer and keeps raw tool outputs referenced through artifacts.
 - **Debate Chamber:**
   - `claudeArchitect`: Drafts or updates the architecture/code based on compressed context.
   - `openaiCritic`: Critiques the draft using a rolling window of debate history (to save tokens).
@@ -29,9 +29,9 @@ Handles high-level cognitive work without touching raw execution data.
 Handles tool execution via the `OpenClaw` RPC bridge.
 - **Lead Delegator:** Classifies and routes subtasks to specialized worker agents.
 - **Specialized Workers:**
-  - `codeExplorer`: AST parsing and file system reads.
-  - `infraOps`: Shell execution, Docker handling, adhering to ephemeral safety rules.
-  - `webResearcher`: Browsing and documentation lookups.
+  - `codeExplorer`: Uses safe local `rg` wrappers for file discovery and code grep, with raw outputs stored as artifacts.
+  - `infraOps`: Runs only allowlisted verification/build commands instead of executing natural-language user text.
+  - `webResearcher`: Uses the canonical OpenClaw `web_search` tool through the bridge.
 - **SOS Escalation Protocol:** 
   - If a worker fails, it branches based on failure type.
   - `reasoning` failures are escalated to an `smeOracle` which parses a condensed error essence and responds with advice. Control loops back to the worker.
@@ -44,11 +44,12 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 
 - **Language:** TypeScript (ESM)
 - **Framework:** `@langchain/langgraph`
-- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). Handles tool execution. Includes idempotency, retry/backoff, timeouts, and artifact storage to `.openclaw_artifacts`. Destructive operations require confirmation via LLM `requireConfirmation` argument.
+- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). `src/tools/openclaw.ts` starts/probes a local loopback Gateway when needed, stores Gateway state in `.openclaw_state`, and calls `/v1/chat/completions` with `model: "openclaw/default"` plus `x-openclaw-model`. OpenClaw Gateway `/tools/invoke` is used only for tools actually available on that HTTP surface, currently `web_search`. Repository-local pseudo-tools (`run_tests`, `shell_exec`, `ast_read`, `find_files`, `grep_code`) are handled by deterministic local adapters with workspace path bounds, exact command allowlists, no shell interpolation, timeouts, and artifact storage.
 
 ---
 
 ## 4. Pending / Open Context
 
-- **MVP Reached:** The project has an executable LangGraph `src/index.ts` entrypoint. `openclaw.ts` routes LLM calls to Anthropic (`claude-3-opus`), OpenAI (`gpt-5.5`), and DeepSeek (`deepseek-chat`). API keys are configured via `.env`.
-- Expand tool usage for nodes inside `src/main.ts` so they pass structured tool arguments instead of string stubs if needed.
+- **MVP Reached:** The project has an executable LangGraph `src/index.ts` entrypoint that ensures OpenClaw Gateway readiness, invokes the full graph, and reports final telemetry.
+- **Validated locally:** `npx tsc --noEmit`, `npm test`, OpenClaw config validation, and a local `openclawRpc("run_tests")` smoke test pass. Full live end-to-end model execution still depends on valid provider credentials and a reachable OpenClaw Gateway/runtime.
+- **Open implementation gap:** The debate loop now produces corrected drafts and runs objective typecheck verification, but it still does not apply generated code patches automatically. If true autonomous file mutation is required, add a guarded patch-application stage with review/verification gates.

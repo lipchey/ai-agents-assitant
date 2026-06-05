@@ -1,38 +1,50 @@
 import { Annotation } from "@langchain/langgraph";
 import { FailureType, WorkerKind, WorkerStatus } from "./enums.js";
 
-// Utility to merge dictionaries
-const mergeDicts = (left: Record<string, string> | undefined, right: Record<string, string> | undefined) => {
-    return { ...(left || {}), ...(right || {}) };
+export type UsageStats = Record<string, { cost: number; tokens: number }>;
+
+export type DebateEntry = {
+    round: number;
+    critique: string;
 };
 
-// Utility to concat arrays
-const concatArrays = (left: any[] | undefined, right: any[] | undefined) => {
-    return [...(left || []), ...(right || [])];
+export type ToolCallRecord = {
+    tool: string;
+    ok: boolean;
+    artifact?: string;
+    error?: string;
 };
 
-// Utility to sum numbers
-const sumNumbers = (left: number | undefined, right: number | undefined) => {
-    return (left || 0) + (right || 0);
+const mergeDicts = (
+    left: Record<string, string> | undefined,
+    right: Record<string, string> | undefined,
+): Record<string, string> => {
+    return { ...(left ?? {}), ...(right ?? {}) };
 };
 
-// Utility to merge usage stats
+const concatArrays = <T>(left: T[] | undefined, right: T[] | undefined): T[] => {
+    return [...(left ?? []), ...(right ?? [])];
+};
+
+const sumNumbers = (left: number | undefined, right: number | undefined): number => {
+    return (left ?? 0) + (right ?? 0);
+};
+
 const mergeUsageStats = (
-    left: Record<string, { cost: number; tokens: number }> | undefined, 
-    right: Record<string, { cost: number; tokens: number }> | undefined
-) => {
-    const res = { ...(left || {}) };
-    for (const [key, val] of Object.entries(right || {})) {
-        if (!res[key]) {
-            res[key] = { cost: val.cost, tokens: val.tokens };
-        } else {
-            res[key] = {
-                cost: res[key].cost + val.cost,
-                tokens: res[key].tokens + val.tokens
-            };
-        }
+    left: UsageStats | undefined,
+    right: UsageStats | undefined,
+): UsageStats => {
+    const result: UsageStats = { ...(left ?? {}) };
+    for (const [key, value] of Object.entries(right ?? {})) {
+        const current = result[key];
+        result[key] = current
+            ? {
+                cost: current.cost + value.cost,
+                tokens: current.tokens + value.tokens,
+            }
+            : { cost: value.cost, tokens: value.tokens };
     }
-    return res;
+    return result;
 };
 
 export const GraphState = Annotation.Root({
@@ -40,6 +52,8 @@ export const GraphState = Annotation.Root({
     complexity: Annotation<"trivial" | "tool_complex" | "pure_reasoning">,
     routeConfidence: Annotation<number>,
     compressedContext: Annotation<string>,
+    swarmSummary: Annotation<string>,
+    swarmStatus: Annotation<WorkerStatus>,
     artifactIndex: Annotation<Record<string, string>>({
         reducer: mergeDicts,
         default: () => ({}),
@@ -47,7 +61,7 @@ export const GraphState = Annotation.Root({
     architectureSpec: Annotation<string>,
     currentDraft: Annotation<string>,
     bestDraft: Annotation<string>,
-    debateThread: Annotation<Array<Record<string, any>>>({
+    debateThread: Annotation<DebateEntry[]>({
         reducer: concatArrays,
         default: () => [],
     }),
@@ -59,27 +73,26 @@ export const GraphState = Annotation.Root({
     verificationReport: Annotation<string>,
     tokenBudget: Annotation<number>,
     finalAnswer: Annotation<string>,
-    
-    // Telemetry fields
+
     totalCost: Annotation<number>({
         reducer: sumNumbers,
-        default: () => 0
+        default: () => 0,
     }),
     totalTokens: Annotation<number>({
         reducer: sumNumbers,
-        default: () => 0
+        default: () => 0,
     }),
-    usageStats: Annotation<Record<string, { cost: number; tokens: number }>>({
+    usageStats: Annotation<UsageStats>({
         reducer: mergeUsageStats,
-        default: () => ({})
-    })
+        default: () => ({}),
+    }),
 });
 
 export const SwarmWorkerState = Annotation.Root({
     subtask: Annotation<string>,
     workerKind: Annotation<WorkerKind>,
     rawToolOutput: Annotation<string>,
-    toolCalls: Annotation<Array<Record<string, any>>>({
+    toolCalls: Annotation<ToolCallRecord[]>({
         reducer: concatArrays,
         default: () => [],
     }),
@@ -94,18 +107,17 @@ export const SwarmWorkerState = Annotation.Root({
         reducer: mergeDicts,
         default: () => ({}),
     }),
-    
-    // Telemetry fields
+
     totalCost: Annotation<number>({
         reducer: sumNumbers,
-        default: () => 0
+        default: () => 0,
     }),
     totalTokens: Annotation<number>({
         reducer: sumNumbers,
-        default: () => 0
+        default: () => 0,
     }),
-    usageStats: Annotation<Record<string, { cost: number; tokens: number }>>({
+    usageStats: Annotation<UsageStats>({
         reducer: mergeUsageStats,
-        default: () => ({})
-    })
+        default: () => ({}),
+    }),
 });

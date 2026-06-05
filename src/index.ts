@@ -2,67 +2,48 @@ import "dotenv/config";
 import { buildMainGraph } from "./main.js";
 import { startOpenClawGateway, stopOpenClawGateway } from "./tools/openclaw.js";
 
-async function run() {
-    const task = process.argv[2];
+const run = async (): Promise<void> => {
+    const task = process.argv.slice(2).join(" ").trim();
     if (!task) {
-        console.error("Usage: npm start \"<your task description>\"");
+        console.error('Usage: npm start -- "<your task description>"');
         process.exit(1);
     }
 
-    console.log(`Starting OpenClaw Gateway...`);
+    console.log("Ensuring OpenClaw Gateway is running...");
     try {
         await startOpenClawGateway();
-        console.log(`Gateway started. Starting agent with task: "${task}"\n`);
-    } catch (e: any) {
-        console.error("Failed to start gateway:", e.message);
+        console.log(`Gateway ready. Starting agent with task: "${task}"\n`);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("Failed to start OpenClaw Gateway:", message);
         process.exit(1);
     }
-    
+
     try {
         const graph = buildMainGraph();
-        
-        // Execute graph
-        const stream = await graph.stream({
+        const finalState = await graph.invoke({
             originalTask: task,
-            tokenBudget: 100
+            tokenBudget: 100,
         });
 
-        let finalState: any = null;
-        for await (const state of stream) {
-            const nodeName = Object.keys(state)[0];
-            if (!nodeName) continue;
-            console.log(`--- [Node: ${nodeName}] ---`);
-            // Print brief state summary
-            const stateData = (state as any)[nodeName];
-            finalState = stateData; // Keep track of the latest state for telemetry
-            
-            if (stateData.complexity) console.log(`Complexity: ${stateData.complexity}`);
-            if (stateData.currentDraft) console.log(`Draft updated (length: ${stateData.currentDraft.length})`);
-            if (stateData.finalAnswer) console.log(`Final Answer: \n${stateData.finalAnswer}`);
-            if (stateData.error) console.log(`Error: ${stateData.error}`);
-            console.log("-----------------------\n");
-        }
+        console.log("=== FINAL ANSWER ===");
+        console.log(finalState.finalAnswer || finalState.bestDraft || finalState.currentDraft || "(no final answer)");
 
-        console.log("Graph execution completed successfully.");
-        
-        if (finalState && finalState.usageStats) {
-            console.log("\n=== TELEMETRY REPORT ===");
-            console.log(`Total Tokens: ${finalState.totalTokens}`);
-            console.log(`Total Cost: $${(finalState.totalCost || 0).toFixed(6)}`);
-            console.log("Breakdown by Role:");
-            for (const [role, stats] of Object.entries(finalState.usageStats)) {
-                const castedStats = stats as { tokens: number; cost: number };
-                console.log(`  - ${role}: ${castedStats.tokens} tokens, $${castedStats.cost.toFixed(6)}`);
-            }
-            console.log("========================\n");
+        console.log("\n=== TELEMETRY REPORT ===");
+        console.log(`Total Tokens: ${finalState.totalTokens}`);
+        console.log(`Total Cost: $${(finalState.totalCost || 0).toFixed(6)}`);
+        console.log("Breakdown by Role:");
+        for (const [role, stats] of Object.entries(finalState.usageStats)) {
+            console.log(`  - ${role}: ${stats.tokens} tokens, $${stats.cost.toFixed(6)}`);
         }
-        
-    } catch (e: any) {
-        console.error("Agent execution failed:", e.message);
+        console.log("========================");
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("Agent execution failed:", message);
+        process.exitCode = 1;
     } finally {
-        console.log("Stopping OpenClaw Gateway...");
-        stopOpenClawGateway();
+        await stopOpenClawGateway();
     }
-}
+};
 
-run();
+void run();

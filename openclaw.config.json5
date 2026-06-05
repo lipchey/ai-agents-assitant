@@ -1,13 +1,37 @@
 {
   gateway: {
+    mode: "local",
+    bind: "loopback",
     auth: {
       mode: "token",
-      token: "dev_token_123"
+      token: "dev_token_123",
     },
     http: {
       endpoints: {
-        chatCompletions: { enabled: true }
-      }
-    }
-  }
+        chatCompletions: { enabled: true },
+      },
+    },
+  },
+  agents: {
+    defaults: {
+      workspace: ".",
+      model: {
+        primary: "anthropic/claude-sonnet-4-6",
+        fallbacks: ["deepseek/deepseek-v4-flash"],
+      },
+      models: {
+        "anthropic/claude-opus-4-8": { alias: "Opus" },
+        "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
+        "openai/gpt-5.5": { alias: "GPT Critic" },
+        "deepseek/deepseek-v4-flash": { alias: "DeepSeek Fast" },
+      },
+    },
+  },
+  tools: {
+    profile: "coding",
+    exec: {
+      host: "gateway",
+      timeoutSec: 1800,
+    },
+  },
 }

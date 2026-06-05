@@ -1,127 +1,376 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
+import { WorkerKind, WorkerStatus } from "./enums.js";
 import { GraphState } from "./state.js";
-import { callLlm, openclawRpc } from "./tools/openclaw.js";
 import { buildSwarm } from "./swarm.js";
+import { callLlm, openclawRpc } from "./tools/openclaw.js";
 
 const MAX_DEBATE_ITERATIONS = 4;
 const ARCHITECT_COST = 5;
+const CODER_COST = 3;
 const CRITIC_COST = 4;
 const SME_COST = 6;
+const VERIFY_COST = 1;
 
-// Nodes
-const complexityRouter = async (state: typeof GraphState.State) => {
-    const { content, cost, tokens } = await callLlm("router", "Classify task complexity.", state.originalTask);
+type GraphStateValue = typeof GraphState.State;
+
+type RouterDecision = {
+    complexity: "trivial" | "tool_complex" | "pure_reasoning";
+    routeConfidence: number;
+};
+
+type CriticDecision = {
+    consensus: boolean;
+    needsMoreContext: boolean;
+    critique: string;
+};
+
+const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+
+const extractJsonObject = (text: string): unknown => {
+    const fenced = /```(?:json)?\s*([\s\S]*?)```/u.exec(text);
+    const candidate = fenced?.[1] ?? text;
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start < 0 || end < start) {
+        return null;
+    }
+    try {
+        return JSON.parse(candidate.slice(start, end + 1));
+    } catch {
+        return null;
+    }
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+    return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+};
+
+const heuristicComplexity = (task: string): RouterDecision => {
+    const normalized = task.toLowerCase();
+    const toolSignals = [
+        "project",
+        "repo",
+        "code",
+        "bug",
+        "fix",
+        "test",
+        "openclaw",
+        "typescript",
+        "langgraph",
+        "file",
+        "implementation",
+    ];
+    const reasoningSignals = ["explain", "design", "architecture", "compare", "plan"];
+
+    if (toolSignals.some((signal) => normalized.includes(signal))) {
+        return { complexity: "tool_complex", routeConfidence: 0.75 };
+    }
+    if (reasoningSignals.some((signal) => normalized.includes(signal))) {
+        return { complexity: "pure_reasoning", routeConfidence: 0.65 };
+    }
+    return { complexity: "trivial", routeConfidence: 0.6 };
+};
+
+const parseRouterDecision = (content: string, task: string): RouterDecision => {
+    const parsed = asRecord(extractJsonObject(content));
+    const complexity = parsed?.complexity;
+    const confidence = parsed?.routeConfidence;
+
+    if (
+        (complexity === "trivial" || complexity === "tool_complex" || complexity === "pure_reasoning")
+        && typeof confidence === "number"
+    ) {
+        return { complexity, routeConfidence: clamp01(confidence) };
+    }
+
+    return heuristicComplexity(task);
+};
+
+const parseCriticDecision = (content: string): CriticDecision => {
+    const parsed = asRecord(extractJsonObject(content));
+    const consensus = typeof parsed?.consensus === "boolean" ? parsed.consensus : /\bLGTM\b|approved|looks good/iu.test(content);
+    const needsMoreContext = typeof parsed?.needsMoreContext === "boolean" ? parsed.needsMoreContext : /need(s)? more context|missing context/iu.test(content);
+    const critique = typeof parsed?.critique === "string" ? parsed.critique : content;
+    return { consensus, needsMoreContext, critique };
+};
+
+const selectWorkerKind = (task: string): WorkerKind => {
+    const normalized = task.toLowerCase();
+    if (/\b(latest|docs|documentation|web|internet|search|browse|research)\b/u.test(normalized)) {
+        return WorkerKind.WEB_RESEARCHER;
+    }
+    if (/\b(test|build|compile|tsc|npm|shell|command|docker|infra)\b/u.test(normalized)) {
+        return WorkerKind.INFRA_OPS;
+    }
+    return WorkerKind.CODE_EXPLORER;
+};
+
+const buildSwarmSubtask = (state: GraphStateValue): string => {
+    if (state.needsMoreContext && state.debateSummary) {
+        return `Gather missing implementation context for: ${state.debateSummary}`;
+    }
+    return state.originalTask;
+};
+
+const extractToolStatus = (report: Record<string, unknown>): { status: string; exitCode?: number } => {
+    const details = asRecord(report.details);
+    const status = typeof details?.status === "string"
+        ? details.status
+        : typeof report.status === "string"
+            ? report.status
+            : "";
+    const exitCode = typeof details?.exitCode === "number"
+        ? details.exitCode
+        : typeof report.exitCode === "number"
+            ? report.exitCode
+            : undefined;
+    return exitCode === undefined ? { status } : { status, exitCode };
+};
+
+const complexityRouter = async (state: GraphStateValue) => {
+    const { content, cost, tokens } = await callLlm(
+        "router",
+        [
+            "Classify the user task for an autonomous software agent.",
+            "Return only JSON:",
+            "{\"complexity\":\"trivial|pure_reasoning|tool_complex\",\"routeConfidence\":0.0}",
+            "Use tool_complex when repository inspection, execution, current docs, or file changes are needed.",
+        ].join(" "),
+        state.originalTask,
+    );
+    const decision = parseRouterDecision(content, state.originalTask);
+
     return {
-        complexity: "tool_complex" as any, // stub
-        routeConfidence: 0.9,
-        tokenBudget: state.tokenBudget || 50,
+        complexity: decision.complexity,
+        routeConfidence: decision.routeConfidence,
+        tokenBudget: state.tokenBudget ?? 100,
         debateIterations: 0,
         consensusReached: false,
         totalCost: cost,
         totalTokens: tokens,
-        usageStats: { "router": { cost, tokens } }
+        usageStats: { router: { cost, tokens } },
     };
 };
 
-const firewall = async (state: typeof GraphState.State) => {
-    return { compressedContext: "<<aggregated structured summary>>" };
-};
-
-const claudeArchitect = async (state: typeof GraphState.State) => {
-    const { content, cost, tokens } = await callLlm("architect", "Architect. Write a technical specification.", `${state.originalTask}\n${state.compressedContext}\n${state.verificationReport || ""}`);
-    return {
-        architectureSpec: content,
-        tokenBudget: state.tokenBudget - ARCHITECT_COST,
-        totalCost: cost,
-        totalTokens: tokens,
-        usageStats: { "architect": { cost, tokens } }
-    };
-};
-
-const claudeCoder = async (state: typeof GraphState.State) => {
-    const { content, cost, tokens } = await callLlm("coder", "Coder. Write code based on spec.", `Spec:\n${state.architectureSpec}\n\nCritiques to fix:\n${state.debateSummary || "None"}`);
+const directResponder = async (state: GraphStateValue) => {
+    const { content, cost, tokens } = await callLlm(
+        "router",
+        "Answer the user directly and concisely. Do not invent tool results.",
+        state.originalTask,
+    );
     return {
         currentDraft: content,
-        tokenBudget: state.tokenBudget - 3, // Assuming Coder cost is 3
+        bestDraft: content,
+        consensusReached: true,
         totalCost: cost,
         totalTokens: tokens,
-        usageStats: { "coder": { cost, tokens } }
+        usageStats: { direct: { cost, tokens } },
     };
 };
 
-const openaiCritic = async (state: typeof GraphState.State) => {
-    const { content, cost, tokens } = await callLlm("critic", "Critique, do not rewrite.", state.currentDraft);
-    const consensus = content.includes("LGTM");
+const swarmNode = async (state: GraphStateValue) => {
+    const swarm = buildSwarm();
+    const subtask = buildSwarmSubtask(state);
+    const result = await swarm.invoke({
+        subtask,
+        workerKind: selectWorkerKind(subtask),
+        status: WorkerStatus.PENDING,
+        attempts: 0,
+        escalationAttempts: 0,
+    });
+    const fallbackSummary = [
+        `Swarm finished with status: ${result.status ?? "unknown"}.`,
+        result.escalationQuery ? `Escalation query: ${result.escalationQuery}` : "",
+        result.rawToolOutput ? `Raw output was captured in artifacts.` : "",
+    ].filter(Boolean).join(" ");
+
     return {
-        debateThread: [{ round: state.debateIterations, critique: content }],
-        debateSummary: "<<rolling windowed summary>>",
-        debateIterations: state.debateIterations + 1,
-        consensusReached: consensus,
-        needsMoreContext: false,
-        tokenBudget: state.tokenBudget - CRITIC_COST,
-        totalCost: cost,
-        totalTokens: tokens,
-        usageStats: { "critic": { cost, tokens } }
+        swarmSummary: result.workerSummary || result.rawToolOutput || fallbackSummary,
+        swarmStatus: result.status,
+        artifactIndex: result.producedArtifacts,
+        totalCost: result.totalCost,
+        totalTokens: result.totalTokens,
+        usageStats: result.usageStats,
     };
 };
 
-const smeTiebreaker = async (state: typeof GraphState.State) => {
-    const { content, cost, tokens } = await callLlm("sme", "Make the final call.", `${state.currentDraft}\n${state.debateSummary}`);
+const firewall = async (state: GraphStateValue) => {
+    const compressedContext = state.swarmSummary
+        ? state.swarmSummary
+        : JSON.stringify({
+            note: "No execution context was gathered.",
+            artifacts: state.artifactIndex,
+        });
+    return { compressedContext };
+};
+
+const claudeArchitect = async (state: GraphStateValue) => {
+    const { content, cost, tokens } = await callLlm(
+        "architect",
+        [
+            "You are the architecture lead.",
+            "Produce a concise technical specification or correction plan.",
+            "Use only the supplied task, compressed execution context, and verification feedback.",
+        ].join(" "),
+        [
+            `Task:\n${state.originalTask}`,
+            `Compressed context:\n${state.compressedContext}`,
+            state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
+        ].filter(Boolean).join("\n\n"),
+    );
+
+    return {
+        architectureSpec: content,
+        tokenBudget: Math.max(0, state.tokenBudget - ARCHITECT_COST),
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { architect: { cost, tokens } },
+    };
+};
+
+const claudeCoder = async (state: GraphStateValue) => {
+    const { content, cost, tokens } = await callLlm(
+        "coder",
+        [
+            "You are the implementation agent.",
+            "Produce the smallest concrete draft that satisfies the architecture and critique.",
+            "When code changes are required, describe exact patches and verification commands.",
+        ].join(" "),
+        [
+            `Spec:\n${state.architectureSpec}`,
+            `Critiques to fix:\n${state.debateSummary || "None"}`,
+            state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
+        ].filter(Boolean).join("\n\n"),
+    );
+
+    return {
+        currentDraft: content,
+        tokenBudget: Math.max(0, state.tokenBudget - CODER_COST),
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { coder: { cost, tokens } },
+    };
+};
+
+const openaiCritic = async (state: GraphStateValue) => {
+    const { content, cost, tokens } = await callLlm(
+        "critic",
+        [
+            "Critique the draft. Do not rewrite it.",
+            "Return only JSON with keys:",
+            "{\"consensus\":boolean,\"needsMoreContext\":boolean,\"critique\":\"string\"}",
+            "Set consensus true only when the draft is ready for objective verification.",
+        ].join(" "),
+        [
+            `Task:\n${state.originalTask}`,
+            `Draft:\n${state.currentDraft}`,
+            `Debate so far:\n${JSON.stringify(state.debateThread.slice(-3))}`,
+        ].join("\n\n"),
+    );
+    const decision = parseCriticDecision(content);
+
+    return {
+        debateThread: [{ round: state.debateIterations, critique: decision.critique }],
+        debateSummary: decision.critique,
+        debateIterations: state.debateIterations + 1,
+        consensusReached: decision.consensus,
+        needsMoreContext: decision.needsMoreContext,
+        tokenBudget: Math.max(0, state.tokenBudget - CRITIC_COST),
+        totalCost: cost,
+        totalTokens: tokens,
+        usageStats: { critic: { cost, tokens } },
+    };
+};
+
+const smeTiebreaker = async (state: GraphStateValue) => {
+    const { content, cost, tokens } = await callLlm(
+        "sme",
+        "Make the final call. Return the best corrected draft, not a meta-discussion.",
+        [
+            `Task:\n${state.originalTask}`,
+            `Current draft:\n${state.currentDraft}`,
+            `Debate summary:\n${state.debateSummary}`,
+        ].join("\n\n"),
+    );
     return {
         currentDraft: content,
         consensusReached: true,
-        tokenBudget: state.tokenBudget - SME_COST,
+        tokenBudget: Math.max(0, state.tokenBudget - SME_COST),
         totalCost: cost,
         totalTokens: tokens,
-        usageStats: { "sme": { cost, tokens } }
+        usageStats: { sme: { cost, tokens } },
     };
 };
 
-const verify = async (state: typeof GraphState.State) => {
-    const report = await openclawRpc("run_tests", { draft: state.currentDraft });
-    const passed = report.passed || false;
-    const out: Partial<typeof GraphState.State> = {
-        verificationPassed: passed,
-        verificationReport: JSON.stringify(report),
-    };
-    if (passed) {
-        out.bestDraft = state.currentDraft;
+const verify = async (state: GraphStateValue) => {
+    try {
+        const report = await openclawRpc(
+            "run_tests",
+            { command: "npm run typecheck", timeout: 120 },
+            { timeoutS: 150, idempotencyKey: `verify-${state.debateIterations}`, maxRetries: 0 },
+        );
+        const { status, exitCode } = extractToolStatus(report);
+        const passed = status === "completed" && (exitCode === undefined || exitCode === 0);
+
+        return {
+            verificationPassed: passed,
+            verificationReport: JSON.stringify(report, null, 2),
+            bestDraft: passed ? state.currentDraft : state.bestDraft || "",
+            tokenBudget: Math.max(0, state.tokenBudget - VERIFY_COST),
+        };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+            verificationPassed: false,
+            verificationReport: `Verification failed before tests completed: ${message}`,
+            tokenBudget: Math.max(0, state.tokenBudget - VERIFY_COST),
+        };
     }
-    return out;
 };
 
-const finalize = async (state: typeof GraphState.State) => {
-    const answer = state.bestDraft || state.currentDraft || "";
+const finalize = async (state: GraphStateValue) => {
+    const answer = state.bestDraft || state.currentDraft || state.architectureSpec || "";
     return { finalAnswer: answer };
 };
 
-// Routing
-const routeByComplexity = (state: typeof GraphState.State): string => {
-    const c = state.complexity;
-    if (c === "trivial") return "finalize";
-    if (c === "pure_reasoning") return "claudeArchitect";
+const routeByComplexity = (state: GraphStateValue): string => {
+    if (state.complexity === "trivial") {
+        return "directResponder";
+    }
+    if (state.complexity === "pure_reasoning") {
+        return "claudeArchitect";
+    }
     return "swarm";
 };
 
-const routeDebate = (state: typeof GraphState.State): string => {
-    if ((state.tokenBudget || 0) <= 0) return "verify";
-    if (state.needsMoreContext) return "swarm";
-    if (state.consensusReached) return "verify";
-    if (state.debateIterations >= MAX_DEBATE_ITERATIONS) return "smeTiebreaker";
-    return "claudeCoder"; // Loop back to the Coder on rejection
+const routeDebate = (state: GraphStateValue): string => {
+    if ((state.tokenBudget ?? 0) <= 0) {
+        return "verify";
+    }
+    if (state.needsMoreContext) {
+        return "swarm";
+    }
+    if (state.consensusReached) {
+        return "verify";
+    }
+    if (state.debateIterations >= MAX_DEBATE_ITERATIONS) {
+        return "smeTiebreaker";
+    }
+    return "claudeCoder";
 };
 
-const routeAfterVerify = (state: typeof GraphState.State): string => {
-    if (state.verificationPassed || (state.tokenBudget || 0) <= 0) return "finalize";
-    return "claudeCoder"; // Failures in verification go to Coder
+const routeAfterVerify = (state: GraphStateValue): string => {
+    if (state.verificationPassed || (state.tokenBudget ?? 0) <= 0) {
+        return "finalize";
+    }
+    return "claudeCoder";
 };
 
-// Assembly
 export const buildMainGraph = () => {
-    const swarm = buildSwarm();
-    const g = new StateGraph(GraphState)
+    return new StateGraph(GraphState)
         .addNode("complexityRouter", complexityRouter)
-        .addNode("swarm", swarm as any) // langgraph sub-graph mapping handling
+        .addNode("directResponder", directResponder)
+        .addNode("swarm", swarmNode)
         .addNode("firewall", firewall)
         .addNode("claudeArchitect", claudeArchitect)
         .addNode("claudeCoder", claudeCoder)
@@ -131,26 +380,26 @@ export const buildMainGraph = () => {
         .addNode("finalize", finalize)
         .addEdge(START, "complexityRouter")
         .addConditionalEdges("complexityRouter", routeByComplexity, {
-            "finalize": "finalize",
-            "swarm": "swarm",
-            "claudeArchitect": "claudeArchitect"
+            directResponder: "directResponder",
+            swarm: "swarm",
+            claudeArchitect: "claudeArchitect",
         })
+        .addEdge("directResponder", "finalize")
         .addEdge("swarm", "firewall")
         .addEdge("firewall", "claudeArchitect")
         .addEdge("claudeArchitect", "claudeCoder")
         .addEdge("claudeCoder", "openaiCritic")
         .addConditionalEdges("openaiCritic", routeDebate, {
-            "claudeCoder": "claudeCoder",
-            "swarm": "swarm",
-            "smeTiebreaker": "smeTiebreaker",
-            "verify": "verify"
+            claudeCoder: "claudeCoder",
+            swarm: "swarm",
+            smeTiebreaker: "smeTiebreaker",
+            verify: "verify",
         })
         .addEdge("smeTiebreaker", "verify")
         .addConditionalEdges("verify", routeAfterVerify, {
-            "finalize": "finalize",
-            "claudeCoder": "claudeCoder"
+            finalize: "finalize",
+            claudeCoder: "claudeCoder",
         })
-        .addEdge("finalize", END);
-
-    return g.compile();
+        .addEdge("finalize", END)
+        .compile();
 };
