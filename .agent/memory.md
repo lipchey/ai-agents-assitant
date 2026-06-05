@@ -50,4 +50,5 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 
 ## 4. Pending / Open Context
 
-- Plumb the LLM `callLlm` stubs with real implementations (e.g. `@langchain/anthropic`, `@langchain/openai`, `@langchain/deepseek`).
+- **MVP Reached:** The project has an executable LangGraph `src/index.ts` entrypoint. `openclaw.ts` routes LLM calls to Anthropic (`claude-3-opus`), OpenAI (`gpt-5.5`), and DeepSeek (`deepseek-chat`). API keys are configured via `.env`.
+- Expand tool usage for nodes inside `src/main.ts` so they pass structured tool arguments instead of string stubs if needed.

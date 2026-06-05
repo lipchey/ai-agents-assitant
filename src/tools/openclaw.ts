@@ -88,9 +88,46 @@ const handlers: Record<string, (args: any) => Promise<any>> = {
     }
 };
 
+import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatOpenAI } from "@langchain/openai";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+
 export const callLlm = async (modelKey: string, system: string, user: string): Promise<string> => {
-    // STUB: Wire to ChatAnthropic / ChatOpenAI
-    return `[Stub response from ${modelKey}]`;
+    const messages = [new SystemMessage(system), new HumanMessage(user)];
+    
+    // Check keys safely without crashing if they aren't filled yet
+    try {
+        let response: any;
+        if (modelKey === "architect" || modelKey === "sme") {
+            const model = new ChatAnthropic({
+                modelName: "claude-3-opus-20240229",
+                temperature: 0.2,
+                anthropicApiKey: process.env.ANTHROPIC_API_KEY || "missing",
+            });
+            response = await model.invoke(messages);
+        } else if (modelKey === "critic") {
+            const model = new ChatOpenAI({
+                modelName: "gpt-5.5",
+                temperature: 0.1,
+                openAIApiKey: process.env.OPENAI_API_KEY || "missing",
+            });
+            response = await model.invoke(messages);
+        } else {
+            // Router / Swarm uses DeepSeek
+            const model = new ChatOpenAI({
+                modelName: "deepseek-chat",
+                temperature: 0.2,
+                configuration: {
+                    baseURL: "https://api.deepseek.com",
+                },
+                openAIApiKey: process.env.DEEPSEEK_API_KEY || "missing",
+            });
+            response = await model.invoke(messages);
+        }
+        return response.content.toString();
+    } catch (e: any) {
+        return `[LLM Error for ${modelKey}: ${e.message}]`;
+    }
 };
 
 export const openclawRpc = async (
