@@ -1,7 +1,9 @@
-# `ai-agents-assitant`
+# `ai-agents-assitant` (LangGraph Agent Framework)
 
-Welcome to this project. For all architecture facts, workflows, and state, please refer to the `.agent/` directory:
+Welcome to the `ai-agents-assitant` project! This repository contains a dual-graph autonomous development agent built with `@langchain/langgraph` in TypeScript.
 
-1. **[memory.md](../.agent/memory.md)**: Persistent project knowledge, deployment details, and open context.
-2. **[guidelines.md](../.agent/guidelines.md)**: Coding standards and rules.
-3. **[tasks.md](../.agent/tasks.md)**: Currently open action items.
+**All project knowledge lives in the `.agent/` directory.** Please read the following files before making changes:
+
+1. **[.agent/memory.md](.agent/memory.md)**: Contains the core architecture (Debate Chamber vs Swarm), deployment context, and open issues.
+2. **[.agent/guidelines.md](.agent/guidelines.md)**: Coding standards, typing rules, and operational guidelines specific to this LangGraph implementation.
+3. **[.agent/tasks.md](.agent/tasks.md)**: The current active task list for the project.
