@@ -1,5 +1,6 @@
 import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph";
 import { randomUUID } from "node:crypto";
+import { DEFAULT_MAX_HITL_ROUNDS } from "../consts";
 import type {
     HitlDrivableGraph,
     HitlGraphRunConfig,
@@ -7,9 +8,6 @@ import type {
     HitlResolution,
     HitlResolver,
 } from "../types/hitl";
-
-/* Defensive cap beyond the swarm's own escalation bound. */
-const DEFAULT_MAX_HITL_ROUNDS = 6;
 
 export const driveSwarmWithHitl = async <TInput, TState>(
     graph: HitlDrivableGraph<TInput, TState>,

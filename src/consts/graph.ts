@@ -31,3 +31,21 @@ export type SwarmNode = (typeof SwarmNode)[keyof typeof SwarmNode];
 
 /* Route token, not a node name, so conditional edges can target blocked explicitly. */
 export const SWARM_BLOCKED_ROUTE = "__blocked__";
+
+/* Keep these high-risk signals aligned with the architect/critic prompt criteria. */
+export const STRONG_ESCALATION_SIGNALS = [
+    /\bsecurity|authentication|authorization|authz|authn|crypto|encrypt|secret|token|permission\b/iu,
+    /\bpayment|billing|invoice|pci|hipaa|gdpr|privacy|compliance|legal\b/iu,
+    /\bproduction|prod|migration|database|schema|data loss|destructive|delete|rollback\b/iu,
+    /\bconcurrency|distributed|race condition|deadlock|consistency|transaction\b/iu,
+    /\bmulti-agent|orchestration|autonomous|human-in-the-loop|hitl|checkpointer\b/iu,
+] as const;
+
+/* Refetch term extraction ignores generic debate/repository vocabulary. */
+export const CONTEXT_TERM_STOP_WORDS = new Set([
+    "about", "after", "agent", "because", "before", "check", "code", "context",
+    "critique", "current", "draft", "evidence", "fetch", "find", "frontier",
+    "implementation", "latest", "missing", "more", "needs", "original", "project",
+    "reason", "repository", "request", "search", "should", "state", "subtask",
+    "summary", "targeted", "task", "that", "this", "true", "what", "where",
+]);

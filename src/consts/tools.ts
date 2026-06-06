@@ -21,3 +21,26 @@ export type ToolStatus = (typeof ToolStatus)[keyof typeof ToolStatus];
 
 /* Must stay allowlisted in SAFE_DIRECT_EXEC_COMMANDS. */
 export const VERIFY_TYPECHECK_COMMAND = "npm run typecheck";
+
+/* Local process output is evidence, but it must stay bounded in memory. */
+export const MAX_PROCESS_OUTPUT_CHARS = 200_000;
+
+/* Timed-out local processes get a graceful SIGTERM before SIGKILL. */
+export const KILL_GRACE_MS = 5_000;
+
+/* Re-check this allowlist in the exec adapter even when callers pre-validate. */
+export const SAFE_COMMAND_SPECS = {
+    "git status --short": { command: "git", args: ["status", "--short"] },
+    "npm run build": { command: "npm", args: ["run", "build"] },
+    "npm run test": { command: "npm", args: ["run", "test"] },
+    "npm run typecheck": { command: "npm", args: ["run", "typecheck"] },
+    "npm test": { command: "npm", args: ["test"] },
+    "npx tsc --noEmit": { command: "npx", args: ["tsc", "--noEmit"] },
+} as const;
+
+export type SafeDirectExecCommand = keyof typeof SAFE_COMMAND_SPECS;
+
+export const SAFE_DIRECT_EXEC_COMMANDS = new Set<string>(Object.keys(SAFE_COMMAND_SPECS));
+
+export const isSafeDirectExecCommand = (command: string): command is SafeDirectExecCommand =>
+    command in SAFE_COMMAND_SPECS;

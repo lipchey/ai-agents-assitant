@@ -1,21 +1,27 @@
 /* Recoverable reasoning errors stay in-loop; environment failures route to HITL. */
-import { ModelRole, RESPONSE_FORMAT_JSON, ToolName, FailureType, WorkerKind, WorkerStatus } from "../consts";
+import {
+    ModelRole,
+    RESPONSE_FORMAT_JSON,
+    FailureType,
+    MAX_ACTION_SUMMARY_CHARS,
+    MAX_OBSERVATION_CHARS,
+    MAX_PRIOR_TRANSCRIPT_CHARS,
+    MAX_REACT_STEPS,
+    MAX_REACT_TOOL_FAILURES,
+    SHELL_EXEC_TIMEOUT_S,
+    TOOL_TIMEOUT_S,
+    ToolName,
+    WorkerKind,
+    WorkerStatus,
+    WORKER_PROMPTS,
+    WORKER_USAGE_KEY,
+} from "../consts";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate, emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared";
 import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools";
 import type { ToolCallRecord } from "../types/state";
 import type { ReactStep } from "../types/swarm";
 import type { SwarmWorkerStateValue } from "../state";
-import { WORKER_PROMPTS, WORKER_USAGE_KEY } from "./tool-catalog.ts";
 import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.ts";
-
-const MAX_REACT_STEPS = 6;
-const MAX_REACT_TOOL_FAILURES = 3;
-/* Planner context is capped; full tool output still goes to artifacts. */
-const MAX_OBSERVATION_CHARS = 1_600;
-const MAX_PRIOR_TRANSCRIPT_CHARS = 8_000;
-const MAX_ACTION_SUMMARY_CHARS = 200;
-const SHELL_EXEC_TIMEOUT_S = 120;
-const TOOL_TIMEOUT_S = 45;
 
 const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[]): string => {
     const guidance = readString(state.escalationResponse);

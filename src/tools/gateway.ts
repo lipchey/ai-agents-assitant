@@ -1,14 +1,21 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { EnvVar, OpenClawControl } from "../consts";
+import {
+    DEFAULT_GATEWAY_TOKEN,
+    DEFAULT_GATEWAY_URL,
+    DEFAULT_TIMEOUT_S,
+    EnvVar,
+    GATEWAY_LOG_MAX_CHARS,
+    GATEWAY_PROBE_TIMEOUT_MS,
+    GATEWAY_SHUTDOWN_GRACE_MS,
+    GATEWAY_STARTUP_POLL_INTERVAL_MS,
+    OpenClawControl,
+    STARTUP_TIMEOUT_MS,
+} from "../consts";
 import { OpenClawError } from "./errors.ts";
 
-const DEFAULT_GATEWAY_URL = "http://127.0.0.1:18789";
-const DEFAULT_GATEWAY_TOKEN = "dev_token_123";
-export const DEFAULT_TIMEOUT_S = 30;
-const STARTUP_TIMEOUT_MS = 45_000;
-const GATEWAY_LOG_MAX_CHARS = 8_000;
+export { DEFAULT_TIMEOUT_S } from "../consts";
 
 export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -39,7 +46,7 @@ const getOpenClawConfigPath = (): string =>
 const getOpenClawStateDir = (): string =>
     process.env[EnvVar.STATE_DIR] ?? path.join(process.cwd(), ".openclaw_state");
 
-const probeGateway = async (timeoutMs = 2_000): Promise<boolean> => {
+const probeGateway = async (timeoutMs = GATEWAY_PROBE_TIMEOUT_MS): Promise<boolean> => {
     const baseUrl = getGatewayBaseUrl();
     const probeUrls = [
         `${baseUrl}${OpenClawControl.READY_ENDPOINT}`,
@@ -139,7 +146,7 @@ export const startOpenClawGateway = async (): Promise<void> => {
         if (!managedGatewayProcess) {
             break;
         }
-        await sleep(750);
+        await sleep(GATEWAY_STARTUP_POLL_INTERVAL_MS);
     }
 
     const logSuffix = managedGatewayLog.trim() ? `\n\nOpenClaw output:\n${managedGatewayLog.trim()}` : "";
@@ -164,7 +171,7 @@ export const stopOpenClawGateway = async (): Promise<void> => {
 
     await Promise.race([
         exitedPromise,
-        sleep(5_000).then(() => {
+        sleep(GATEWAY_SHUTDOWN_GRACE_MS).then(() => {
             if (!exited) {
                 child.kill("SIGKILL");
             }

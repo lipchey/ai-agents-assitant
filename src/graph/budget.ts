@@ -1,14 +1,17 @@
 /* Soft USD guard is separate from the hard loop caps in routing.ts. */
+import {
+    COST_BUDGET_MIN_REMAINING_USD,
+    COST_BUDGET_SOFT_CEILING_RATIO,
+} from "../consts";
 import type { GraphStateValue } from "../types/graph";
 
-const COST_BUDGET_SOFT_CEILING_RATIO = 0.95;
-const COST_BUDGET_MIN_REMAINING_USD = 0.005;
-
-export const PROJECTED_CONTEXT_REFETCH_CYCLE_USD = 0.08;
-export const PROJECTED_STRONG_ARCHITECT_USD = 0.05;
-export const PROJECTED_CODER_REVIEW_CYCLE_USD = 0.06;
-export const PROJECTED_STRONG_CRITIC_USD = 0.05;
-export const PROJECTED_SME_TIEBREAKER_USD = 0.05;
+export {
+    PROJECTED_CONTEXT_REFETCH_CYCLE_USD,
+    PROJECTED_STRONG_ARCHITECT_USD,
+    PROJECTED_CODER_REVIEW_CYCLE_USD,
+    PROJECTED_STRONG_CRITIC_USD,
+    PROJECTED_SME_TIEBREAKER_USD,
+} from "../consts";
 
 const readCostBudgetUsd = (state: GraphStateValue): number => {
     const budget = state.costBudgetUsd;

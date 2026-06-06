@@ -1,5 +1,11 @@
 /* OpenClaw web_search lacks provider override/runtime failover, so Tavily -> DuckDuckGo is explicit. */
-import { ToolName, FALLBACK_PROVIDER_LABEL, WEB_SEARCH_MAX_RESULTS } from "../consts";
+import {
+    ToolName,
+    FALLBACK_PROVIDER_LABEL,
+    PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+    WEB_SEARCH_FALLBACK_COUNT_CAP,
+    WEB_SEARCH_MAX_RESULTS,
+} from "../consts";
 import { errorMessage, readString } from "../shared";
 import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
@@ -52,9 +58,9 @@ export const runWebLookupWithFallback = async (
             options,
         );
         if (!webSearchResultIsEmpty(tavily)) {
-            return { ...tavily, searchProvider: "tavily" };
+            return { ...tavily, searchProvider: PRIMARY_WEB_SEARCH_PROVIDER_LABEL };
         }
-        tavilyFailure = "tavily returned no results";
+        tavilyFailure = `${PRIMARY_WEB_SEARCH_PROVIDER_LABEL} returned no results`;
     } catch (error) {
         tavilyFailure = errorMessage(error);
     }
@@ -62,7 +68,7 @@ export const runWebLookupWithFallback = async (
     try {
         const fallback = await invokeGatewayTool(
             ToolName.WEB_SEARCH,
-            { query, count: Math.min(WEB_SEARCH_MAX_RESULTS, 10) },
+            { query, count: Math.min(WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_FALLBACK_COUNT_CAP) },
             options,
         );
         const fallbackPayload = webSearchPayload(fallback);

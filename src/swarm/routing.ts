@@ -1,14 +1,14 @@
-import { SWARM_BLOCKED_ROUTE, SwarmNode, FailureType, WorkerKind, WorkerStatus } from "../consts";
+import {
+    SWARM_BLOCKED_ROUTE,
+    SwarmNode,
+    FailureType,
+    MAX_ESCALATION_ATTEMPTS,
+    WorkerStatus,
+    WORKER_NODE,
+} from "../consts";
 import type { SwarmWorkerStateValue } from "../state";
 
-/* Bounded retries keep SME/HITL escalation from cycling forever. */
-export const MAX_ESCALATION_ATTEMPTS = 2;
-
-const WORKER_NODE: Record<WorkerKind, string> = {
-    [WorkerKind.CODE_EXPLORER]: SwarmNode.CODE_EXPLORER,
-    [WorkerKind.INFRA_OPS]: SwarmNode.INFRA_OPS,
-    [WorkerKind.WEB_RESEARCHER]: SwarmNode.WEB_RESEARCHER,
-};
+export { MAX_ESCALATION_ATTEMPTS } from "../consts";
 
 export const delegateToWorker = (state: SwarmWorkerStateValue): string =>
     WORKER_NODE[state.workerKind] ?? SwarmNode.CODE_EXPLORER;

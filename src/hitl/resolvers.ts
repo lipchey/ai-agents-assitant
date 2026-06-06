@@ -2,9 +2,10 @@
 
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { createInterface } from "node:readline/promises";
+import { HITL_RESOLVER_CONFIG_KEY } from "../consts";
 import type { HitlResolver } from "../types/hitl";
 
-export const HITL_RESOLVER_CONFIG_KEY = "hitlResolver";
+export { HITL_RESOLVER_CONFIG_KEY } from "../consts";
 
 export const autoAbortResolver: HitlResolver = async () => ({ action: "abort" });
 

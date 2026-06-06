@@ -1,21 +1,20 @@
-import { MainNode } from "../consts";
 import {
+    MainNode,
+    MAX_CONTEXT_FETCHES,
+    MAX_DEBATE_ITERATIONS,
+    MAX_PATCH_FORMAT_RETRIES,
+    MAX_VERIFY_ATTEMPTS,
     PROJECTED_CODER_REVIEW_CYCLE_USD,
     PROJECTED_CONTEXT_REFETCH_CYCLE_USD,
     PROJECTED_SME_TIEBREAKER_USD,
     PROJECTED_STRONG_ARCHITECT_USD,
     PROJECTED_STRONG_CRITIC_USD,
+} from "../consts";
+import {
     canSpendUsd,
     isCostBudgetNear,
 } from "./budget.ts";
 import type { GraphStateValue } from "../types/graph";
-
-const MAX_DEBATE_ITERATIONS = 4;
-/* Two total fetches means the primary swarm pass plus one targeted refetch. */
-const MAX_CONTEXT_FETCHES = 2;
-const MAX_VERIFY_ATTEMPTS = 2;
-/* Patch-format retries are cheaper than verification retries and capped separately. */
-const MAX_PATCH_FORMAT_RETRIES = 2;
 
 export const routeByComplexity = (state: GraphStateValue): string => {
     if (state.complexity === "trivial") {

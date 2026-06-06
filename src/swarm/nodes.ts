@@ -1,14 +1,19 @@
 import { interrupt } from "@langchain/langgraph";
-import { ModelRole, RESPONSE_FORMAT_JSON, UsageKey, FailureType, WorkerKind, WorkerStatus } from "../consts";
+import {
+    ModelRole,
+    RESPONSE_FORMAT_JSON,
+    FailureType,
+    MAX_BLOCKED_FALLBACK_CHARS,
+    UsageKey,
+    WorkerKind,
+    WorkerStatus,
+} from "../consts";
 import { SystemPrompts } from "../prompts";
 import { asRecord, extractJsonObject, safeJson, truncate, emptyUsage, usageFromLlm } from "../shared";
 import { callLlm } from "../tools";
 import type { HitlInterruptPayload, HitlResolution } from "../types/hitl";
 import type { SwarmWorkerStateValue } from "../state";
 import { runReactWorker } from "./react-worker.ts";
-
-/* Blocked-worker fallbacks must not leak a full raw transcript into reasoning prompts. */
-const MAX_BLOCKED_FALLBACK_CHARS = 600;
 
 export const codeExplorer = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER);
 export const infraOps = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS);

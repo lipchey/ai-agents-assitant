@@ -1,10 +1,9 @@
-import { ModelRef, ModelRole, OpenClawControl } from "../consts";
+import { ModelRef, ModelRole } from "../consts";
 import type { ModelProvider, ModelRouting } from "../types/tools";
 
 export type { ModelProvider, ModelRouting } from "../types/tools";
 
-export const DEFAULT_OPENCLAW_MODEL = OpenClawControl.DEFAULT_MODEL;
-export const STRONG_REASONING_AGENT_ID = OpenClawControl.STRONG_REASONING_AGENT_ID;
+export { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID } from "../consts";
 
 export const providerForModel = (modelRef: string): ModelProvider => {
     const provider = modelRef.split("/", 1)[0];

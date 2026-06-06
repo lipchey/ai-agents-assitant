@@ -1,11 +1,8 @@
 import "dotenv/config";
 import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled, printReport } from "./cli";
-import { HITL_RESOLVER_CONFIG_KEY } from "./hitl";
+import { HITL_RESOLVER_CONFIG_KEY, MAIN_GRAPH_RECURSION_LIMIT } from "./consts";
 import { buildMainGraph } from "./graph";
 import { startOpenClawGateway, stopOpenClawGateway } from "./tools";
-
-/* Recursion headroom protects bounded loops; per-cycle caps remain the real guard. */
-const RECURSION_LIMIT = 50;
 
 const run = async (): Promise<void> => {
     const task = process.argv.slice(2).join(" ").trim();
@@ -33,7 +30,7 @@ const run = async (): Promise<void> => {
         const finalState = await graph.invoke(
             { originalTask: task, costBudgetUsd, patchApplicationEnabled },
             /* Keep the non-serializable HITL resolver out of checkpointed graph state. */
-            { recursionLimit: RECURSION_LIMIT, configurable: { [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver() } },
+            { recursionLimit: MAIN_GRAPH_RECURSION_LIMIT, configurable: { [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver() } },
         );
 
         printReport(finalState, costBudgetUsd);

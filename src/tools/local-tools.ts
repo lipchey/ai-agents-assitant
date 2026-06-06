@@ -1,40 +1,31 @@
 /* Local pseudo-tools are the authoritative guard for path bounds and shell allowlists. */
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
-import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../consts";
+import {
+    DEFAULT_TIMEOUT_S,
+    KILL_GRACE_MS,
+    MAX_PROCESS_OUTPUT_CHARS,
+    SAFE_COMMAND_SPECS,
+    SHELL_EXEC_TIMEOUT_S,
+    TOOL_TIMEOUT_S,
+    ToolName,
+    ToolStatus,
+    VERIFY_TYPECHECK_COMMAND,
+    isSafeDirectExecCommand,
+} from "../consts";
+import type { SafeDirectExecCommand } from "../consts";
 import { clampInt, readNumber, readString, truncate } from "../shared";
 import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
-import { DEFAULT_TIMEOUT_S } from "./gateway.ts";
 import { resolveWorkspacePath } from "./workspace.ts";
 
-const MAX_PROCESS_OUTPUT_CHARS = 200_000;
-const KILL_GRACE_MS = 5_000;
+export { SAFE_DIRECT_EXEC_COMMANDS } from "../consts";
 
-/* Re-check this allowlist in the exec adapter even when callers pre-validate. */
-export const SAFE_DIRECT_EXEC_COMMANDS = new Set([
-    "git status --short",
-    "npm run build",
-    "npm run test",
-    "npm run typecheck",
-    "npm test",
-    "npx tsc --noEmit",
-]);
-
-const SAFE_COMMAND_SPECS: Record<string, { command: string; args: string[] }> = {
-    "git status --short": { command: "git", args: ["status", "--short"] },
-    "npm run build": { command: "npm", args: ["run", "build"] },
-    "npm run test": { command: "npm", args: ["run", "test"] },
-    "npm run typecheck": { command: "npm", args: ["run", "typecheck"] },
-    "npm test": { command: "npm", args: ["test"] },
-    "npx tsc --noEmit": { command: "npx", args: ["tsc", "--noEmit"] },
-};
-
-const assertSafeDirectExecCommand = (tool: string, command: string): void => {
-    if (!SAFE_DIRECT_EXEC_COMMANDS.has(command)) {
+function assertSafeDirectExecCommand(tool: string, command: string): asserts command is SafeDirectExecCommand {
+    if (!isSafeDirectExecCommand(command)) {
         throw new OpenClawError(`${tool} rejected unsafe command. Use an allowlisted verification command or add a guarded approval flow.`);
     }
-};
+}
 
 const limitLines = (value: string, limit: number): string => value.split(/\r?\n/u).slice(0, limit).join("\n");
 
@@ -102,9 +93,9 @@ const runLocalSafeCommand = async (
     if (!spec) {
         throw new OpenClawError(`${tool} has no local command spec for ${commandText}.`);
     }
-    return await runLocalProcess(tool, spec.command, spec.args, {
+    return await runLocalProcess(tool, spec.command, [...spec.args], {
         cwd: readString(args.workdir) ?? ".",
-        timeoutS: readNumber(args.timeout) ?? options?.timeoutS ?? 120,
+        timeoutS: readNumber(args.timeout) ?? options?.timeoutS ?? SHELL_EXEC_TIMEOUT_S,
     });
 };
 
@@ -117,7 +108,7 @@ const runLocalFindFiles = async (args: OpenClawRpcArgs, options?: OpenClawRpcOpt
         ToolName.FIND_FILES,
         "rg",
         ["--files", "--hidden", "--glob", "!node_modules/**", "--glob", "!dist/**", "--glob", pattern, searchPath],
-        { timeoutS: options?.timeoutS ?? 45 },
+        { timeoutS: options?.timeoutS ?? TOOL_TIMEOUT_S },
     );
     const details = readDetails(result);
     const stdout = typeof details.stdout === "string" ? limitLines(details.stdout, limit) : "";
@@ -144,7 +135,7 @@ const runLocalGrepCode = async (args: OpenClawRpcArgs, options?: OpenClawRpcOpti
         pattern,
         searchPath,
     ];
-    const result = await runLocalProcess(ToolName.GREP_CODE, "rg", rgArgs, { timeoutS: options?.timeoutS ?? 45 });
+    const result = await runLocalProcess(ToolName.GREP_CODE, "rg", rgArgs, { timeoutS: options?.timeoutS ?? TOOL_TIMEOUT_S });
     const details = readDetails(result);
     const stdout = typeof details.stdout === "string" ? limitLines(details.stdout, limit) : "";
     return { ...result, details: { ...details, stdout, limit, pattern, path: searchPath } };

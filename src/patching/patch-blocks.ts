@@ -1,11 +1,9 @@
 /* Opt-in patches are structured-only and snapshot pristine files for rollback. */
 import fs from "node:fs/promises";
 import path from "node:path";
+import { PATCH_BLOCK, PROTECTED_SEGMENTS } from "../consts";
 import { resolveWorkspacePath } from "../tools";
 import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "../types/patching";
-
-const PATCH_BLOCK = /<<<PATCH\s+(?:file|path)\s*=\s*"([^"]+)"\s*>>>\r?\n([\s\S]*?)\r?\n?<<<END\s+PATCH>>>/gu;
-const PROTECTED_SEGMENTS = new Set([".git", "node_modules"]);
 
 const isProtectedPath = (relativePath: string): boolean => {
     return relativePath

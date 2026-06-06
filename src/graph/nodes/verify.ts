@@ -1,12 +1,9 @@
 /* Consensus is not correctness; code paths still need an objective typecheck. */
-import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../../consts";
+import { ToolName, ToolStatus, VERIFY_RPC_TIMEOUT_S, VERIFY_TIMEOUT_S, VERIFY_TYPECHECK_COMMAND } from "../../consts";
 import { errorMessage } from "../../shared";
 import { openclawRpc } from "../../tools";
 import { extractToolStatus } from "../parsers.ts";
 import type { GraphStateValue } from "../../types/graph";
-
-const VERIFY_TIMEOUT_S = 120;
-const VERIFY_RPC_TIMEOUT_S = 150;
 
 export const verify = async (state: GraphStateValue) => {
     const verifyAttempts = (state.verifyAttempts ?? 0) + 1;

@@ -1,12 +1,10 @@
-import { ModelRole, RESPONSE_FORMAT_JSON, CONFIDENCE_ESCALATION_THRESHOLD, UsageKey } from "../../consts";
+import { ModelRole, RESPONSE_FORMAT_JSON, CONFIDENCE_ESCALATION_THRESHOLD, RECENT_DEBATE_WINDOW, UsageKey } from "../../consts";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseCriticDecision, parseFrontierCriticDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../types/graph";
-
-const RECENT_DEBATE_WINDOW = 3;
 
 export const frontierCritic = async (state: GraphStateValue) => {
     const result = await callLlm(

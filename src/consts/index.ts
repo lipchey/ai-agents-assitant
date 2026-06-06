@@ -1,12 +1,82 @@
 export { EnvVar, isTruthyEnv } from "./env.ts";
-export { MainNode, SWARM_BLOCKED_ROUTE, SwarmNode } from "./graph.ts";
+export {
+    CONTEXT_TERM_STOP_WORDS,
+    MainNode,
+    STRONG_ESCALATION_SIGNALS,
+    SWARM_BLOCKED_ROUTE,
+    SwarmNode,
+} from "./graph.ts";
+export { HITL_RESOLVER_CONFIG_KEY } from "./hitl.ts";
 export { ModelRef, ModelRole, RESPONSE_FORMAT_JSON } from "./models.ts";
-export { OpenClawControl } from "./openclaw.ts";
-export { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "./tools.ts";
+export {
+    DEFAULT_GATEWAY_TOKEN,
+    DEFAULT_GATEWAY_URL,
+    DEFAULT_OPENCLAW_MODEL,
+    DEFAULT_TIMEOUT_S,
+    GATEWAY_LOG_MAX_CHARS,
+    GATEWAY_PROBE_TIMEOUT_MS,
+    GATEWAY_SHUTDOWN_GRACE_MS,
+    GATEWAY_STARTUP_POLL_INTERVAL_MS,
+    OpenClawControl,
+    STARTUP_TIMEOUT_MS,
+    STRONG_REASONING_AGENT_ID,
+} from "./openclaw.ts";
+export { PATCH_BLOCK, PROTECTED_SEGMENTS } from "./patching.ts";
+export {
+    KILL_GRACE_MS,
+    MAX_PROCESS_OUTPUT_CHARS,
+    SAFE_COMMAND_SPECS,
+    SAFE_DIRECT_EXEC_COMMANDS,
+    ToolName,
+    ToolStatus,
+    VERIFY_TYPECHECK_COMMAND,
+    isSafeDirectExecCommand,
+} from "./tools.ts";
+export type { SafeDirectExecCommand } from "./tools.ts";
 export {
     CONFIDENCE_ESCALATION_THRESHOLD,
+    COST_BUDGET_MIN_REMAINING_USD,
+    COST_BUDGET_SOFT_CEILING_RATIO,
+    DEFAULT_MAX_HITL_ROUNDS,
     DEFAULT_COST_BUDGET_USD,
+    MAIN_GRAPH_RECURSION_LIMIT,
+    MAX_ACTION_SUMMARY_CHARS,
+    MAX_BLOCKED_FALLBACK_CHARS,
+    MAX_CONTEXT_FETCHES,
+    MAX_CONTEXT_SEARCH_TERMS,
+    MAX_DEBATE_ITERATIONS,
+    MAX_ESCALATION_ATTEMPTS,
+    MAX_OBSERVATION_CHARS,
+    MAX_PATCH_FORMAT_RETRIES,
+    MAX_PRIOR_TRANSCRIPT_CHARS,
+    MAX_REACT_STEPS,
+    MAX_REACT_TOOL_FAILURES,
+    MAX_VERIFY_ATTEMPTS,
+    PROJECTED_CODER_REVIEW_CYCLE_USD,
+    PROJECTED_CONTEXT_REFETCH_CYCLE_USD,
+    PROJECTED_SME_TIEBREAKER_USD,
+    PROJECTED_STRONG_ARCHITECT_USD,
+    PROJECTED_STRONG_CRITIC_USD,
+    RECENT_DEBATE_WINDOW,
+    SHELL_EXEC_TIMEOUT_S,
+    TOOL_TIMEOUT_S,
+    VERIFY_RPC_TIMEOUT_S,
+    VERIFY_TIMEOUT_S,
 } from "./tuning.ts";
 export { UsageKey } from "./usage.ts";
-export { FALLBACK_PROVIDER_LABEL, WEB_SEARCH_MAX_RESULTS } from "./web.ts";
-export { FailureType, WorkerKind, WorkerStatus } from "./worker.ts";
+export {
+    FALLBACK_PROVIDER_LABEL,
+    PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+    WEB_SEARCH_FALLBACK_COUNT_CAP,
+    WEB_SEARCH_MAX_RESULTS,
+} from "./web.ts";
+export { WORKER_PROMPTS } from "./worker-prompts.ts";
+export {
+    FailureType,
+    WorkerKind,
+    WorkerStatus,
+    WORKER_NODE,
+    WORKER_ROUTES,
+    WORKER_TOOLS,
+    WORKER_USAGE_KEY,
+} from "./worker.ts";

@@ -1,16 +1,6 @@
 /* Refetches are targeted from critique terms to avoid paying for repeated inventory. */
-import { WorkerKind } from "../consts";
+import { CONTEXT_TERM_STOP_WORDS, MAX_CONTEXT_SEARCH_TERMS, WorkerKind } from "../consts";
 import type { GraphStateValue } from "../types/graph";
-
-const MAX_CONTEXT_SEARCH_TERMS = 10;
-
-const CONTEXT_TERM_STOP_WORDS = new Set([
-    "about", "after", "agent", "because", "before", "check", "code", "context",
-    "critique", "current", "draft", "evidence", "fetch", "find", "frontier",
-    "implementation", "latest", "missing", "more", "needs", "original", "project",
-    "reason", "repository", "request", "search", "should", "state", "subtask",
-    "summary", "targeted", "task", "that", "this", "true", "what", "where",
-]);
 
 const extractContextSearchTerms = (text: string): string[] => {
     const terms = new Map<string, number>();
