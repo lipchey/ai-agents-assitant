@@ -115,6 +115,6 @@ authoritative guard regardless of caller-side checks.
 
 ## 8. Memory & task automation (unchanged)
 
-Per [guidelines.md](guidelines.md): update [memory.md](memory.md) (Audit Log /
-Architecture) and [tasks.md](tasks.md) before completing a task. Single-developer
-repo — commit to `main`, no branches/PRs unless asked.
+Per [guidelines.md](guidelines.md): update [memory.md](memory.md) (Architecture /
+Current Status) and [tasks.md](tasks.md) before completing a task.
+Single-developer repo — commit to `main`, no branches/PRs unless asked.
