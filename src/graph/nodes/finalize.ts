@@ -1,5 +1,5 @@
 /* Failed guarded patch runs roll back here so the workspace is not left broken. */
-import { rollbackPatches } from "../../patch.js";
+import { rollbackPatches } from "../../patching/patch-blocks.js";
 import type { GraphStateValue } from "../../types/graph/state.js";
 
 export const finalize = async (state: GraphStateValue) => {

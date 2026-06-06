@@ -123,7 +123,8 @@ When enabled:
 ## 4. OpenClaw and Tooling
 
 Public import surface is intentionally stable through barrels: `src/main.ts`,
-`src/swarm.ts`, `src/state.ts`, `src/prompts.ts`, and `src/tools/openclaw.ts`.
+`src/swarm.ts`, `src/state.ts`, `src/prompts.ts`, `src/patch.ts`,
+`src/hitl.ts`, and `src/tools/openclaw.ts`.
 
 OpenClaw details:
 - Chat calls use `/v1/chat/completions` with `x-openclaw-model`; default body
@@ -159,10 +160,10 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
   formatting, usage merging, and telemetry shape.
 - Internal modules import concrete files, not subsystem barrels they re-export.
 - Always use explicit `.js` extensions in local ESM imports.
-- `src/` root is reserved for executable entrypoints, public barrels, and
-  temporary legacy root modules already tracked for cleanup. Feature modules,
-  domain types, adapters, constants, and runtime data should live under their
-  owning folders.
+- `src/` root is reserved for executable entrypoints and public barrels. Feature
+  modules, domain types, adapters, constants, and runtime data should live under
+  their owning folders. Patch implementation lives in `src/patching/`; HITL
+  resolvers and swarm-driving helpers live in `src/hitl/`.
 - Prompts are cache anchors. Keep `SystemPrompts` output contracts aligned with
   parsers in `src/graph/parsers.ts` and `src/swarm/tool-validation.ts`.
 - Comments should explain non-obvious safety/cost/provider/order invariants.
@@ -193,6 +194,6 @@ This file was consolidated from a chronological audit log into current
 architecture, invariants, and backlog. Removed stale details that conflicted
 with code, especially older `humanGate` blocking notes and patch notes that
 omitted patch-format retries. Checked `src/graph/*`, `src/state/*`,
-`src/swarm/*`, `src/tools/*`, `src/patch.ts`, `src/hitl.ts`, `src/index.ts`, and
-`package.json`. Companion cleanup reduced `.agent/tasks.md` to active tasks and
-backlog only.
+`src/swarm/*`, `src/tools/*`, `src/patch.ts`, `src/patching/*`, `src/hitl.ts`,
+`src/hitl/*`, `src/index.ts`, and `package.json`. Companion cleanup reduced
+`.agent/tasks.md` to active tasks and backlog only.

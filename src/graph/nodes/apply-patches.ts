@@ -1,5 +1,5 @@
 /* No applicable patch blocks bounce to coder instead of verifying an unchanged tree. */
-import { applyPatchBlocks, parsePatchBlocks } from "../../patch.js";
+import { applyPatchBlocks, parsePatchBlocks } from "../../patching/patch-blocks.js";
 import type { GraphStateValue } from "../../types/graph/state.js";
 
 export const applyPatches = async (state: GraphStateValue) => {

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled } from "./cli/config.js";
 import { printReport } from "./cli/report.js";
-import { HITL_RESOLVER_CONFIG_KEY } from "./hitl.js";
+import { HITL_RESOLVER_CONFIG_KEY } from "./hitl/resolvers.js";
 import { buildMainGraph } from "./main.js";
 import { startOpenClawGateway, stopOpenClawGateway } from "./tools/openclaw.js";
 
