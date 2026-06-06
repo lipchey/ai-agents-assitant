@@ -125,6 +125,10 @@ When enabled:
 Public import surface is intentionally stable through barrels: `src/main.ts`,
 `src/swarm.ts`, `src/state.ts`, `src/prompts.ts`, `src/patch.ts`,
 `src/hitl.ts`, and `src/tools/openclaw.ts`.
+Subsystem roots with multiple TypeScript modules also expose named-export
+`index.ts` barrels (for example `src/graph/`, `src/swarm/`, `src/tools/`,
+`src/consts/`, `src/shared/`, and `src/types/*`). Internal subsystem modules
+still import concrete files to preserve cycle safety.
 
 OpenClaw details:
 - Chat calls use `/v1/chat/completions` with `x-openclaw-model`; default body
