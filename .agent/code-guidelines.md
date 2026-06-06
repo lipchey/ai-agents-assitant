@@ -63,9 +63,8 @@ never re-list those fields inline.
   `nodes/<node>.ts`, routing, build), `swarm/*` (tool-catalog, tool-validation,
   react-worker, nodes, routing, build), `state/*`, `prompts/*`, `cli/*`.
 - The root of `src/` is reserved for:
-  - executable entrypoints (`index.ts`);
-  - public barrels (`main.ts`, `swarm.ts`, `state.ts`, `prompts.ts`);
-  - temporary legacy root modules that are already tracked for cleanup.
+  - executable entrypoint (`main.ts`);
+  - the single public export barrel (`index.ts`).
   Do not add feature modules, domain enums, parsers, patching logic, HITL
   drivers, adapters, or runtime data files directly under `src/`.
 - Put files next to their strongest owner:
@@ -96,10 +95,14 @@ never re-list those fields inline.
 - Split a file when it starts owning multiple roles, not just when it gets long:
   parsing vs applying vs rollback, resolver types vs stdin resolver vs graph
   driver, worker nodes vs recovery nodes, or gateway lifecycle vs HTTP calls.
-- **Barrels** keep the public import surface stable: `tools/openclaw.ts`,
-  `main.ts`, `swarm.ts`, `state.ts`, `prompts.ts` re-export only. External
-  consumers (and smoke scripts) import the barrel; never reach past it into a
-  sibling's internals.
+- **Barrels** keep the public import surface stable: `src/index.ts` is the
+  side-effect-free root barrel. External consumers and smoke scripts import that
+  barrel for root-level public API; `src/main.ts` is CLI-only and must not be
+  re-exported from `src/index.ts`.
+- Every folder root that owns multiple TypeScript modules should expose an
+  `index.ts` barrel with explicit named exports. Consumers outside that
+  subsystem boundary may import from the folder barrel instead of a concrete
+  file when the symbol is part of the folder's public surface.
 - **Cycle safety:** modules *inside* a subsystem import each other by concrete
   file, **not** the barrel. A subsystem barrel must not be imported by a file it
   re-exports. Keep dependencies a DAG (shared types in a leaf module, e.g.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { applyPatchBlocks, parsePatchBlocks, rollbackPatches } from "../src/patch.ts";
+import { applyPatchBlocks, parsePatchBlocks, rollbackPatches } from "../src/index.ts";
 
 const run = async (): Promise<void> => {
     const smokeDir = `.patch-smoke-${Date.now()}`;

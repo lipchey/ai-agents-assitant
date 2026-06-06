@@ -3,7 +3,7 @@ import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { WorkerStatus } from "../../consts/worker.ts";
 import { readHitlResolver } from "../../hitl/resolvers.ts";
 import { driveSwarmWithHitl } from "../../hitl/swarm-driver.ts";
-import { buildSwarm } from "../../swarm.ts";
+import { buildSwarm } from "../../swarm/build.ts";
 import type { SwarmWorkerStateValue } from "../../state/swarm-state.ts";
 import type { GraphStateValue } from "../../types/graph/state.ts";
 import type { HitlDrivableGraph } from "../../types/hitl/index.ts";

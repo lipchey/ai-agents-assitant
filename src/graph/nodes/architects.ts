@@ -1,7 +1,7 @@
 import { ModelRole, RESPONSE_FORMAT_JSON } from "../../consts/models.ts";
 import { CONFIDENCE_ESCALATION_THRESHOLD } from "../../consts/tuning.ts";
 import { UsageKey } from "../../consts/usage.ts";
-import { SystemPrompts } from "../../prompts.ts";
+import { SystemPrompts } from "../../prompts/index.ts";
 import { usageFromLlm } from "../../shared/usage.ts";
 import { callLlm } from "../../tools/openclaw.ts";
 import { strongEscalationReasonForTask } from "../escalation.ts";

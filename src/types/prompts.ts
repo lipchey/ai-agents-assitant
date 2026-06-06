@@ -1,3 +1,1 @@
-import { SystemPrompts } from "../prompts.ts";
-
-export type SystemPromptKey = keyof typeof SystemPrompts;
+export type { SystemPromptKey } from "../prompts/index.ts";

@@ -18,6 +18,6 @@ None.
   reasoning layer. Current HITL is swarm-only.
 - [ ] Structured logging: emit warnings for empty DuckDuckGo fallback results so
   zero-hit searches are visible without failing the worker.
-- [x] Source layout cleanup: move remaining root-level feature modules
-  (`src/patch.ts`, `src/hitl.ts`) under owning folders while preserving public
-  barrels and smoke-script contracts.
+- [x] Source layout cleanup: keep root `src/` to `index.ts` and `main.ts`,
+  with feature code under owning folders and public exports centralized through
+  `src/index.ts`.

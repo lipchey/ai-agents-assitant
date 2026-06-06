@@ -4,12 +4,12 @@ import { FailureType, WorkerKind, WorkerStatus } from "../src/consts/worker.ts";
 import {
     autoAbortResolver,
     driveSwarmWithHitl,
+    humanGate,
+    SwarmWorkerState,
     type HitlDrivableGraph,
     type HitlInterruptPayload,
     type HitlResolver,
-} from "../src/hitl.ts";
-import { SwarmWorkerState } from "../src/state.ts";
-import { humanGate } from "../src/swarm.ts";
+} from "../src/index.ts";
 
 type WorkerState = typeof SwarmWorkerState.State;
 

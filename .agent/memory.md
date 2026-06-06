@@ -24,7 +24,7 @@ The system uses a dual-graph design.
 
 ### Main Graph: reasoning and orchestration
 
-Entry point: `src/index.ts` starts/probes OpenClaw Gateway, builds
+Entry point: `src/main.ts` starts/probes OpenClaw Gateway, builds
 `buildMainGraph()`, passes `costBudgetUsd`, `patchApplicationEnabled`, and the
 HITL resolver, then prints final answer, patch report, and telemetry.
 
@@ -122,9 +122,9 @@ When enabled:
 
 ## 4. OpenClaw and Tooling
 
-Public import surface is intentionally stable through barrels: `src/main.ts`,
-`src/swarm.ts`, `src/state.ts`, `src/prompts.ts`, `src/patch.ts`,
-`src/hitl.ts`, and `src/tools/openclaw.ts`.
+Public import surface is intentionally stable through the side-effect-free root
+barrel `src/index.ts`. The CLI lives in `src/main.ts`; importing `src/index.ts`
+must not start the agent.
 Subsystem roots with multiple TypeScript modules also expose named-export
 `index.ts` barrels (for example `src/graph/`, `src/swarm/`, `src/tools/`,
 `src/consts/`, `src/shared/`, and `src/types/*`). Internal subsystem modules
@@ -166,10 +166,11 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
 - Use explicit `.ts` extensions in local TypeScript source imports.
   `rewriteRelativeImportExtensions` rewrites them to `.js` for emitted Node ESM
   output.
-- `src/` root is reserved for executable entrypoints and public barrels. Feature
-  modules, domain types, adapters, constants, and runtime data should live under
-  their owning folders. Patch implementation lives in `src/patching/`; HITL
-  resolvers and swarm-driving helpers live in `src/hitl/`.
+- `src/` root is reserved for `main.ts` as the executable entrypoint and
+  `index.ts` as the single public export barrel. Feature modules, domain types,
+  adapters, constants, and runtime data should live under their owning folders.
+  Patch implementation lives in `src/patching/`; HITL resolvers and
+  swarm-driving helpers live in `src/hitl/`.
 - Prompts are cache anchors. Keep `SystemPrompts` output contracts aligned with
   parsers in `src/graph/parsers.ts` and `src/swarm/tool-validation.ts`.
 - Comments should explain non-obvious safety/cost/provider/order invariants.
@@ -200,6 +201,6 @@ This file was consolidated from a chronological audit log into current
 architecture, invariants, and backlog. Removed stale details that conflicted
 with code, especially older `humanGate` blocking notes and patch notes that
 omitted patch-format retries. Checked `src/graph/*`, `src/state/*`,
-`src/swarm/*`, `src/tools/*`, `src/patch.ts`, `src/patching/*`, `src/hitl.ts`,
-`src/hitl/*`, `src/index.ts`, and `package.json`. Companion cleanup reduced
-`.agent/tasks.md` to active tasks and backlog only.
+`src/swarm/*`, `src/tools/*`, `src/patching/*`, `src/hitl/*`, `src/index.ts`,
+`src/main.ts`, and `package.json`. Companion cleanup reduced `.agent/tasks.md`
+to active tasks and backlog only.

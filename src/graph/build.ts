@@ -1,6 +1,6 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { MainNode } from "../consts/graph.ts";
-import { GraphState } from "../state.ts";
+import { GraphState } from "../state/graph-state.ts";
 import { applyPatches } from "./nodes/apply-patches.ts";
 import { claudeArchitect, frontierArchitect } from "./nodes/architects.ts";
 import { claudeCoder } from "./nodes/coder.ts";
