@@ -1,6 +1,6 @@
 // LLM client: builds the provider-aware OpenClaw chat-completion payload for a
 // cost-cascade role, calls the Gateway, and returns content + cost telemetry.
-import { ModelRole } from "../constants.js";
+import { ModelRole, OpenClawControl } from "../constants.js";
 import type { LlmUsage } from "../shared/usage.js";
 import { OpenClawError } from "./errors.js";
 import { jsonPost } from "./http.js";
@@ -99,7 +99,7 @@ export const callLlm = async (
         headers["x-openclaw-agent-id"] = agentId;
     }
 
-    const response = await jsonPost<ChatCompletionResponse>("/v1/chat/completions", body, { timeoutS: 180, headers });
+    const response = await jsonPost<ChatCompletionResponse>(OpenClawControl.CHAT_COMPLETIONS_ENDPOINT, body, { timeoutS: 180, headers });
 
     const content = contentToString(response.choices?.[0]?.message?.content);
     if (!content) {

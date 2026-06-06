@@ -7,7 +7,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { EnvVar } from "../constants.js";
+import { EnvVar, OpenClawControl } from "../constants.js";
 import { OpenClawError } from "./errors.js";
 
 const DEFAULT_GATEWAY_URL = "http://127.0.0.1:18789";
@@ -47,7 +47,11 @@ const getOpenClawStateDir = (): string =>
 
 const probeGateway = async (timeoutMs = 2_000): Promise<boolean> => {
     const baseUrl = getGatewayBaseUrl();
-    const probeUrls = [`${baseUrl}/readyz`, `${baseUrl}/healthz`, `${baseUrl}/v1/models`];
+    const probeUrls = [
+        `${baseUrl}${OpenClawControl.READY_ENDPOINT}`,
+        `${baseUrl}${OpenClawControl.HEALTH_ENDPOINT}`,
+        `${baseUrl}${OpenClawControl.MODELS_ENDPOINT}`,
+    ];
 
     for (const url of probeUrls) {
         try {

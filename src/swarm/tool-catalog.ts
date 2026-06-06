@@ -19,7 +19,7 @@ export const WORKER_PROMPTS: Record<WorkerKind, string> = {
 };
 
 // usageStats key for each worker's planner LLM spend.
-export const WORKER_USAGE_KEY: Record<WorkerKind, string> = {
+export const WORKER_USAGE_KEY: Record<WorkerKind, UsageKey> = {
     [WorkerKind.CODE_EXPLORER]: UsageKey.CODE_EXPLORER,
     [WorkerKind.INFRA_OPS]: UsageKey.INFRA_OPS,
     [WorkerKind.WEB_RESEARCHER]: UsageKey.WEB_RESEARCHER,

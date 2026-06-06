@@ -43,6 +43,22 @@ export const ModelRole = {
 } as const;
 export type ModelRole = (typeof ModelRole)[keyof typeof ModelRole];
 
+// --- OpenClaw control identifiers -------------------------------------------
+// Gateway endpoints, agent/session ids, and transport model ids are just as
+// typo-sensitive as node/tool names: a misspelling silently routes to the wrong
+// Gateway behavior or endpoint.
+export const OpenClawControl = {
+    DEFAULT_MODEL: "openclaw/default",
+    STRONG_REASONING_AGENT_ID: "strong-reasoning",
+    DEFAULT_SESSION_KEY: "main",
+    CHAT_COMPLETIONS_ENDPOINT: "/v1/chat/completions",
+    TOOLS_INVOKE_ENDPOINT: "/tools/invoke",
+    READY_ENDPOINT: "/readyz",
+    HEALTH_ENDPOINT: "/healthz",
+    MODELS_ENDPOINT: "/v1/models",
+} as const;
+export type OpenClawControl = (typeof OpenClawControl)[keyof typeof OpenClawControl];
+
 // --- Main reasoning-graph node names -----------------------------------------
 export const MainNode = {
     COMPLEXITY_ROUTER: "complexityRouter",

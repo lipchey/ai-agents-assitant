@@ -1,21 +1,21 @@
 // Model routing: maps an abstract cost-cascade role to a concrete provider model
 // reference, provider, and default temperature. This is the single place that
 // decides which model backs each role.
-import { ModelRef, ModelRole } from "../constants.js";
+import { ModelRef, ModelRole, OpenClawControl } from "../constants.js";
 
 export type ModelProvider = "anthropic" | "deepseek" | "openai" | "unknown";
 
 export type ModelRouting = {
-    modelRef: string;
+    modelRef: ModelRef;
     provider: ModelProvider;
     temperature?: number;
 };
 
 // OpenClaw routing identifiers used by callLlm.
-export const DEFAULT_OPENCLAW_MODEL = "openclaw/default";
+export const DEFAULT_OPENCLAW_MODEL = OpenClawControl.DEFAULT_MODEL;
 // Agent whose `thinkingDefault: "adaptive"` reaches the provider runtime; used
 // for Anthropic strong-reasoning calls.
-export const STRONG_REASONING_AGENT_ID = "strong-reasoning";
+export const STRONG_REASONING_AGENT_ID = OpenClawControl.STRONG_REASONING_AGENT_ID;
 
 export const providerForModel = (modelRef: string): ModelProvider => {
     const provider = modelRef.split("/", 1)[0];
@@ -28,11 +28,15 @@ const isClaudeOpusModel = (modelRef: string): boolean => /^anthropic\/claude-opu
 
 // Claude Opus routes omit temperature (the provider rejects it alongside
 // adaptive thinking), so drop it for Opus even when a default is given.
-const route = (modelRef: string, temperature?: number): ModelRouting => ({
+const route = (modelRef: ModelRef, temperature?: number): ModelRouting => ({
     modelRef,
     provider: providerForModel(modelRef),
     ...(!isClaudeOpusModel(modelRef) && temperature !== undefined ? { temperature } : {}),
 });
+
+const assertNeverRole = (role: never): never => {
+    throw new Error(`Unhandled model role: ${String(role)}`);
+};
 
 export const modelForRole = (role: ModelRole): ModelRouting => {
     switch (role) {
@@ -54,6 +58,6 @@ export const modelForRole = (role: ModelRole): ModelRouting => {
             // temperature 0 for stable, repeatable tool decisions.
             return route(ModelRef.DEEPSEEK_FLASH, 0);
         default:
-            return route(ModelRef.DEEPSEEK_FLASH, 0.2);
+            return assertNeverRole(role);
     }
 };

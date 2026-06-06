@@ -5,7 +5,7 @@
 import { ModelRole, RESPONSE_FORMAT_JSON, ToolName } from "../constants.js";
 import { FailureType, WorkerKind, WorkerStatus } from "../enums.js";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate } from "../shared/text.js";
-import { emptyUsage, mergeUsage, usageFromLlm, type UsageBreakdown } from "../shared/usage.js";
+import { emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared/usage.js";
 import { SwarmWorkerState, type ToolCallRecord } from "../state.js";
 import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools/openclaw.js";
 import { WORKER_PROMPTS, WORKER_USAGE_KEY } from "./tool-catalog.js";
@@ -85,7 +85,7 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
         toolCalls,
         totalCost: usage.cost,
         totalTokens: usage.tokens,
-        usageStats: { [usageKey]: usage } satisfies Record<string, UsageBreakdown>,
+        usageStats: { [usageKey]: usage } satisfies UsageStats,
     });
 
     for (let step = 0; step < MAX_REACT_STEPS; step += 1) {
@@ -186,6 +186,6 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
         toolCalls,
         totalCost: usage.cost,
         totalTokens: usage.tokens,
-        usageStats: { [usageKey]: usage } satisfies Record<string, UsageBreakdown>,
+        usageStats: { [usageKey]: usage } satisfies UsageStats,
     };
 };

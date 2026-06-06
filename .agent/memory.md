@@ -274,3 +274,41 @@ barrels are import-only and never imported by a file they re-export (cycle-safe)
 **Validated locally:** `npm run typecheck`, `smoke:react`, `smoke:patch`,
 `smoke:hitl`, `smoke:websearch` all pass; grep confirms zero duplicated helpers and
 no inline model-ref/tool-name/threshold literals outside `constants.ts`/`pricing.json`.
+
+---
+
+## 16. Audit Log (2026-06-06) — strict post-refactor review hardening
+
+Strict review of the structural refactor in §15. Graph topology and prompt text
+remain unchanged; fixes were limited to parser robustness and stronger typing /
+constant discipline.
+
+**FIXED — JSON extraction no longer fails on trailing braces/prose.** The shared
+`extractJsonObject` helper previously sliced from the first `{` to the last `}`,
+so a valid model JSON object followed by prose containing another `{` would fail
+to parse and fall back to heuristic/prose handling. It now scans for the first
+parseable balanced JSON object, respecting strings and escapes, while still
+preferring fenced JSON blocks. `scripts/react-smoke.ts` pins the trailing-brace
+case through `parseReactDecision`.
+
+**HARDENED — closed model-role routing is compile-time exhaustive.**
+`modelForRole(role: ModelRole)` now returns `ModelRef`-typed routes and ends with
+an `assertNever` branch instead of a silent DeepSeek Flash fallback. Adding a new
+`ModelRole` now forces the routing table to be updated.
+
+**HARDENED — telemetry keys are typed.** `UsageStats` is now a sparse
+`UsageKey`-indexed record, and worker telemetry maps use `UsageKey` values rather
+than plain strings, tightening the refactor's "typed usage keys" rule.
+
+**HARDENED — OpenClaw control identifiers are centralized.** Gateway endpoints,
+the default Gateway session key, the default OpenClaw Chat Completions model id,
+and the strong-reasoning agent id now live in `OpenClawControl` in
+`src/constants.ts` and are reused by `tools/{gateway,http,llm,models}.ts`.
+
+**GUIDELINES UPDATED.** `.agent/code-guidelines.md` now records the OpenClaw
+control-identifier rule, `assertNever`-style exhaustive switches for closed
+unions, and balanced JSON extraction via `src/shared/json.ts`.
+
+**Validated locally:** `npm run typecheck` passes; `smoke:react`, `smoke:patch`,
+`smoke:hitl`, and `smoke:websearch` pass when run outside the restricted Codex
+sandbox (the sandbox still blocks `tsx` IPC pipes with `listen EPERM`).

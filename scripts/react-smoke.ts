@@ -20,6 +20,11 @@ const run = (): void => {
     assert.equal(act.kind === "act" && act.tool, "grep_code");
     assert.deepEqual(act.kind === "act" && act.args, { pattern: "callLlm" });
 
+    const trailingBrace = parseReactDecision('{"thought":"look","action":{"tool":"grep_code","args":{"pattern":"GraphState"}}} trailing note with { brace');
+    assert.equal(trailingBrace.kind, "act", "parser must use the first balanced JSON object, not first-to-last brace slicing");
+    assert.equal(trailingBrace.kind === "act" && trailingBrace.tool, "grep_code");
+    assert.deepEqual(trailingBrace.kind === "act" && trailingBrace.args, { pattern: "GraphState" });
+
     const fenced = parseReactDecision('```json\n{"thought":"done","final":"found it in src/main.ts"}\n```');
     assert.equal(fenced.kind, "final");
     assert.equal(fenced.kind === "final" && fenced.final, "found it in src/main.ts");

@@ -1,5 +1,6 @@
 // HTTP transport to the OpenClaw Gateway: the raw JSON POST and the retrying
 // `/tools/invoke` wrapper used by every gateway-side tool call.
+import { OpenClawControl } from "../constants.js";
 import { stringifyError } from "../shared/text.js";
 import { OpenClawError } from "./errors.js";
 import { DEFAULT_TIMEOUT_S, authHeaders, getGatewayBaseUrl, sleep } from "./gateway.js";
@@ -52,11 +53,11 @@ export const invokeGatewayTool = async (
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
         try {
             const response = await jsonPost<{ ok: boolean; result?: unknown; error?: { message?: string; type?: string } }>(
-                "/tools/invoke",
+                OpenClawControl.TOOLS_INVOKE_ENDPOINT,
                 {
                     tool,
                     args,
-                    sessionKey: options?.sessionKey ?? "main",
+                    sessionKey: options?.sessionKey ?? OpenClawControl.DEFAULT_SESSION_KEY,
                     ...(options?.action ? { action: options.action } : {}),
                     ...(options?.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : {}),
                 },

@@ -12,7 +12,8 @@ one job, and the type checker catches mistakes the runtime would otherwise hide.
 
 ## 1. Constants — no magic scalars
 
-Every tool name, model reference, model role, graph node name, telemetry key,
+Every tool name, model reference, model role, OpenClaw control identifier
+(Gateway endpoints, session keys, agent ids), graph node name, telemetry key,
 tool status, env-var name, and tuning threshold lives **once** in
 [src/constants.ts](../src/constants.ts) and is reused. Inline string/number
 literals for these are forbidden — a typo'd node name or `usageStats` key fails
@@ -20,7 +21,7 @@ silently at runtime instead of at compile time.
 
 - Each group is an `as const` object paired with a same-named union type:
   `ToolName`, `ModelRef`, `ModelRole`, `MainNode`, `SwarmNode`, `UsageKey`,
-  `ToolStatus`, `EnvVar`.
+  `ToolStatus`, `EnvVar`, `OpenClawControl`.
 - `ModelRef` values **must** stay byte-equal to the keys in
   [src/pricing.json](../src/pricing.json) (the cost lookup is keyed on them).
 - Tuning knobs are named constants with a one-line rationale
@@ -69,8 +70,9 @@ re-list those fields inline.
   of `as` casts. Reserve `as` for genuine LangGraph generic-inference gaps.
 - Build `usageStats` entries with `UsageKey` constants as computed keys so a typo
   is a compile error.
-- Switches over a union should be exhaustive (no `default`-only narrowing of a
-  known role/kind); let the compiler flag a missing case.
+- Switches over a union should be exhaustive through an `assertNever`-style
+  terminal branch, never a runtime fallback for a known role/kind; let the
+  compiler flag a missing case.
 - Use the project enums (`WorkerStatus`, `FailureType`, `WorkerKind`) for control
   flow, never scattered booleans/strings.
 - Keep `tsconfig` strictness (`strict`, `noUncheckedIndexedAccess`,
@@ -92,6 +94,11 @@ Keep each role's text and JSON output contract **byte-identical** unless the
 matching parser in [graph/parsers.ts](../src/graph/parsers.ts) /
 [swarm/tool-validation.ts](../src/swarm/tool-validation.ts) changes too. Editing
 copy busts the cache and can break a parser — change both together, deliberately.
+
+When parsing JSON from model text, use [src/shared/json.ts](../src/shared/json.ts)
+instead of ad hoc brace slicing. LLM replies often include prose, code fences, or
+extra braces after the object; parser helpers must scan for the first parseable
+balanced JSON object and degrade through the existing fallbacks.
 
 ## 7. Safety envelope is defense-in-depth — keep it layered
 
