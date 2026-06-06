@@ -14,3 +14,4 @@
 - **MEMORY AUTOMATION**: Before completing any task, you MUST update `.agent/memory.md` under the "Pending / Open Context" section if there are unresolved issues, or under "Architecture" if structural changes were made.
 - **Task Tracking**: Keep `.agent/tasks.md` up to date by marking items as `[x]` when completed.
 - **Testing**: Run `npx tsc --noEmit` before committing any code to ensure graph typings are perfectly aligned.
+- **Git Workflow**: This is a single-developer repository. Commit directly to `main` — do NOT create feature branches or open PRs unless explicitly asked. Commit only when the developer asks.
