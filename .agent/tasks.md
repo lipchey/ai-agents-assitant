@@ -26,6 +26,9 @@ theme below; remaining ideas are in the Backlog.
 - [x] Make Opus calls provider-aware (no temperature, adaptive thinking, effort, `strong-reasoning` routing).
 - [x] Finalize `pure_reasoning` from reasoning roles; cache `pricing.json` per process.
 
+### Code quality & maintainability
+- [x] Structural refactor (audit §15): centralize all scalars in `src/constants.ts`, dedupe helpers into `src/shared/*`, decompose the three monoliths (`tools/openclaw.ts`, `main.ts`, `swarm.ts`) into single-responsibility modules behind stable barrels, tighten typing (`callLlm(role: ModelRole)`, typed usage keys), and compact comments. Captured the rules in `.agent/code-guidelines.md`. Behavior-preserving: prompts byte-identical, all smoke tests + typecheck green.
+
 ### Autonomy, HITL & prompts
 - [x] Guarded, opt-in patch application (`applyPatches` + `src/patch.ts`).
 - [x] Real HITL channel (checkpointer + caller resume loop) restoring `humanGate` interrupt escalation.

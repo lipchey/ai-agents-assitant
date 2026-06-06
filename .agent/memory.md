@@ -2,6 +2,14 @@
 
 > Persistent context for AI assistants. Read first to skip re-scanning the repo. Keep current facts up to date in place.
 
+> **Code layout note (see Audit Log §15):** the source is split into small,
+> single-responsibility modules. `src/main.ts`, `src/swarm.ts`, `src/state.ts`,
+> `src/prompts.ts`, and `src/tools/openclaw.ts` are now **barrels** that re-export
+> from `graph/*`, `swarm/*`, `state/*`, `prompts/*`, and `tools/*`. Centralized
+> scalars live in `src/constants.ts`; shared helpers in `src/shared/*`. Symbol
+> names referenced below are unchanged; only their files moved. New working rules:
+> [.agent/code-guidelines.md](code-guidelines.md).
+
 ---
 
 ## 1. What this is (Project Goal)
@@ -224,3 +232,45 @@ Critical review of changes after `f67704ff23a4f3218575efcd791c7e1df7b3db8e` foun
 **NOTE — `tavily_search` exposure.** The primary depends on the Tavily plugin tool being invokable via `/tools/invoke`. If it is ever unavailable, the wrapper degrades gracefully to the key-free DuckDuckGo fallback (never a hard break). To change the fallback provider later, repin `tools.web.search.provider`, add the provider's plugin entry + API key if it needs one, and update `FALLBACK_PROVIDER_LABEL`.
 
 **Validated locally:** `npx tsc --noEmit` / `npm test` pass; `openclaw config validate` reports the config valid; new `scripts/websearch-smoke.ts` (`npm run smoke:websearch`) stubs the `fetch` boundary to pin the real `openclawRpc → runWebLookupWithFallback → invokeGatewayTool` path: Tavily-success (fallback untouched, rich args sent), Tavily-error → fallback, empty-Tavily → fallback, both-fail throw, and missing-query rejection. The existing `smoke:react`/`smoke:patch`/`smoke:hitl` still pass.
+
+---
+
+## 15. Audit Log (2026-06-06) — structural refactor: constants, dedup, decomposition, typing
+
+Behavior-preserving cleanup. No graph topology, routing logic, prompt text, or
+safety guard changed; the four smoke tests + `npm run typecheck` stay green, and
+`SystemPrompts` is byte-identical across all 14 keys (verified). Working rules
+captured in **[.agent/code-guidelines.md](code-guidelines.md)**.
+
+**ADDED — `src/constants.ts`** centralizes every scalar that was inline/duplicated:
+`ToolName`, `ModelRef` (byte-equal to `pricing.json` keys), `ModelRole`,
+`MainNode`/`SwarmNode` (+ `SWARM_BLOCKED_ROUTE`), `UsageKey`, `ToolStatus`,
+`EnvVar` (+ `isTruthyEnv`), `CONFIDENCE_ESCALATION_THRESHOLD` (was `0.72` ×8),
+`DEFAULT_COST_BUDGET_USD`, `VERIFY_TYPECHECK_COMMAND`, `RESPONSE_FORMAT_JSON`,
+web-search labels. Each `as const` object is paired with a same-named union type;
+`callLlm` is now typed `(role: ModelRole, …)`, not `(modelKey: string, …)`.
+
+**ADDED — `src/shared/*`** deduplicates helpers that were hand-rolled in 2–3 files:
+`json.ts` (`extractJsonObject`, `asRecord`), `text.ts` (`readString`, `readNumber`,
+`clampInt`, `clamp01`, `truncate`, `safeJson`, `stringifyPretty`, `stringifyError`,
+`errorMessage`), `usage.ts` (the single `LlmUsage`/`UsageBreakdown` shape +
+`emptyUsage`/`mergeUsage`/`usageFromLlm`/`mergeUsageStats`).
+
+**CHANGED — the three monoliths split by responsibility** (largest file now ~200
+lines, was 1021). Each former path is a re-export **barrel**:
+- `src/tools/openclaw.ts` → `tools/{types,errors,workspace,gateway,http,models,pricing,llm,local-tools,web-search,artifacts,rpc}.ts`. `normalizeToolInvocation` collapsed into `rpc.ts`'s `omitControlArgs`.
+- `src/main.ts` → `graph/{types,budget,escalation,parsers,context-terms,routing,build}.ts` + `graph/nodes/<node>.ts` (one node per file; architect/critic pairs share a file).
+- `src/swarm.ts` → `swarm/{tool-catalog,tool-validation,react-worker,nodes,routing,build}.ts`.
+- `src/state.ts` → `state/{reducers,graph-state,swarm-state}.ts`; `src/prompts.ts` → `prompts/{core,reasoning-prompts,worker-prompts}.ts`; `src/index.ts` slimmed → `cli/{config,report}.ts`.
+
+**Public symbol names are unchanged** (e.g. `buildMainGraph`, `buildSwarm`,
+`humanGate`, `parseReactDecision`, `sanitizeToolArgs`, `openclawRpc`, `callLlm`,
+`resolveWorkspacePath`, `SAFE_DIRECT_EXEC_COMMANDS`, `GraphState`,
+`SwarmWorkerState`), so the smoke scripts and external imports were untouched.
+
+**Convention:** internal modules import each other by concrete file; subsystem
+barrels are import-only and never imported by a file they re-export (cycle-safe).
+
+**Validated locally:** `npm run typecheck`, `smoke:react`, `smoke:patch`,
+`smoke:hitl`, `smoke:websearch` all pass; grep confirms zero duplicated helpers and
+no inline model-ref/tool-name/threshold literals outside `constants.ts`/`pricing.json`.

@@ -1,18 +1,12 @@
-// Guarded patch-application stage.
-//
-// The reasoning layer's `claudeCoder` produces draft file contents but, by
-// design, the rest of the framework never touched disk — verification ran
-// `npm run typecheck` against the *unmodified* repository, so an objectively
-// failing draft could never be fixed by another coder pass. This module lets
-// the framework optionally mutate repository files autonomously, but only
-// behind hard guards:
-//   - It is OFF unless `patchApplicationEnabled` is set (env `AGENT_APPLY_PATCHES`).
-//   - It only acts on explicitly delimited `<<<PATCH file="...">>> ... <<<END PATCH>>>`
-//     blocks; free-form prose in a draft is never written to disk.
-//   - Every target path is bounded to the workspace (`resolveWorkspacePath`) and
-//     protected directories (`.git`, `node_modules`) are refused.
-//   - Pristine (pre-run) contents of every touched file are captured so the
-//     caller can roll back to the original state if verification ultimately fails.
+// Guarded patch-application stage. Lets the framework optionally mutate
+// repository files (so `verify` tests the real mutated tree) behind hard guards:
+//   - OFF unless `patchApplicationEnabled` is set (env `AGENT_APPLY_PATCHES`).
+//   - Only explicitly delimited `<<<PATCH file="...">>> ... <<<END PATCH>>>`
+//     blocks are written; free-form prose in a draft never touches disk.
+//   - Every target is bounded to the workspace (`resolveWorkspacePath`); `.git`
+//     and `node_modules` are refused.
+//   - Pristine pre-run contents are captured so the caller can roll back if
+//     verification ultimately fails.
 import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveWorkspacePath } from "./tools/openclaw.js";

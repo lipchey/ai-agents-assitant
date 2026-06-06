@@ -1,0 +1,26 @@
+// Implementation node: turns the approved spec + open critiques into the smallest
+// concrete change, emitting structured <<<PATCH>>> blocks for guarded application.
+import { ModelRole, UsageKey } from "../../constants.js";
+import { SystemPrompts } from "../../prompts.js";
+import { usageFromLlm } from "../../shared/usage.js";
+import { callLlm } from "../../tools/openclaw.js";
+import type { GraphStateValue } from "../types.js";
+
+export const claudeCoder = async (state: GraphStateValue) => {
+    const result = await callLlm(
+        ModelRole.CODER,
+        SystemPrompts.claudeCoder,
+        [
+            `Spec:\n${state.architectureSpec}`,
+            `Critiques to fix:\n${state.debateSummary || "None"}`,
+            state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
+        ].filter(Boolean).join("\n\n"),
+    );
+
+    return {
+        currentDraft: result.content,
+        totalCost: result.cost,
+        totalTokens: result.tokens,
+        usageStats: { [UsageKey.CODER]: usageFromLlm(result) },
+    };
+};

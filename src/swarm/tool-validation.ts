@@ -1,0 +1,122 @@
+// ReAct step parsing + tool-argument validation: the network-free safety guards
+// that decide whether a planner-proposed action is allowed and well-formed before
+// any tool runs. Pinned by scripts/react-smoke.ts.
+import { ToolName } from "../constants.js";
+import { FailureType, WorkerKind } from "../enums.js";
+import { asRecord, extractJsonObject } from "../shared/json.js";
+import { clampInt, readString } from "../shared/text.js";
+import { SAFE_DIRECT_EXEC_COMMANDS, type OpenClawRpcArgs } from "../tools/openclaw.js";
+import { WORKER_TOOLS } from "./tool-catalog.js";
+
+const SHELL_EXEC_TIMEOUT_S = 120;
+
+export type ReactDecision =
+    | { kind: "act"; thought: string; tool: string; args: OpenClawRpcArgs }
+    | { kind: "final"; thought: string; final: string };
+
+export const parseReactDecision = (content: string): ReactDecision => {
+    const parsed = asRecord(extractJsonObject(content));
+    const thought = typeof parsed?.thought === "string" ? parsed.thought.trim() : "";
+    const action = asRecord(parsed?.action);
+    const tool = readString(action?.tool);
+    if (tool) {
+        const rawArgs = asRecord(action?.args);
+        return { kind: "act", thought, tool, args: (rawArgs ?? {}) as OpenClawRpcArgs };
+    }
+    const final = typeof parsed?.final === "string" ? parsed.final.trim() : "";
+    if (final) {
+        return { kind: "final", thought, final };
+    }
+    // No structured action and no `final`: treat the whole reply as the final
+    // summary so a stray prose response converges instead of looping the budget.
+    return { kind: "final", thought, final: content.trim() };
+};
+
+type SanitizedAction =
+    | { ok: true; args: OpenClawRpcArgs }
+    | { ok: false; error: string };
+
+export const sanitizeToolArgs = (
+    kind: WorkerKind,
+    tool: string,
+    rawArgs: OpenClawRpcArgs,
+): SanitizedAction => {
+    if (!WORKER_TOOLS[kind].includes(tool)) {
+        return { ok: false, error: `Tool "${tool}" is not available to ${kind}. Allowed: ${WORKER_TOOLS[kind].join(", ")}.` };
+    }
+
+    switch (tool) {
+        case ToolName.FIND_FILES: {
+            const pattern = readString(rawArgs.pattern) ?? "src/**/*.ts";
+            const path = readString(rawArgs.path) ?? ".";
+            const limit = clampInt(rawArgs.limit, 100, 1, 500);
+            return { ok: true, args: { path, pattern, limit } };
+        }
+        case ToolName.GREP_CODE: {
+            const pattern = readString(rawArgs.pattern) ?? readString(rawArgs.query);
+            if (!pattern) {
+                return { ok: false, error: 'grep_code requires a non-empty "pattern".' };
+            }
+            const path = readString(rawArgs.path) ?? ".";
+            const limit = clampInt(rawArgs.limit, 80, 1, 500);
+            return {
+                ok: true,
+                args: { path, pattern, ignoreCase: rawArgs.ignoreCase !== false, literal: rawArgs.literal === true, limit },
+            };
+        }
+        case ToolName.AST_READ: {
+            const path = readString(rawArgs.path) ?? readString(rawArgs.subtask);
+            if (!path) {
+                return { ok: false, error: 'ast_read requires a "path" to a file.' };
+            }
+            return { ok: true, args: { path } };
+        }
+        case ToolName.SHELL_EXEC: {
+            const command = readString(rawArgs.command);
+            if (!command) {
+                return { ok: false, error: 'shell_exec requires a "command".' };
+            }
+            if (!SAFE_DIRECT_EXEC_COMMANDS.has(command)) {
+                return {
+                    ok: false,
+                    error: `Command "${command}" is not allowlisted. Choose exactly one of: ${[...SAFE_DIRECT_EXEC_COMMANDS].join(" | ")}.`,
+                };
+            }
+            return { ok: true, args: { command, timeout: SHELL_EXEC_TIMEOUT_S } };
+        }
+        case ToolName.WEB_LOOKUP: {
+            const query = readString(rawArgs.query) ?? readString(rawArgs.subtask);
+            if (!query) {
+                return { ok: false, error: 'web_lookup requires a "query".' };
+            }
+            return { ok: true, args: { query } };
+        }
+        default:
+            return { ok: false, error: `Tool "${tool}" is not available to ${kind}.` };
+    }
+};
+
+// Classify a tool/planner error: environment problems (missing binary, perms,
+// gateway/timeout) need human resolution; everything else is a recoverable
+// reasoning error the worker can retry.
+export const classifyFailure = (errorMessage: string): FailureType => {
+    const normalized = errorMessage.toLowerCase();
+    if (
+        normalized.includes("not available")
+        || normalized.includes("not found")
+        || normalized.includes("unauthorized")
+        || normalized.includes("permission")
+        || normalized.includes("gateway")
+        || normalized.includes("timeout")
+    ) {
+        return FailureType.ENVIRONMENT;
+    }
+    return FailureType.REASONING;
+};
+
+export const readExitCode = (value: unknown): number | undefined => {
+    const record = asRecord(value);
+    const details = asRecord(record?.details);
+    const exitCode = details?.exitCode ?? record?.exitCode;
+    return typeof exitCode === "number" && Number.isFinite(exitCode) ? exitCode : undefined;
+};

@@ -1,0 +1,111 @@
+// LLM client: builds the provider-aware OpenClaw chat-completion payload for a
+// cost-cascade role, calls the Gateway, and returns content + cost telemetry.
+import { ModelRole } from "../constants.js";
+import type { LlmUsage } from "../shared/usage.js";
+import { OpenClawError } from "./errors.js";
+import { jsonPost } from "./http.js";
+import { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID, modelForRole } from "./models.js";
+import { calculateUsage, loadPricing, type ProviderUsage } from "./pricing.js";
+import type { JsonObject } from "./types.js";
+
+type ChatCompletionResponse = {
+    choices?: Array<{ message?: { content?: unknown } }>;
+    usage?: ProviderUsage;
+};
+
+export type LlmCallResult = LlmUsage & { content: string };
+
+export type LlmCallOptions = {
+    maxTokens?: number;
+    reasoningEffort?: "low" | "medium" | "high" | "xhigh" | "max";
+    responseFormat?: "json_object";
+    thinking?: "adaptive" | "enabled" | "disabled";
+};
+
+// Flatten a chat message content (string or content-part array) to plain text.
+const contentToString = (content: unknown): string => {
+    if (typeof content === "string") {
+        return content;
+    }
+    if (Array.isArray(content)) {
+        return content
+            .map((part) => {
+                if (typeof part === "string") {
+                    return part;
+                }
+                if (part && typeof part === "object" && "text" in part && typeof part.text === "string") {
+                    return part.text;
+                }
+                return "";
+            })
+            .filter(Boolean)
+            .join("\n");
+    }
+    return content === null || content === undefined ? "" : String(content);
+};
+
+export const callLlm = async (
+    role: ModelRole,
+    system: string,
+    user: string,
+    options: LlmCallOptions = {},
+): Promise<LlmCallResult> => {
+    const { modelRef, provider, temperature } = modelForRole(role);
+    // Anthropic adaptive thinking must route through the strong-reasoning agent so
+    // OpenClaw's adaptive-thinking default reaches the provider runtime.
+    const agentId = provider === "anthropic" && options.thinking === "adaptive"
+        ? STRONG_REASONING_AGENT_ID
+        : undefined;
+    const body: JsonObject = {
+        model: agentId ? `openclaw/${agentId}` : DEFAULT_OPENCLAW_MODEL,
+        messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+        ],
+        stream: false,
+        user: `ai-agents-assitant:${role}`,
+    };
+
+    if (temperature !== undefined) {
+        body.temperature = temperature;
+    }
+    if (options.maxTokens !== undefined) {
+        body.max_tokens = options.maxTokens;
+    }
+    if (options.responseFormat !== undefined) {
+        body.response_format = { type: options.responseFormat };
+    }
+
+    if (provider === "anthropic") {
+        // Anthropic uses `thinking` + `output_config.effort`, not OpenAI's
+        // `reasoning_effort`. Effort only applies when thinking is on.
+        if (options.thinking !== undefined) {
+            body.thinking = { type: options.thinking };
+        }
+        if (options.thinking !== undefined && options.thinking !== "disabled" && options.reasoningEffort !== undefined) {
+            body.output_config = { effort: options.reasoningEffort };
+        }
+    } else {
+        if (options.reasoningEffort !== undefined) {
+            body.reasoning_effort = options.reasoningEffort;
+        }
+        if (options.thinking !== undefined) {
+            body.thinking = { type: options.thinking === "adaptive" ? "enabled" : options.thinking };
+        }
+    }
+
+    const headers: Record<string, string> = { "x-openclaw-model": modelRef };
+    if (agentId) {
+        headers["x-openclaw-agent-id"] = agentId;
+    }
+
+    const response = await jsonPost<ChatCompletionResponse>("/v1/chat/completions", body, { timeoutS: 180, headers });
+
+    const content = contentToString(response.choices?.[0]?.message?.content);
+    if (!content) {
+        throw new OpenClawError(`OpenClaw returned an empty assistant message for ${role} (${modelRef}).`);
+    }
+
+    const pricing = (await loadPricing())[modelRef];
+    return { content, ...calculateUsage(response.usage ?? {}, pricing) };
+};

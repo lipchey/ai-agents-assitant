@@ -1,18 +1,12 @@
 // Human-in-the-loop (HITL) channel for the Swarm sub-graph.
 //
-// Environment failures (missing binary, permissions, gateway/timeout) cannot be
-// fixed by another model pass — they need out-of-band human action. The swarm's
-// `humanGate` node now calls LangGraph `interrupt()` to pause for that action;
-// for the interrupt to actually pause (instead of throwing) the swarm must be
-// compiled with a checkpointer AND the caller must run a resume loop. This module
-// provides both the caller-side resume driver (`driveSwarmWithHitl`) and the
-// pluggable resolver that decides how each interrupt is answered.
-//
-// Availability is handled at the resolver, not the node: `humanGate` ALWAYS
-// interrupts, and the resolver decides whether a human answers (interactive TTY)
-// or the run degrades to the previous graceful-block behavior (auto-abort in
-// non-interactive environments). This keeps the swarm graph identical in both
-// modes.
+// Environment failures need out-of-band human action, so `humanGate` calls
+// `interrupt()`. For that to pause (not throw) the swarm must be compiled with a
+// checkpointer AND the caller must run a resume loop — this module provides the
+// caller-side driver (`driveSwarmWithHitl`) plus the pluggable resolver.
+// Availability is decided at the resolver, never the node: `humanGate` ALWAYS
+// interrupts, so the swarm graph is identical whether a human answers
+// (interactive TTY) or the run auto-aborts (headless).
 
 import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";

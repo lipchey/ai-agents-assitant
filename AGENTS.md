@@ -8,4 +8,5 @@ This file acts as a thin router. **All core project knowledge lives in `.agent/`
 ## Read first (same for every agent)
 - `.agent/memory.md` — The architecture of our LangGraph agent (Main Graph vs Swarm Sub-Graph) and the current state of the code.
 - `.agent/guidelines.md` — Working rules: strict TypeScript guidelines, LangGraph Annotation usage, and MEMORY AUTOMATION. **Follow every rule in it.**
+- `.agent/code-guidelines.md` — Project structure conventions: constants, shared helpers, module decomposition + barrels, typing, comments. **Follow when changing code.**
 - `.agent/tasks.md` — Currently open action items for building out the agent framework.
