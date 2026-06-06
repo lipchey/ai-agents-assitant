@@ -17,7 +17,8 @@ type ModelRole =
     | "firewall"
     | "frontier"
     | "router"
-    | "sme";
+    | "sme"
+    | "worker";
 
 type ModelProvider = "anthropic" | "deepseek" | "openai" | "unknown";
 
@@ -310,6 +311,11 @@ const modelForRole = (modelKey: string): ModelRouting => {
             return route("deepseek/deepseek-v4-pro", 0.2);
         case "firewall":
         case "router":
+        case "worker":
+            // Swarm-layer execution planning (lead delegation + ReAct workers) is
+            // deliberately cheap: tool selection is not deep reasoning, and the
+            // loop may issue many calls, so it runs on the cheapest flash model
+            // at temperature 0 for stable, repeatable tool decisions.
             return route("deepseek/deepseek-v4-flash", 0);
         default:
             return route("deepseek/deepseek-v4-flash", 0.2);
@@ -584,7 +590,12 @@ const readIntegerInRange = (value: unknown, fallback: number, min: number, max: 
     return Math.max(min, Math.min(max, Math.floor(value)));
 };
 
-const SAFE_DIRECT_EXEC_COMMANDS = new Set([
+// Single source of truth for the shell allowlist. Exported so the Swarm's
+// ReAct workers can both advertise the allowed commands to the planner model and
+// pre-validate a proposed command before paying for an `openclawRpc` round-trip.
+// The local exec adapter below re-checks against this set, so it remains the
+// authoritative guard regardless of caller behavior.
+export const SAFE_DIRECT_EXEC_COMMANDS = new Set([
     "git status --short",
     "npm run build",
     "npm run test",
@@ -608,7 +619,7 @@ const assertSafeDirectExecCommand = (tool: string, command: string): void => {
     }
 };
 
-const resolveWorkspacePath = (inputPath: string): string => {
+export const resolveWorkspacePath = (inputPath: string): string => {
     const workspaceRoot = process.cwd();
     const resolved = path.resolve(workspaceRoot, inputPath);
     const relative = path.relative(workspaceRoot, resolved);

@@ -6,7 +6,9 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck"
+    "test": "npm run typecheck",
+    "smoke:hitl": "tsx scripts/hitl-smoke.ts",
+    "smoke:react": "tsx scripts/react-smoke.ts"
   },
   "keywords": [],
   "author": "",

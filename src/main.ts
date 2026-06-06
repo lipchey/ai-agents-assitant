@@ -1,15 +1,18 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { WorkerKind, WorkerStatus } from "./enums.js";
+import { driveSwarmWithHitl, readHitlResolver, type HitlDrivableGraph } from "./hitl.js";
 import { SystemPrompts } from "./prompts.js";
-import { GraphState, type UsageBreakdown } from "./state.js";
+import { applyPatchBlocks, parsePatchBlocks, rollbackPatches } from "./patch.js";
+import { GraphState, SwarmWorkerState, type UsageBreakdown } from "./state.js";
 import { buildSwarm } from "./swarm.js";
 import { callLlm, openclawRpc, type LlmCallResult } from "./tools/openclaw.js";
 
 const MAX_DEBATE_ITERATIONS = 4;
 // Hard caps on the two reentrant cycles. The swarm runs once on the primary
 // route, so allowing 2 total context fetches permits exactly one debate-driven
-// refetch before we stop paying for redundant (and, for codeExplorer,
-// deterministic) tool runs plus an Opus architect pass each loop.
+// refetch before we stop paying for another LLM-planned swarm pass plus an Opus
+// architect pass each loop.
 const MAX_CONTEXT_FETCHES = 2;
 const MAX_VERIFY_ATTEMPTS = 2;
 const COST_BUDGET_SOFT_CEILING_RATIO = 0.95;
@@ -343,16 +346,27 @@ const directResponder = async (state: GraphStateValue) => {
     };
 };
 
-const swarmNode = async (state: GraphStateValue) => {
+type SwarmStateValue = typeof SwarmWorkerState.State;
+
+const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const swarm = buildSwarm();
     const subtask = buildSwarmSubtask(state);
-    const result = await swarm.invoke({
+    const initialInput = {
         subtask,
         workerKind: selectWorkerKind(subtask),
         status: WorkerStatus.PENDING,
         attempts: 0,
         escalationAttempts: 0,
-    });
+    };
+    // The swarm is checkpointed so `humanGate` can `interrupt()`. Drive it through
+    // the HITL resume loop: on an environment failure the resolver (interactive
+    // operator, or auto-abort when headless) decides retry-vs-abort and the swarm
+    // resumes accordingly.
+    const result = await driveSwarmWithHitl(
+        swarm as HitlDrivableGraph<typeof initialInput, SwarmStateValue>,
+        initialInput,
+        readHitlResolver(config),
+    );
     const fallbackSummary = [
         `Swarm finished with status: ${result.status ?? "unknown"}.`,
         result.escalationQuery ? `Escalation query: ${result.escalationQuery}` : "",
@@ -574,8 +588,60 @@ const verify = async (state: GraphStateValue) => {
     }
 };
 
+// Guarded autonomous file mutation. Sits between the debate/tiebreaker and
+// `verify` so verification tests the real mutated tree instead of the untouched
+// repo. No-op unless explicitly enabled, and only structured patch blocks are
+// ever written to disk; pristine contents are recorded for rollback in finalize.
+const applyPatches = async (state: GraphStateValue) => {
+    if (!state.patchApplicationEnabled || state.complexity === "pure_reasoning") {
+        return {};
+    }
+
+    const blocks = parsePatchBlocks(state.currentDraft || "");
+    if (blocks.length === 0) {
+        return { patchReport: "Patch application enabled but the draft contained no structured <<<PATCH>>> blocks; nothing written." };
+    }
+
+    // Files whose pristine state was already captured on an earlier pass (the
+    // verify/fix loop can re-enter this node) so we never overwrite a true
+    // pristine backup with already-patched content.
+    const alreadyHandled = new Set<string>([
+        ...Object.keys(state.patchBackups ?? {}),
+        ...(state.patchCreatedFiles ?? []),
+    ]);
+    const result = await applyPatchBlocks(blocks, alreadyHandled);
+
+    return {
+        patchApplied: state.patchApplied || result.applied.length > 0,
+        appliedFiles: result.applied,
+        patchBackups: result.newBackups,
+        patchCreatedFiles: result.created,
+        patchReport: result.report,
+    };
+};
+
 const finalize = async (state: GraphStateValue) => {
     const answer = state.bestDraft || state.currentDraft || state.architectureSpec || "";
+
+    // If we autonomously mutated the repo but verification ultimately failed,
+    // roll back to the pristine tree so a guarded run never leaves broken files
+    // behind. On success the changes are kept.
+    if (state.patchApplied && !state.verificationPassed) {
+        const rollbackReport = await rollbackPatches(state.patchBackups ?? {}, state.patchCreatedFiles ?? []);
+        return {
+            finalAnswer: answer,
+            patchReport: `${state.patchReport ?? ""}\nVerification failed; reverted applied changes. ${rollbackReport}`.trim(),
+        };
+    }
+
+    if (state.patchApplied) {
+        const kept = [...new Set(state.appliedFiles ?? [])];
+        return {
+            finalAnswer: answer,
+            patchReport: `${state.patchReport ?? ""}\nVerification passed; kept ${kept.length} applied file(s): ${kept.join(", ")}.`.trim(),
+        };
+    }
+
     return { finalAnswer: answer };
 };
 
@@ -611,16 +677,16 @@ const routeAfterClaudeArchitect = (state: GraphStateValue): string => {
 
 const routeDebate = (state: GraphStateValue): string => {
     if (isCostBudgetNear(state)) {
-        return "verify";
+        return "applyPatches";
     }
     // Consensus wins over a late "needs more context" so we don't bounce back
     // into the swarm after the critic has already approved the draft.
     if (state.consensusReached) {
-        return "verify";
+        return "applyPatches";
     }
     // Only refetch context while under the hard cap. Without this, a critic that
     // keeps asking for more context loops swarm -> firewall -> architect(Opus)
-    // -> coder -> critic indefinitely (re-running deterministic tools), burning
+    // -> coder -> critic indefinitely (re-running the LLM-planned swarm), burning
     // frontier tokens and tripping the graph recursion limit before the USD
     // budget guard can stop later loops.
     if (
@@ -631,9 +697,9 @@ const routeDebate = (state: GraphStateValue): string => {
         return "swarm";
     }
     if (state.debateIterations >= MAX_DEBATE_ITERATIONS) {
-        return canSpendUsd(state, PROJECTED_SME_TIEBREAKER_USD) ? "smeTiebreaker" : "verify";
+        return canSpendUsd(state, PROJECTED_SME_TIEBREAKER_USD) ? "smeTiebreaker" : "applyPatches";
     }
-    return canSpendUsd(state, PROJECTED_CODER_REVIEW_CYCLE_USD) ? "claudeCoder" : "verify";
+    return canSpendUsd(state, PROJECTED_CODER_REVIEW_CYCLE_USD) ? "claudeCoder" : "applyPatches";
 };
 
 const routeAfterFrontierCritic = (state: GraphStateValue): string => {
@@ -669,6 +735,7 @@ export const buildMainGraph = () => {
         .addNode("frontierCritic", frontierCritic)
         .addNode("openaiCritic", openaiCritic)
         .addNode("smeTiebreaker", smeTiebreaker)
+        .addNode("applyPatches", applyPatches)
         .addNode("verify", verify)
         .addNode("finalize", finalize)
         .addEdge(START, "complexityRouter")
@@ -694,16 +761,17 @@ export const buildMainGraph = () => {
             claudeCoder: "claudeCoder",
             swarm: "swarm",
             smeTiebreaker: "smeTiebreaker",
-            verify: "verify",
+            applyPatches: "applyPatches",
             openaiCritic: "openaiCritic",
         })
         .addConditionalEdges("openaiCritic", routeDebate, {
             claudeCoder: "claudeCoder",
             swarm: "swarm",
             smeTiebreaker: "smeTiebreaker",
-            verify: "verify",
+            applyPatches: "applyPatches",
         })
-        .addEdge("smeTiebreaker", "verify")
+        .addEdge("smeTiebreaker", "applyPatches")
+        .addEdge("applyPatches", "verify")
         .addConditionalEdges("verify", routeAfterVerify, {
             finalize: "finalize",
             claudeCoder: "claudeCoder",

@@ -1,26 +1,35 @@
 # Project Tasks
 
-- [x] Initial scaffold of LangGraph architecture
-- [x] Typed Swarm and Graph states
-- [x] Connect LLM apis to `callLlm` function (MVP configured with Opus, GPT-5.5, DeepSeek)
-- [x] Implement robust `openclawRpc` wrapper
-- [x] Create entrypoint (`src/index.ts`) for graph execution
-- [x] Correct OpenClaw Gateway contract: `/v1/chat/completions`, `x-openclaw-model`, local Gateway lifecycle, and artifact storage
-- [x] Replace invalid OpenClaw tool mappings with actual Gateway `/tools/invoke` usage for `web_search` plus safe local pseudo-tool adapters for repo operations
-- [x] Adapt Main Graph to invoke the Swarm Sub-Graph with explicit state mapping instead of unsafe compiled-graph insertion
-- [x] Add objective verification through `npm run typecheck` and make `npm test` a real check
-- [x] Audit & harden control flow: bound the context-refetch loop (`MAX_CONTEXT_FETCHES`) and verify/fix loop (`MAX_VERIFY_ATTEMPTS`) to stop frontier-token burn and recursion-limit crashes
-- [x] Fix `humanGate` crash (`interrupt()` without a checkpointer) — block gracefully on environment failures
-- [x] Skip meaningless typecheck verification for `pure_reasoning`; guard `undefined` `compressedContext`; raise `recursionLimit` to preserve telemetry
-- [x] Add DeepSeek V4 Pro as a low-cost frontier architecture/critic layer before Opus/GPT escalation
-- [x] Refresh model pricing telemetry for Opus 4.8, GPT-5.5, DeepSeek V4 Pro, and DeepSeek V4 Flash
-- [x] Replace abstract `tokenBudget` with a real `costBudgetUsd` graph budget and USD-aware debate/refetch routing
-- [x] Make debate-driven context refetch targeted from `debateSummary`/latest critique and vary `codeExplorer` grep terms
-- [x] Account for cache-hit/cache-write input pricing in LLM telemetry for DeepSeek, Anthropic, and OpenAI usage fields
-- [x] Make Opus calls provider-aware: no temperature, adaptive thinking, Anthropic `output_config.effort`, and current OpenClaw `strong-reasoning` agent routing
-- [x] Finalize `pure_reasoning` tasks from reasoning roles instead of the coder prompt
-- [x] Cache `pricing.json` loading per process
-- [ ] Add guarded patch-application stage if the framework should mutate repository files autonomously instead of returning draft patches
-- [ ] Wire a real HITL channel (compile swarm with a checkpointer + caller resume loop) to restore `humanGate` interrupt-based escalation
-- [x] Author centralized per-agent system prompts in `src/prompts.ts` (environment, global goal, upstream/downstream data flow, tool boundaries, output contracts) for the 10 LLM-calling nodes; keep `system` strings constant for prompt caching and preserve existing JSON contracts
-- [ ] (Capability) Upgrade Swarm workers from fixed deterministic tool plans to LLM-planned ReAct-style agents: the lead delegator and `codeExplorer`/`infraOps`/`webResearcher` decide tools/paths/commands per step (read specific files, follow imports, refine searches), while keeping workspace-path bounds, command allowlists, no shell interpolation, per-worker call/loop caps, and artifact storage. Reuses the `src/prompts.ts` prompt layer.
+**Status (2026-06-06):** MVP complete; no active tasks. The granular change history
+lives in the `.agent/memory.md` Audit Logs (§5–§12). Completed work is grouped by
+theme below; remaining ideas are in the Backlog.
+
+## Completed milestones
+
+### Foundation & dual-graph
+- [x] Scaffold LangGraph dual-graph architecture; typed Swarm + Graph states.
+- [x] Wire LLM APIs through `callLlm`; robust `openclawRpc` wrapper; `src/index.ts` entrypoint.
+- [x] Correct OpenClaw Gateway contract (`/v1/chat/completions`, `x-openclaw-model`, lifecycle, artifacts); real `/tools/invoke` for `web_search` + safe local pseudo-tool adapters.
+- [x] Main graph invokes the Swarm sub-graph via explicit state mapping.
+
+### Control flow & safety
+- [x] Objective verification via `npm run typecheck`; real `npm test`.
+- [x] Bound the context-refetch (`MAX_CONTEXT_FETCHES`) and verify/fix (`MAX_VERIFY_ATTEMPTS`) loops.
+- [x] Fix `humanGate` crash; skip typecheck for `pure_reasoning`; guard undefined `compressedContext`; raise `recursionLimit`.
+- [x] Replace abstract `tokenBudget` with a real `costBudgetUsd` budget + USD-aware routing.
+- [x] Make debate-driven context refetch targeted from `debateSummary`/latest critique.
+
+### Model cost cascade & telemetry
+- [x] Add DeepSeek V4 Pro as the low-cost frontier architect/critic layer before Opus/GPT escalation.
+- [x] Refresh model pricing; account for cache-hit/miss/write input pricing in telemetry.
+- [x] Make Opus calls provider-aware (no temperature, adaptive thinking, effort, `strong-reasoning` routing).
+- [x] Finalize `pure_reasoning` from reasoning roles; cache `pricing.json` per process.
+
+### Autonomy, HITL & prompts
+- [x] Guarded, opt-in patch application (`applyPatches` + `src/patch.ts`).
+- [x] Real HITL channel (checkpointer + caller resume loop) restoring `humanGate` interrupt escalation.
+- [x] Centralized per-agent system prompts in `src/prompts.ts`.
+- [x] Upgrade Swarm workers + lead delegator to LLM-planned ReAct-style agents (per-step tool/path/command choice) while preserving workspace bounds, command allowlists, no shell interpolation, per-worker caps, and artifact storage.
+
+## Backlog (not scheduled)
+- [ ] MAIN-graph HITL: wire `interrupt()`-based approval for the reasoning layer (today only the swarm's environment-failure gate is wired).

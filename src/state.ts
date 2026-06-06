@@ -99,6 +99,32 @@ export const GraphState = Annotation.Root({
     criticEscalationReason: Annotation<string>,
     verificationPassed: Annotation<boolean>,
     verificationReport: Annotation<string>,
+
+    // Guarded patch-application stage. OFF by default; when enabled, the
+    // `applyPatches` node writes the coder's structured patch blocks to disk so
+    // `verify` tests the real mutated tree. `patchBackups`/`patchCreatedFiles`
+    // capture the pristine state for rollback if verification ultimately fails.
+    patchApplicationEnabled: Annotation<boolean>({
+        reducer: (_left, right) => right,
+        default: () => false,
+    }),
+    patchApplied: Annotation<boolean>({
+        reducer: (_left, right) => right,
+        default: () => false,
+    }),
+    appliedFiles: Annotation<string[]>({
+        reducer: concatArrays,
+        default: () => [],
+    }),
+    patchBackups: Annotation<Record<string, string>>({
+        reducer: mergeDicts,
+        default: () => ({}),
+    }),
+    patchCreatedFiles: Annotation<string[]>({
+        reducer: concatArrays,
+        default: () => [],
+    }),
+    patchReport: Annotation<string>,
     costBudgetUsd: Annotation<number>({
         reducer: (_left, right) => right,
         default: () => 1,

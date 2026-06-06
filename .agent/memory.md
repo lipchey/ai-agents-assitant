@@ -28,19 +28,20 @@ Handles high-level cognitive work without touching raw execution data.
   - `frontierCritic`: Performs the first critique using a rolling window of debate history (to save tokens).
   - `openaiCritic`: Runs only when the frontier critic or high-risk heuristics require strong-model review.
   - `smeTiebreaker`: Breaks the tie if a maximum debate loop count is reached without consensus.
+- **Guarded Patch Application (`applyPatches`):** Sits between the debate/tiebreaker and `verify`. OFF unless `patchApplicationEnabled` (env `AGENT_APPLY_PATCHES`). When on, it parses the coder's structured `<<<PATCH file="...">>> … <<<END PATCH>>>` blocks from `currentDraft` and writes the full file contents to disk so `verify` tests the real mutated tree. It is bounded to the workspace, refuses `.git`/`node_modules`, and records pristine backups (`patchBackups`/`patchCreatedFiles`). `finalize` keeps the changes when verification passed and rolls back to the pristine tree when it ultimately failed. When off it is a pure no-op.
 - **Objective Verification (`verify`):** Tests the finalized code. Consensus != Correctness. An objective gate is needed to test output.
 
 ### Execution Layer (Swarm Sub-Graph)
 Handles tool execution via the `OpenClaw` RPC bridge.
-- **Lead Delegator:** Classifies and routes subtasks to specialized worker agents.
-- **Specialized Workers:**
-  - `codeExplorer`: Uses safe local `rg` wrappers for file discovery and code grep, with raw outputs stored as artifacts. Debate-driven refetches now receive a targeted subtask built from `debateSummary`/latest critique, and `codeExplorer` derives a focused grep pattern from those critique terms instead of always repeating the default broad pattern.
-  - `infraOps`: Runs only allowlisted verification/build commands instead of executing natural-language user text.
-  - `webResearcher`: Uses the canonical OpenClaw `web_search` tool through the bridge.
+- **Lead Delegator:** An LLM classifier (cheap `worker` role → DeepSeek V4 Flash) chooses which worker handles the subtask, seeded by and falling back to the upstream `selectWorkerKind` heuristic. Runs once per swarm invocation.
+- **Specialized Workers (LLM-planned ReAct agents):** Each worker runs a bounded ReAct loop — the `worker`-role planner picks ONE tool per step, reads the real observation, and decides the next step (read specific files, follow imports, refine searches), up to `MAX_REACT_STEPS`. The safety envelope is enforced both at the worker (per-kind tool catalog `WORKER_TOOLS`, shell-allowlist pre-check, required-arg/limit validation in `sanitizeToolArgs`) and in the local OpenClaw adapters (workspace path bounds, exact command allowlist, no shell interpolation, artifact storage). Recoverable (reasoning) tool/validation errors are fed back in-loop, bounded by `MAX_REACT_TOOL_FAILURES`. See Audit Log §12.
+  - `codeExplorer`: tools `find_files` / `grep_code` / `ast_read`.
+  - `infraOps`: `shell_exec` (allowlisted) plus the read tools for inspection; a non-zero exit is reported as a finding, not a worker failure.
+  - `webResearcher`: `web_lookup` (→ OpenClaw `web_search`).
 - **SOS Escalation Protocol:** 
   - If a worker fails, it branches based on failure type.
-  - `reasoning` failures are escalated to an `smeOracle` powered by DeepSeek V4 Pro, which parses a condensed error essence and responds with advice. Control loops back to the worker.
-  - `environment` failures (permissions, missing binaries) are escalated to `humanGate` for manual Human-In-The-Loop resolution.
+  - `reasoning` failures are escalated to an `smeOracle` powered by DeepSeek V4 Pro, which parses a condensed error essence and responds with advice. Control loops back to the worker, which now consumes that advice (and any `humanGate` retry guidance) as escalation context in its next ReAct attempt.
+  - `environment` failures (permissions, missing binaries, gateway/timeout) escalate to `humanGate`, which calls LangGraph `interrupt()` for a real Human-In-The-Loop pause. The swarm is compiled with a `MemorySaver` checkpointer and the main-graph `swarmNode` runs the caller-side resume loop (`driveSwarmWithHitl` in `src/hitl.ts`). A pluggable `HitlResolver` answers each interrupt: an interactive stdin resolver prompts the operator (retry with guidance, or abort), and a non-interactive auto-abort resolver reproduces the previous graceful-block behavior. `humanGate` ALWAYS interrupts; availability is decided at the resolver, so the swarm graph is identical headless or interactive.
 - **Compressor (`workerCompress`):** Formats output structurally for the Firewall, preserving lossless raw outputs in an artifact store.
 
 ---
@@ -57,7 +58,8 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 
 - **MVP Reached:** The project has an executable LangGraph `src/index.ts` entrypoint that ensures OpenClaw Gateway readiness, invokes the full graph, and reports final telemetry.
 - **Validated locally:** `npx tsc --noEmit`, `npm test`, OpenClaw config validation, and a local `openclawRpc("run_tests")` smoke test pass. Full live end-to-end model execution still depends on valid provider credentials and a reachable OpenClaw Gateway/runtime.
-- **Open implementation gap:** The debate loop now produces corrected drafts and runs objective typecheck verification, but it still does not apply generated code patches automatically. If true autonomous file mutation is required, add a guarded patch-application stage with review/verification gates.
+- **Patch application (guarded, opt-in):** The debate loop can now mutate repository files autonomously through the `applyPatches` node (see Audit Log 2026-06-06 below). It is OFF by default; when off, behavior is unchanged except for one no-op node in the path.
+- **HITL channel (wired):** The swarm's `humanGate` now uses real `interrupt()`-based escalation (checkpointer + caller resume loop, see Audit Log §11). The remaining related gap is on the MAIN graph: its own HITL escalation (e.g. interrupting the reasoning layer for approval) is not wired — only the swarm's environment-failure gate is. Swarm workers are now LLM-planned ReAct agents (Audit Log §12) that consume `smeOracle`/`humanGate` guidance as escalation context on retry, so the previous "deterministic tool plan" gap is closed.
 
 ---
 
@@ -132,3 +134,53 @@ Senior audit of the dual-graph framework. Architecture matches the design (cheap
 **Cache-friendly.** `system` strings are constants; all task/state-specific content stays in the `user` message, so the stable system prefix is prompt-cacheable across repeated same-role calls (debate/verify loops). JSON output contracts were preserved byte-for-byte so the existing parsers (`parseRouterDecision`, `parseFrontierArchitectureDecision`, `parseFrontierCriticDecision`, `parseCriticDecision`) keep working.
 
 **Validated locally:** `npx tsc --noEmit` and `npm test` pass after these changes.
+
+---
+
+## 10. Audit Log (2026-06-06) — guarded autonomous patch application
+
+**CHANGED — Added `src/patch.ts` + the `applyPatches` main-graph node.** The framework can now mutate repository files autonomously instead of only returning draft patches, behind hard guards:
+- **Opt-in.** Disabled unless `AGENT_APPLY_PATCHES` is truthy (read in `src/index.ts`, passed as `GraphState.patchApplicationEnabled`). When disabled, `applyPatches` is a no-op and end-to-end behavior is unchanged apart from one extra no-op super-step before `verify`.
+- **Structured-only.** Only explicitly delimited `<<<PATCH file="rel/path">>> …full file… <<<END PATCH>>>` blocks are written; free-form prose in the draft never touches disk. `claudeCoder`'s prompt now specifies this format (full file contents, not unified diffs). Later blocks for the same path win.
+- **Bounded.** Every target is resolved through the now-exported `resolveWorkspacePath` (workspace escape refused) and `.git`/`node_modules` segments are refused.
+- **Reversible.** Pristine pre-run contents are captured in `patchBackups`; newly created files are tracked in `patchCreatedFiles`. The verify/fix retry loop re-enters `applyPatches` without overwriting the original backups (uses an `alreadyHandled` set). `finalize` keeps changes when `verificationPassed`, otherwise rolls back (restore backed-up files, delete created files).
+
+**Flow change.** `routeDebate`, `routeAfterFrontierCritic`, the `openaiCritic` route, and the `smeTiebreaker` edge now target `applyPatches` instead of `verify`; `applyPatches → verify` is a plain edge. `pure_reasoning` never reaches this node (it finalizes from the architects).
+
+**New state fields:** `patchApplicationEnabled`, `patchApplied`, `appliedFiles`, `patchBackups`, `patchCreatedFiles`, `patchReport`. `src/index.ts` prints a `PATCH APPLICATION` report section when present.
+
+**Validated locally:** `npx tsc --noEmit` / `npm test` pass, plus a parse→apply→rollback smoke test confirming workspace-escape and `.git` blocks are skipped, content is written, backups restore originals, and created files are deleted on rollback.
+
+---
+
+## 11. Audit Log (2026-06-06) — real HITL channel (interrupt + checkpointer + resume loop)
+
+**CHANGED — `humanGate` now interrupts instead of blocking.** Restored interrupt-based escalation for swarm `environment` failures. `humanGate` builds a JSON-serializable `HitlInterruptPayload` (failure type, worker kind, subtask, reason, escalation attempt) and calls `interrupt(payload)`. On resume it reads a `HitlResolution`: `abort` → `WorkerStatus.BLOCKED` with the actionable detail (the exact prior graceful-block behavior); `retry` → `WorkerStatus.WORKING` + the human's guidance as `escalationResponse`, routing back through `routeAfterHuman` to the worker. The retry path is bounded by the existing `MAX_ESCALATION_ATTEMPTS`, so `humanGate` can interrupt at most twice per swarm run.
+
+**CHANGED — swarm compiled with a checkpointer.** `buildSwarm()` now compiles with `new MemorySaver()` so `interrupt()` pauses instead of throwing. Each `swarmNode` call builds a fresh swarm + fresh `thread_id`, so checkpoints never leak between runs or between the debate-driven refetches.
+
+**ADDED — `src/hitl.ts` (caller-side channel).** `driveSwarmWithHitl(graph, input, resolver, opts)` is the resume loop: invoke with a `thread_id`; while `isInterrupted(result)`, ask the resolver and resume with `new Command({ resume })`; force a final abort if still paused after a defensive round cap. Resolvers: `autoAbortResolver` (headless default), `createStdinHitlResolver()` (interactive terminal prompt; auto-falls back to abort when stdin is not a TTY). `readHitlResolver(config)` pulls the resolver from `config.configurable.hitlResolver`.
+
+**CHANGED — caller wiring.** `swarmNode(state, config)` now reads the resolver from config and drives the swarm via `driveSwarmWithHitl`. `src/index.ts` builds the resolver (interactive by default; `AGENT_HITL` falsey forces auto-abort) and passes it through `graph.invoke(..., { configurable: { hitlResolver } })` — NOT through graph state, so the non-serializable function never enters a checkpoint.
+
+**Design note.** Availability is handled at the resolver, never at the node. `humanGate` always interrupts; the swarm graph topology is byte-identical headless vs interactive. This keeps the failure detail flowing to the firewall in both modes.
+
+**Validated locally:** `npx tsc --noEmit` / `npm test` pass, plus `scripts/hitl-smoke.ts` (run: `npx tsx scripts/hitl-smoke.ts`) — a real `SwarmWorkerState` graph using the real `humanGate` + real `MemorySaver`/`interrupt()`/`Command` confirms: (1) auto-abort → `BLOCKED` with the failure detail propagated; (2) retry → interrupt payload surfaced to the resolver, guidance threaded to the worker, worker recovers to `DONE`.
+
+---
+
+## 12. Audit Log (2026-06-06) — LLM-planned ReAct swarm workers
+
+**CHANGED — Swarm workers are now bounded ReAct agents instead of fixed tool plans.** `src/swarm.ts` replaced the deterministic `WorkerToolPlan[]` runners (`runWorkerPlan` + hard-coded `find_files`+`grep_code` / single allowlisted `shell_exec` / single `web_lookup`, plus the swarm-side grep-pattern derivation helpers) with a generic `runReactWorker`. Each worker's `worker`-role planner (DeepSeek V4 Flash, JSON mode, temp 0) chooses ONE tool per step, reads the real observation, and decides the next step — so `codeExplorer` can read specific files and follow imports, `infraOps` can inspect before/after a command, and `webResearcher` can refine queries. Bounded by `MAX_REACT_STEPS=6` and `MAX_REACT_TOOL_FAILURES=3`.
+
+**CHANGED — Lead delegator is LLM-driven.** The swarm `leadDelegator` node now calls the `worker` role to classify the subtask into a `WorkerKind`, seeded by and falling back to the upstream `selectWorkerKind` heuristic. Runs once per swarm invocation; escalation routes still return to the worker, not the delegator.
+
+**Safety envelope preserved (defense in depth).** Per-worker tool catalogs (`WORKER_TOOLS`), shell-allowlist pre-checks (now sourced from the exported `SAFE_DIRECT_EXEC_COMMANDS`), and required-arg/limit validation live in `sanitizeToolArgs`; the local OpenClaw adapters remain the authoritative guard for workspace path bounds, the exact command allowlist, no-shell-interpolation, and artifact storage. An out-of-scope tool or bad args returns a recoverable error observation (counted against the failure cap), not a crash.
+
+**Escalation guidance is now consumed.** A worker re-entering after `smeOracle` (reasoning) or `humanGate` (environment retry) reads `escalationResponse` + the prior `rawToolOutput` transcript into its ReAct context, closing the previously-open gap where retries needed an out-of-band fix. Environment failures still break the loop → `humanGate`; a stuck worker (no final, no successful tool call, or repeated failures) → `smeOracle`; both bounded by `MAX_ESCALATION_ATTEMPTS`. A planner-call failure (gateway/timeout) escalates by failure type instead of crashing the run.
+
+**Telemetry.** Each worker records its planner LLM spend under `codeExplorer`/`infraOps`/`webResearcher`, and the delegator under `leadDelegator`, in `usageStats`. A new `worker` model role maps to DeepSeek V4 Flash (temp 0) in `modelForRole`.
+
+**New prompts.** `src/prompts.ts` adds a `WORKER_CORE` base (the ReAct loop protocol + safety rules — explicitly NOT carrying CORE's "you cannot call tools" rule) and four constant, cache-friendly prompts: `leadDelegator`, `codeExplorer`, `infraOps`, `webResearcher`.
+
+**Validated locally:** `npx tsc --noEmit` / `npm test` pass; the HITL smoke test still passes (humanGate + escalation routing intact); and `scripts/react-smoke.ts` (`npm run smoke:react`) pins the guards — per-worker tool restriction, shell-allowlist refusal of non-allowlisted/interpolated commands, required-arg rejection, limit clamping, and `parseReactDecision` act/final/prose-fallback. Full live end-to-end execution still depends on provider credentials and a reachable Gateway.
