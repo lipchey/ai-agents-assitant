@@ -13,11 +13,11 @@ import {
     ThinkingMode,
     TOOL_TIMEOUT_S,
     ToolName,
-    WorkerKind,
+    type WorkerKind,
     WorkerStatus,
-    WORKER_PROMPTS,
     WORKER_USAGE_KEY,
 } from "../consts";
+import { WORKER_PROMPTS } from "../prompts";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate, emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared";
 import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools";
 import type { ToolCallRecord } from "../types/state";

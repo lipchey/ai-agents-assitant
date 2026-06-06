@@ -1,5 +1,5 @@
 /* Network-free guard layer before any planner-proposed tool call runs. */
-import { ToolName, FailureType, ReactDecisionKind, SAFE_DIRECT_EXEC_COMMANDS, SHELL_EXEC_TIMEOUT_S, WorkerKind, WORKER_TOOLS } from "../consts";
+import { ToolName, FailureType, ReactDecisionKind, SAFE_DIRECT_EXEC_COMMANDS, SHELL_EXEC_TIMEOUT_S, type WorkerKind, WORKER_TOOLS } from "../consts";
 import { asRecord, extractJsonObject, clampInt, readString } from "../shared";
 import type { OpenClawRpcArgs } from "../tools";
 import type { ReactDecision, SanitizedAction } from "../types/swarm";

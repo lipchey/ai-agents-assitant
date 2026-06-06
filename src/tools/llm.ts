@@ -1,7 +1,7 @@
-import { ChatRole, ModelProvider, OpenClawControl, ThinkingMode } from "../consts";
+import { ChatRole, DEFAULT_OPENCLAW_MODEL, ModelProvider, OpenClawControl, STRONG_REASONING_AGENT_ID, ThinkingMode } from "../consts";
 import { OpenClawError } from "./errors.ts";
 import { jsonPost } from "./http.ts";
-import { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID, modelForRole } from "./models.ts";
+import { modelForRole } from "./models.ts";
 import { calculateUsage, loadPricing } from "./pricing.ts";
 import type { ModelRole } from "../consts";
 import type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "../types/tools";

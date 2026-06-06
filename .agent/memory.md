@@ -75,7 +75,7 @@ Flow:
   `firewall`; raw observations are stored as artifacts and referenced by index.
 
 Worker safety envelope: `MAX_REACT_STEPS = 6`, `MAX_REACT_TOOL_FAILURES = 3`;
-per-worker tool catalogs in `src/swarm/tool-catalog.ts`; `sanitizeToolArgs()`
+per-worker tool catalogs (`WORKER_TOOLS`) in `src/consts/worker.ts`; `sanitizeToolArgs()`
 validates args and pre-checks shell commands. Local OpenClaw adapters remain the
 authoritative guard for workspace path bounds, exact command allowlist, no shell
 interpolation, timeouts, and artifact storage. Non-zero shell exits are evidence,
@@ -212,3 +212,12 @@ omitted patch-format retries. Checked `src/graph/*`, `src/state/*`,
 `src/swarm/*`, `src/tools/*`, `src/patching/*`, `src/hitl/*`, `src/index.ts`,
 `src/main.ts`, and `package.json`. Companion cleanup reduced `.agent/tasks.md`
 to active tasks and backlog only.
+
+Consistency refactor (same day): `WORKER_PROMPTS` moved to `src/prompts/`
+(removing the `consts -> prompts` import inversion); the empty
+`src/swarm/tool-catalog.ts` and duplicate `src/tools/openclaw.ts` barrels were
+deleted; runtime-constant re-exports were removed from implementation modules so
+each constant is imported from `src/consts/*` on one path only (barrels may still
+re-export a constant when it is part of the public surface, e.g.
+`HITL_RESOLVER_CONFIG_KEY` through `src/hitl/`). `.env.example` now lists every
+`EnvVar` the app reads.

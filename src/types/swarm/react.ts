@@ -1,4 +1,4 @@
-import { ReactDecisionKind } from "../../consts";
+import type { ReactDecisionKind } from "../../consts";
 import type { OpenClawRpcArgs } from "../tools";
 
 export type ReactDecision =

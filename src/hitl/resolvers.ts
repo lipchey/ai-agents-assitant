@@ -5,8 +5,6 @@ import { createInterface } from "node:readline/promises";
 import { HITL_RESOLVER_CONFIG_KEY, HitlResolutionAction } from "../consts";
 import type { HitlResolver } from "../types/hitl";
 
-export { HITL_RESOLVER_CONFIG_KEY } from "../consts";
-
 export const autoAbortResolver: HitlResolver = async () => ({ action: HitlResolutionAction.ABORT });
 
 /* Non-TTY runs must never hang waiting for operator input. */

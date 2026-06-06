@@ -92,7 +92,6 @@ export {
     WEB_SEARCH_FALLBACK_COUNT_CAP,
     WEB_SEARCH_MAX_RESULTS,
 } from "./web.ts";
-export { WORKER_PROMPTS } from "./worker-prompts.ts";
 export {
     FailureType,
     ReactDecisionKind,

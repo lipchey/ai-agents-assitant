@@ -1,5 +1,5 @@
 import { Annotation } from "@langchain/langgraph";
-import { FailureType, WorkerKind, WorkerStatus } from "../consts";
+import type { FailureType, WorkerKind, WorkerStatus } from "../consts";
 import { mergeUsageStats, type UsageStats } from "../shared";
 import type { ToolCallRecord } from "../types/state";
 import { concatArrays, mergeDicts, sumNumbers } from "./reducers.ts";

@@ -5,7 +5,7 @@ import {
     TAVILY_SEARCH_DEPTH,
     ToolName,
 } from "../src/consts";
-import { openclawRpc } from "../src/tools/openclaw.ts";
+import { openclawRpc } from "../src/tools";
 
 type GatewayBody = { ok: boolean; result?: unknown; error?: { message?: string } };
 type Handler = (tool: string, args: Record<string, unknown>) => GatewayBody;

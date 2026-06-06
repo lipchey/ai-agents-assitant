@@ -1,6 +1,5 @@
 import type { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
-import { HITL_THREAD_CONFIG_KEY, HitlInterruptKind, HitlResolutionAction } from "../../consts";
-import type { FailureType, WorkerKind } from "../../consts";
+import type { FailureType, HITL_THREAD_CONFIG_KEY, HitlInterruptKind, HitlResolutionAction, WorkerKind } from "../../consts";
 
 export type HitlInterruptPayload = {
     kind: typeof HitlInterruptKind.ENVIRONMENT_FAILURE;

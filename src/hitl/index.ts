@@ -1,4 +1,5 @@
-export { autoAbortResolver, createStdinHitlResolver, HITL_RESOLVER_CONFIG_KEY, readHitlResolver } from "./resolvers.ts";
+export { HITL_RESOLVER_CONFIG_KEY } from "../consts";
+export { autoAbortResolver, createStdinHitlResolver, readHitlResolver } from "./resolvers.ts";
 export { driveSwarmWithHitl } from "./swarm-driver.ts";
 export type {
     HitlDrivableGraph,

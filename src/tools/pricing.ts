@@ -71,7 +71,7 @@ export const calculateUsage = (usage: ProviderUsage, pricing: ModelPricing | und
         return { tokens, cost: 0, inputTokens, outputTokens, cachedInputTokens, cacheMissInputTokens, cacheWriteInputTokens };
     }
 
-    let inputCost = 0;
+    let inputCost: number;
     if (deepSeekCacheHitTokens !== undefined || deepSeekCacheMissTokens !== undefined) {
         const hitTokens = deepSeekCacheHitTokens ?? 0;
         const missTokens = deepSeekCacheMissTokens ?? Math.max(0, promptTokens - hitTokens);

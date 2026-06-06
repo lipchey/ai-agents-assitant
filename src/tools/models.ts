@@ -3,8 +3,6 @@ import type { ModelRouting } from "../types/tools";
 
 export type { ModelProvider, ModelRouting } from "../types/tools";
 
-export { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID } from "../consts";
-
 export const providerForModel = (modelRef: string): ModelProvider => {
     const provider = modelRef.split("/", 1)[0];
     return provider === ModelProvider.ANTHROPIC || provider === ModelProvider.DEEPSEEK || provider === ModelProvider.OPENAI

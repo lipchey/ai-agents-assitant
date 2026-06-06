@@ -4,7 +4,6 @@ import path from "node:path";
 import {
     DEFAULT_GATEWAY_TOKEN,
     DEFAULT_GATEWAY_URL,
-    DEFAULT_TIMEOUT_S,
     EnvVar,
     GATEWAY_LOG_MAX_CHARS,
     GATEWAY_PROBE_TIMEOUT_MS,
@@ -14,8 +13,6 @@ import {
     STARTUP_TIMEOUT_MS,
 } from "../consts";
 import { OpenClawError } from "./errors.ts";
-
-export { DEFAULT_TIMEOUT_S } from "../consts";
 
 export const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

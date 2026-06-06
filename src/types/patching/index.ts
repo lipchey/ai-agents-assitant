@@ -1,4 +1,4 @@
-import { OriginalReadKind } from "../../consts";
+import type { OriginalReadKind } from "../../consts";
 
 export type PatchBlock = {
     path: string;

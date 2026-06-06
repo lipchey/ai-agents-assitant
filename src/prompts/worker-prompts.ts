@@ -1,3 +1,4 @@
+import { WorkerKind } from "../consts";
 import { worker } from "./core.ts";
 
 export const workerPrompts = {
@@ -38,3 +39,9 @@ export const workerPrompts = {
         "search first.",
     ].join("\n")),
 } as const;
+
+export const WORKER_PROMPTS: Record<WorkerKind, string> = {
+    [WorkerKind.CODE_EXPLORER]: workerPrompts.codeExplorer,
+    [WorkerKind.INFRA_OPS]: workerPrompts.infraOps,
+    [WorkerKind.WEB_RESEARCHER]: workerPrompts.webResearcher,
+};

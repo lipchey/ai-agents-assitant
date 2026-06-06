@@ -19,8 +19,6 @@ import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/t
 import { OpenClawError } from "./errors.ts";
 import { resolveWorkspacePath } from "./workspace.ts";
 
-export { SAFE_DIRECT_EXEC_COMMANDS } from "../consts";
-
 function assertSafeDirectExecCommand(tool: string, command: string): asserts command is SafeDirectExecCommand {
     if (!isSafeDirectExecCommand(command)) {
         throw new OpenClawError(`${tool} rejected unsafe command. Use an allowlisted verification command or add a guarded approval flow.`);

@@ -60,7 +60,7 @@ never re-list those fields inline.
   (`tools/openclaw.ts`, `main.ts`, `swarm.ts`) are split by concern:
   `tools/*` (gateway, http, models, pricing, llm, local-tools, web-search,
   artifacts, rpc), `graph/*` (budget, escalation, parsers, context-terms,
-  `nodes/<node>.ts`, routing, build), `swarm/*` (tool-catalog, tool-validation,
+  `nodes/<node>.ts`, routing, build), `swarm/*` (tool-validation,
   react-worker, nodes, routing, build), `state/*`, `prompts/*`, `cli/*`.
 - The root of `src/` is reserved for:
   - executable entrypoint (`main.ts`);

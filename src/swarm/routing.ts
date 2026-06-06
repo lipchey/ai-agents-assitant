@@ -8,8 +8,6 @@ import {
 } from "../consts";
 import type { SwarmWorkerStateValue } from "../state";
 
-export { MAX_ESCALATION_ATTEMPTS } from "../consts";
-
 export const delegateToWorker = (state: SwarmWorkerStateValue): string =>
     WORKER_NODE[state.workerKind] ?? SwarmNode.CODE_EXPLORER;
 
