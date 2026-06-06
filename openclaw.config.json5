@@ -23,6 +23,7 @@
         "anthropic/claude-opus-4-8": { alias: "Opus" },
         "anthropic/claude-sonnet-4-6": { alias: "Sonnet" },
         "openai/gpt-5.5": { alias: "GPT Critic" },
+        "deepseek/deepseek-v4-pro": { alias: "DeepSeek Frontier" },
         "deepseek/deepseek-v4-flash": { alias: "DeepSeek Fast" },
       },
     },

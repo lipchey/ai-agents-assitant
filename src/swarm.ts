@@ -1,9 +1,11 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { FailureType, WorkerKind, WorkerStatus } from "./enums.js";
-import { SwarmWorkerState, type ToolCallRecord } from "./state.js";
-import { callLlm, openclawRpc, storeArtifact, type OpenClawRpcArgs } from "./tools/openclaw.js";
+import { SwarmWorkerState, type ToolCallRecord, type UsageBreakdown } from "./state.js";
+import { callLlm, openclawRpc, storeArtifact, type LlmCallResult, type OpenClawRpcArgs } from "./tools/openclaw.js";
 
 const MAX_ESCALATION_ATTEMPTS = 2;
+const DEFAULT_CODE_GREP_PATTERN = "OpenClaw|openclawRpc|callLlm|StateGraph|Annotation";
+const TARGETED_CONTEXT_MARKER = "Targeted context request";
 
 type WorkerState = typeof SwarmWorkerState.State;
 
@@ -11,6 +13,16 @@ type WorkerToolPlan = {
     tool: string;
     args: OpenClawRpcArgs;
 };
+
+const usageFromLlm = (result: LlmCallResult): UsageBreakdown => ({
+    cost: result.cost,
+    tokens: result.tokens,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+    cachedInputTokens: result.cachedInputTokens,
+    cacheMissInputTokens: result.cacheMissInputTokens,
+    cacheWriteInputTokens: result.cacheWriteInputTokens,
+});
 
 const stringifyToolResult = (value: unknown): string => {
     if (typeof value === "string") {
@@ -63,6 +75,79 @@ const parseInfraCommand = (subtask: string): string => {
     const explicit = /^(?:command|shell)\s*:\s*(.+)$/iu.exec(trimmed)?.[1]?.trim();
     const candidate = explicit ?? trimmed;
     return SAFE_INFRA_COMMANDS.has(candidate) ? candidate : "npm run typecheck";
+};
+
+const TARGETED_GREP_STOP_WORDS = new Set([
+    "avoid",
+    "broad",
+    "context",
+    "critique",
+    "debate",
+    "directly",
+    "evidence",
+    "focus",
+    "frontier",
+    "implementation",
+    "inventory",
+    "latest",
+    "missing",
+    "needed",
+    "original",
+    "repository",
+    "request",
+    "resolves",
+    "search",
+    "summary",
+    "targeted",
+    "terms",
+    "that",
+    "this",
+    "true",
+    "triggered",
+    "unless",
+]);
+
+const escapeRegex = (value: string): string => value.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
+
+const extractTargetedTerms = (subtask: string): string[] => {
+    const explicitTerms = /Search focus terms:\s*([^\n]+)/iu.exec(subtask)?.[1]
+        ?.split(",")
+        .map((term) => term.trim())
+        .filter(Boolean);
+    const candidates = explicitTerms && explicitTerms.length > 0
+        ? explicitTerms
+        : [...subtask.matchAll(/`([^`]{2,80})`|\b[A-Za-z][A-Za-z0-9_./-]{2,}\b/gu)].map((match) => match[1] ?? match[0]);
+    const uniqueTerms = new Map<string, number>();
+
+    for (const candidate of candidates) {
+        const normalized = candidate.replace(/^["'([{]+|["')\]}.,:;]+$/gu, "").trim();
+        const lower = normalized.toLowerCase();
+        if (
+            normalized.length < 3
+            || TARGETED_GREP_STOP_WORDS.has(lower)
+            || /^\d+$/u.test(normalized)
+        ) {
+            continue;
+        }
+        const score = (/[A-Z_./-]/u.test(normalized) ? 2 : 1) + Math.min(3, Math.floor(normalized.length / 12));
+        uniqueTerms.set(normalized, Math.max(uniqueTerms.get(normalized) ?? 0, score));
+    }
+
+    return [...uniqueTerms.entries()]
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+        .slice(0, 12)
+        .map(([term]) => term);
+};
+
+const buildCodeGrepPattern = (subtask: string): string => {
+    if (!subtask.includes(TARGETED_CONTEXT_MARKER)) {
+        return DEFAULT_CODE_GREP_PATTERN;
+    }
+    const terms = extractTargetedTerms(subtask);
+    if (terms.length === 0) {
+        return DEFAULT_CODE_GREP_PATTERN;
+    }
+    return terms.map(escapeRegex).join("|");
 };
 
 const leadDelegator = async (state: WorkerState) => {
@@ -125,6 +210,7 @@ const runWorkerPlan = async (state: WorkerState, plans: WorkerToolPlan[]) => {
 };
 
 const codeExplorer = (state: WorkerState) => {
+    const grepPattern = buildCodeGrepPattern(state.subtask);
     const plans: WorkerToolPlan[] = [
         {
             tool: "find_files",
@@ -134,7 +220,7 @@ const codeExplorer = (state: WorkerState) => {
             tool: "grep_code",
             args: {
                 path: ".",
-                pattern: "OpenClaw|openclawRpc|callLlm|StateGraph|Annotation",
+                pattern: grepPattern,
                 ignoreCase: false,
                 limit: 80,
             },
@@ -153,17 +239,18 @@ const webResearcher = (state: WorkerState) => {
 };
 
 const smeOracle = async (state: WorkerState) => {
-    const { content, cost, tokens } = await callLlm(
-        "sme",
+    const result = await callLlm(
+        "frontier",
         "You are a subject-matter expert. Return concise recovery advice for the worker.",
         state.escalationQuery,
+        { maxTokens: 900, reasoningEffort: "high", thinking: "enabled" },
     );
     return {
-        escalationResponse: content,
+        escalationResponse: result.content,
         escalationAttempts: (state.escalationAttempts ?? 0) + 1,
-        totalCost: cost,
-        totalTokens: tokens,
-        usageStats: { sme: { cost, tokens } },
+        totalCost: result.cost,
+        totalTokens: result.tokens,
+        usageStats: { frontierSme: usageFromLlm(result) },
     };
 };
 
@@ -183,7 +270,7 @@ const humanGate = (state: WorkerState) => {
 };
 
 const workerCompress = async (state: WorkerState) => {
-    const { content, cost, tokens } = await callLlm(
+    const result = await callLlm(
         "firewall",
         [
             "Summarize raw tool output for a reasoning model.",
@@ -191,12 +278,13 @@ const workerCompress = async (state: WorkerState) => {
             "Return compact JSON with keys: findings, evidence, risks, artifacts.",
         ].join(" "),
         state.rawToolOutput || JSON.stringify(state.toolCalls),
+        { maxTokens: 1_200, responseFormat: "json_object", thinking: "disabled" },
     );
     return {
-        workerSummary: content,
-        totalCost: cost,
-        totalTokens: tokens,
-        usageStats: { firewall: { cost, tokens } },
+        workerSummary: result.content,
+        totalCost: result.cost,
+        totalTokens: result.tokens,
+        usageStats: { firewall: usageFromLlm(result) },
     };
 };
 

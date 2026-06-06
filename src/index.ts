@@ -2,6 +2,13 @@ import "dotenv/config";
 import { buildMainGraph } from "./main.js";
 import { startOpenClawGateway, stopOpenClawGateway } from "./tools/openclaw.js";
 
+const DEFAULT_COST_BUDGET_USD = 1;
+
+const readCostBudgetUsd = (): number => {
+    const configured = Number(process.env.AGENT_COST_BUDGET_USD);
+    return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_COST_BUDGET_USD;
+};
+
 const run = async (): Promise<void> => {
     const task = process.argv.slice(2).join(" ").trim();
     if (!task) {
@@ -21,10 +28,11 @@ const run = async (): Promise<void> => {
 
     try {
         const graph = buildMainGraph();
+        const costBudgetUsd = readCostBudgetUsd();
         const finalState = await graph.invoke(
             {
                 originalTask: task,
-                tokenBudget: 100,
+                costBudgetUsd,
             },
             // Headroom above the worst-case bounded flow (~22 super-steps with the
             // context-fetch, debate, and verify caps) so a legitimate multi-cycle
@@ -39,9 +47,16 @@ const run = async (): Promise<void> => {
         console.log("\n=== TELEMETRY REPORT ===");
         console.log(`Total Tokens: ${finalState.totalTokens}`);
         console.log(`Total Cost: $${(finalState.totalCost || 0).toFixed(6)}`);
+        console.log(`Cost Budget: $${(finalState.costBudgetUsd || costBudgetUsd).toFixed(2)}`);
+        console.log(`Remaining Budget: $${Math.max(0, (finalState.costBudgetUsd || costBudgetUsd) - (finalState.totalCost || 0)).toFixed(6)}`);
         console.log("Breakdown by Role:");
         for (const [role, stats] of Object.entries(finalState.usageStats)) {
-            console.log(`  - ${role}: ${stats.tokens} tokens, $${stats.cost.toFixed(6)}`);
+            const cacheDetails = [
+                stats.cachedInputTokens ? `${stats.cachedInputTokens} cached input` : "",
+                stats.cacheMissInputTokens ? `${stats.cacheMissInputTokens} cache-miss input` : "",
+                stats.cacheWriteInputTokens ? `${stats.cacheWriteInputTokens} cache-write input` : "",
+            ].filter(Boolean).join(", ");
+            console.log(`  - ${role}: ${stats.tokens} tokens, $${stats.cost.toFixed(6)}${cacheDetails ? ` (${cacheDetails})` : ""}`);
         }
         console.log("========================");
     } catch (error) {

@@ -15,12 +15,18 @@ type ModelRole =
     | "coder"
     | "critic"
     | "firewall"
+    | "frontier"
     | "router"
     | "sme";
 
 type ModelPricing = {
     inputPer1M: number;
     outputPer1M: number;
+    inputCacheHitPer1M?: number;
+    inputCacheMissPer1M?: number;
+    inputCacheWritePer1M?: number;
+    inputCacheWrite5mPer1M?: number;
+    inputCacheWrite1hPer1M?: number;
 };
 
 type ChatCompletionResponse = {
@@ -35,6 +41,21 @@ type ChatCompletionResponse = {
         total_tokens?: number;
         input_tokens?: number;
         output_tokens?: number;
+        uncached_input_tokens?: number;
+        prompt_cache_hit_tokens?: number;
+        prompt_cache_miss_tokens?: number;
+        prompt_tokens_details?: {
+            cached_tokens?: number;
+        };
+        input_tokens_details?: {
+            cached_tokens?: number;
+        };
+        cache_read_input_tokens?: number;
+        cache_creation_input_tokens?: number;
+        cache_creation?: {
+            ephemeral_5m_input_tokens?: number;
+            ephemeral_1h_input_tokens?: number;
+        };
     };
 };
 
@@ -42,6 +63,18 @@ export type LlmCallResult = {
     content: string;
     tokens: number;
     cost: number;
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+    cacheMissInputTokens: number;
+    cacheWriteInputTokens: number;
+};
+
+export type LlmCallOptions = {
+    maxTokens?: number;
+    reasoningEffort?: "high" | "max";
+    responseFormat?: "json_object";
+    thinking?: "enabled" | "disabled";
 };
 
 export type OpenClawRpcArgs = JsonObject & {
@@ -247,6 +280,8 @@ const modelForRole = (modelKey: string): { modelRef: string; temperature: number
             return { modelRef: "anthropic/claude-sonnet-4-6", temperature: 0.2 };
         case "critic":
             return { modelRef: "openai/gpt-5.5", temperature: 0.1 };
+        case "frontier":
+            return { modelRef: "deepseek/deepseek-v4-pro", temperature: 0.2 };
         case "firewall":
         case "router":
             return { modelRef: "deepseek/deepseek-v4-flash", temperature: 0 };
@@ -326,25 +361,126 @@ const contentToString = (content: unknown): string => {
     return content === null || content === undefined ? "" : String(content);
 };
 
+const usageNumber = (value: unknown): number | undefined => {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+};
+
+const tokenCost = (tokens: number, per1M: number): number => {
+    return (tokens / 1_000_000) * per1M;
+};
+
+const calculateUsage = (
+    usage: NonNullable<ChatCompletionResponse["usage"]>,
+    pricing: ModelPricing | undefined,
+): Omit<LlmCallResult, "content"> => {
+    const deepSeekCacheHitTokens = usageNumber(usage.prompt_cache_hit_tokens);
+    const deepSeekCacheMissTokens = usageNumber(usage.prompt_cache_miss_tokens);
+    const openAiCachedInputTokens = usageNumber(usage.prompt_tokens_details?.cached_tokens)
+        ?? usageNumber(usage.input_tokens_details?.cached_tokens);
+    const anthropicCacheReadTokens = usageNumber(usage.cache_read_input_tokens);
+    const anthropicCacheWrite5mTokens = usageNumber(usage.cache_creation?.ephemeral_5m_input_tokens) ?? 0;
+    const anthropicCacheWrite1hTokens = usageNumber(usage.cache_creation?.ephemeral_1h_input_tokens) ?? 0;
+    const anthropicDetailedWriteTokens = anthropicCacheWrite5mTokens + anthropicCacheWrite1hTokens;
+    const anthropicFlatWriteTokens = usageNumber(usage.cache_creation_input_tokens) ?? 0;
+    const anthropicCacheWriteTokens = anthropicDetailedWriteTokens || anthropicFlatWriteTokens;
+    const hasAnthropicCacheUsage = anthropicCacheReadTokens !== undefined || anthropicCacheWriteTokens > 0;
+
+    const promptTokens = usageNumber(usage.prompt_tokens)
+        ?? usageNumber(usage.input_tokens)
+        ?? usageNumber(usage.uncached_input_tokens)
+        ?? (deepSeekCacheHitTokens ?? 0) + (deepSeekCacheMissTokens ?? 0);
+    const outputTokens = usageNumber(usage.completion_tokens) ?? usageNumber(usage.output_tokens) ?? 0;
+    const cachedInputTokens = deepSeekCacheHitTokens ?? openAiCachedInputTokens ?? anthropicCacheReadTokens ?? 0;
+    const cacheWriteInputTokens = hasAnthropicCacheUsage ? anthropicCacheWriteTokens : 0;
+    const cacheMissInputTokens = deepSeekCacheMissTokens
+        ?? (hasAnthropicCacheUsage ? promptTokens : Math.max(0, promptTokens - cachedInputTokens));
+    const inputTokens = hasAnthropicCacheUsage
+        ? promptTokens + cachedInputTokens + cacheWriteInputTokens
+        : promptTokens;
+    const computedTotalTokens = inputTokens + outputTokens;
+    const tokens = hasAnthropicCacheUsage
+        ? computedTotalTokens
+        : usageNumber(usage.total_tokens) ?? computedTotalTokens;
+
+    if (!pricing) {
+        return {
+            tokens,
+            cost: 0,
+            inputTokens,
+            outputTokens,
+            cachedInputTokens,
+            cacheMissInputTokens,
+            cacheWriteInputTokens,
+        };
+    }
+
+    let inputCost = 0;
+    if (deepSeekCacheHitTokens !== undefined || deepSeekCacheMissTokens !== undefined) {
+        const hitTokens = deepSeekCacheHitTokens ?? 0;
+        const missTokens = deepSeekCacheMissTokens ?? Math.max(0, promptTokens - hitTokens);
+        const unclassifiedTokens = Math.max(0, promptTokens - hitTokens - missTokens);
+        inputCost = tokenCost(hitTokens, pricing.inputCacheHitPer1M ?? pricing.inputPer1M)
+            + tokenCost(missTokens, pricing.inputCacheMissPer1M ?? pricing.inputPer1M)
+            + tokenCost(unclassifiedTokens, pricing.inputPer1M);
+    } else if (hasAnthropicCacheUsage) {
+        const flatWriteRemainderTokens = Math.max(0, anthropicFlatWriteTokens - anthropicDetailedWriteTokens);
+        inputCost = tokenCost(promptTokens, pricing.inputPer1M)
+            + tokenCost(cachedInputTokens, pricing.inputCacheHitPer1M ?? pricing.inputPer1M)
+            + tokenCost(anthropicCacheWrite5mTokens, pricing.inputCacheWrite5mPer1M ?? pricing.inputCacheWritePer1M ?? pricing.inputPer1M)
+            + tokenCost(anthropicCacheWrite1hTokens, pricing.inputCacheWrite1hPer1M ?? pricing.inputCacheWritePer1M ?? pricing.inputPer1M)
+            + tokenCost(flatWriteRemainderTokens, pricing.inputCacheWritePer1M ?? pricing.inputCacheWrite5mPer1M ?? pricing.inputPer1M);
+    } else if (cachedInputTokens > 0) {
+        inputCost = tokenCost(cachedInputTokens, pricing.inputCacheHitPer1M ?? pricing.inputPer1M)
+            + tokenCost(Math.max(0, promptTokens - cachedInputTokens), pricing.inputCacheMissPer1M ?? pricing.inputPer1M);
+    } else {
+        inputCost = tokenCost(promptTokens, pricing.inputPer1M);
+    }
+
+    return {
+        tokens,
+        cost: inputCost + tokenCost(outputTokens, pricing.outputPer1M),
+        inputTokens,
+        outputTokens,
+        cachedInputTokens,
+        cacheMissInputTokens,
+        cacheWriteInputTokens,
+    };
+};
+
 export const callLlm = async (
     modelKey: string,
     system: string,
     user: string,
+    options: LlmCallOptions = {},
 ): Promise<LlmCallResult> => {
     const { modelRef, temperature } = modelForRole(modelKey);
+    const body: JsonObject = {
+        model: "openclaw/default",
+        messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+        ],
+        temperature,
+        stream: false,
+        user: `ai-agents-assitant:${modelKey}`,
+    };
+
+    if (options.maxTokens !== undefined) {
+        body.max_tokens = options.maxTokens;
+    }
+    if (options.reasoningEffort !== undefined) {
+        body.reasoning_effort = options.reasoningEffort;
+    }
+    if (options.responseFormat !== undefined) {
+        body.response_format = { type: options.responseFormat };
+    }
+    if (options.thinking !== undefined) {
+        body.thinking = { type: options.thinking };
+    }
 
     const response = await jsonPost<ChatCompletionResponse>(
         "/v1/chat/completions",
-        {
-            model: "openclaw/default",
-            messages: [
-                { role: "system", content: system },
-                { role: "user", content: user },
-            ],
-            temperature,
-            stream: false,
-            user: `ai-agents-assitant:${modelKey}`,
-        },
+        body,
         {
             timeoutS: 180,
             headers: {
@@ -358,16 +494,10 @@ export const callLlm = async (
         throw new OpenClawError(`OpenClaw returned an empty assistant message for ${modelKey} (${modelRef}).`);
     }
 
-    const usage = response.usage ?? {};
-    const inputTokens = usage.prompt_tokens ?? usage.input_tokens ?? 0;
-    const outputTokens = usage.completion_tokens ?? usage.output_tokens ?? 0;
-    const totalTokens = usage.total_tokens ?? inputTokens + outputTokens;
     const pricing = (await loadPricing())[modelRef];
-    const cost = pricing
-        ? (inputTokens / 1_000_000) * pricing.inputPer1M + (outputTokens / 1_000_000) * pricing.outputPer1M
-        : 0;
+    const usage = calculateUsage(response.usage ?? {}, pricing);
 
-    return { content, tokens: totalTokens, cost };
+    return { content, ...usage };
 };
 
 const readString = (value: unknown): string | undefined => {

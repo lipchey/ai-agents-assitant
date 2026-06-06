@@ -12,5 +12,10 @@
 - [x] Audit & harden control flow: bound the context-refetch loop (`MAX_CONTEXT_FETCHES`) and verify/fix loop (`MAX_VERIFY_ATTEMPTS`) to stop frontier-token burn and recursion-limit crashes
 - [x] Fix `humanGate` crash (`interrupt()` without a checkpointer) — block gracefully on environment failures
 - [x] Skip meaningless typecheck verification for `pure_reasoning`; guard `undefined` `compressedContext`; raise `recursionLimit` to preserve telemetry
+- [x] Add DeepSeek V4 Pro as a low-cost frontier architecture/critic layer before Opus/GPT escalation
+- [x] Refresh model pricing telemetry for Opus 4.8, GPT-5.5, DeepSeek V4 Pro, and DeepSeek V4 Flash
+- [x] Replace abstract `tokenBudget` with a real `costBudgetUsd` graph budget and USD-aware debate/refetch routing
+- [x] Make debate-driven context refetch targeted from `debateSummary`/latest critique and vary `codeExplorer` grep terms
+- [x] Account for cache-hit/cache-write input pricing in LLM telemetry for DeepSeek, Anthropic, and OpenAI usage fields
 - [ ] Add guarded patch-application stage if the framework should mutate repository files autonomously instead of returning draft patches
 - [ ] Wire a real HITL channel (compile swarm with a checkpointer + caller resume loop) to restore `humanGate` interrupt-based escalation
