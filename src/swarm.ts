@@ -24,6 +24,11 @@ const MAX_REACT_TOOL_FAILURES = 3;
 const MAX_OBSERVATION_CHARS = 1_600;
 const MAX_PRIOR_TRANSCRIPT_CHARS = 8_000;
 const MAX_ACTION_SUMMARY_CHARS = 200;
+// Cap on the raw-transcript fallback used when a blocked worker has no
+// escalation query/response to summarize. Keeps the full glued transcript from
+// flowing through the firewall into the architect prompt on the rare path where
+// nothing structured was captured.
+const MAX_BLOCKED_FALLBACK_CHARS = 600;
 
 type WorkerState = typeof SwarmWorkerState.State;
 
@@ -455,26 +460,37 @@ const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
 // per swarm invocation; escalation routes go back to the worker, not here.
 const leadDelegator = async (state: WorkerState) => {
     const seededKind = state.workerKind ?? WorkerKind.CODE_EXPLORER;
-    const result = await callLlm(
-        "worker",
-        SystemPrompts.leadDelegator,
-        [
-            `Subtask:\n${state.subtask}`,
-            state.escalationResponse ? `Escalation guidance:\n${state.escalationResponse}` : "",
-            `Heuristic suggestion: ${seededKind}`,
-        ].filter(Boolean).join("\n\n"),
-        { maxTokens: 120, responseFormat: "json_object", thinking: "disabled" },
-    );
+    let selectedKind = seededKind;
+    let usage = emptyUsage();
+
+    try {
+        const result = await callLlm(
+            "worker",
+            SystemPrompts.leadDelegator,
+            [
+                `Subtask:\n${state.subtask}`,
+                state.escalationResponse ? `Escalation guidance:\n${state.escalationResponse}` : "",
+                `Heuristic suggestion: ${seededKind}`,
+            ].filter(Boolean).join("\n\n"),
+            { maxTokens: 120, responseFormat: "json_object", thinking: "disabled" },
+        );
+        selectedKind = parseWorkerKind(result.content, seededKind);
+        usage = usageFromLlm(result);
+    } catch {
+        // The upstream heuristic is intentionally supplied as a deterministic
+        // fallback, so a transient cheap-router/model failure should not abort a
+        // repository inspection that the selected worker can still perform.
+    }
 
     return {
-        workerKind: parseWorkerKind(result.content, seededKind),
+        workerKind: selectedKind,
         status: WorkerStatus.WORKING,
         attempts: state.attempts ?? 0,
         escalationAttempts: state.escalationAttempts ?? 0,
         failureType: FailureType.NONE,
-        totalCost: result.cost,
-        totalTokens: result.tokens,
-        usageStats: { leadDelegator: usageFromLlm(result) },
+        totalCost: usage.cost,
+        totalTokens: usage.tokens,
+        usageStats: { leadDelegator: usage },
     };
 };
 
@@ -584,6 +600,24 @@ const routeAfterHuman = (state: WorkerState): string => {
     return delegateToWorker(state);
 };
 
+const blocked = (state: WorkerState) => {
+    const failure = state.failureType ?? FailureType.UNKNOWN;
+    const reason = state.escalationQuery
+        || state.escalationResponse
+        || (state.rawToolOutput ? truncate(state.rawToolOutput, MAX_BLOCKED_FALLBACK_CHARS) : "")
+        || "worker stopped without a recoverable result";
+    const response = state.status === WorkerStatus.BLOCKED && state.escalationResponse
+        ? state.escalationResponse
+        : `Worker blocked after ${state.escalationAttempts ?? 0} escalation attempt(s) (${failure}): ${reason}`;
+
+    return {
+        status: WorkerStatus.BLOCKED,
+        failureType: failure,
+        escalationResponse: response,
+        workerSummary: response,
+    };
+};
+
 export const buildSwarm = () => {
     const graph = new StateGraph(SwarmWorkerState)
         .addNode("leadDelegator", leadDelegator)
@@ -593,6 +627,7 @@ export const buildSwarm = () => {
         .addNode("smeOracle", smeOracle)
         .addNode("humanGate", humanGate)
         .addNode("workerCompress", workerCompress)
+        .addNode("blocked", blocked)
         .addEdge(START, "leadDelegator")
         .addConditionalEdges("leadDelegator", delegateToWorker, {
             codeExplorer: "codeExplorer",
@@ -604,7 +639,7 @@ export const buildSwarm = () => {
         smeOracle: "smeOracle",
         humanGate: "humanGate",
         workerCompress: "workerCompress",
-        __blocked__: END,
+        __blocked__: "blocked",
     } as const;
 
     graph
@@ -616,13 +651,14 @@ export const buildSwarm = () => {
         codeExplorer: "codeExplorer",
         infraOps: "infraOps",
         webResearcher: "webResearcher",
-        __blocked__: END,
+        __blocked__: "blocked",
     } as const;
 
     graph
         .addConditionalEdges("smeOracle", routeAfterSme, workerTargets)
         .addConditionalEdges("humanGate", routeAfterHuman, workerTargets)
-        .addEdge("workerCompress", END);
+        .addEdge("workerCompress", END)
+        .addEdge("blocked", END);
 
     // A checkpointer is required for `humanGate`'s `interrupt()` to pause instead
     // of throw. Each `swarmNode` invocation builds a fresh swarm with its own

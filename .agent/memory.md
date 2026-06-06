@@ -184,3 +184,21 @@ Senior audit of the dual-graph framework. Architecture matches the design (cheap
 **New prompts.** `src/prompts.ts` adds a `WORKER_CORE` base (the ReAct loop protocol + safety rules — explicitly NOT carrying CORE's "you cannot call tools" rule) and four constant, cache-friendly prompts: `leadDelegator`, `codeExplorer`, `infraOps`, `webResearcher`.
 
 **Validated locally:** `npx tsc --noEmit` / `npm test` pass; the HITL smoke test still passes (humanGate + escalation routing intact); and `scripts/react-smoke.ts` (`npm run smoke:react`) pins the guards — per-worker tool restriction, shell-allowlist refusal of non-allowlisted/interpolated commands, required-arg rejection, limit clamping, and `parseReactDecision` act/final/prose-fallback. Full live end-to-end execution still depends on provider credentials and a reachable Gateway.
+
+---
+
+## 13. Audit Log (2026-06-06) — review hardening for patch/HITL/ReAct edge cases
+
+Critical review of changes after `f67704ff23a4f3218575efcd791c7e1df7b3db8e` found and fixed four edge cases:
+
+**FIXED — Patch application no longer verifies an unchanged tree.** When `AGENT_APPLY_PATCHES` is enabled but the coder emits no structured `<<<PATCH>>>` blocks, or all blocks are skipped by guards, `applyPatches` now sets `patchApplicationFailed`, records verification feedback, increments the bounded retry counter, and routes back to `claudeCoder` or finalizes after the cap. It does not run `npm run typecheck` against an unchanged repository and call that success a verified implementation.
+
+**FIXED — Patch writer fails closed on filesystem edge cases.** `src/patch.ts` now distinguishes missing files from unreadable targets (for example directory targets), reports guarded skips for read/write failures, and only records backups/created files after a successful write. Rollback remains scoped to workspace-resolved paths.
+
+**FIXED — Lead delegator fallback is real on model-call failure.** If the LLM delegator call throws, `leadDelegator` now uses the seeded heuristic worker kind instead of aborting the swarm before any deterministic worker can run.
+
+**FIXED — Exhausted swarm escalation ends as `BLOCKED`.** The swarm now routes exhausted escalation paths through an explicit `blocked` node so terminal state is `WorkerStatus.BLOCKED` with an actionable `workerSummary`/`escalationResponse`, not a stale `ESCALATING` state.
+
+**ADDED — Patch smoke coverage.** `scripts/patch-smoke.ts` and `npm run smoke:patch` cover safe apply, workspace/protected/read-failed skips, all-skipped reporting, and rollback.
+
+**Validated locally:** `npm run typecheck`, `npm test`, `npm run smoke:patch`, `npm run smoke:react`, and `npm run smoke:hitl` pass. The `tsx` smoke scripts require running outside the restricted sandbox in this Codex environment because the sandbox denies tsx's IPC pipe (`listen EPERM`).

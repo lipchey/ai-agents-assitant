@@ -59,11 +59,21 @@ export const parsePatchBlocks = (draft: string): PatchBlock[] => {
     return [...byPath.entries()].map(([targetPath, content]) => ({ path: targetPath, content }));
 };
 
-const readOriginal = async (resolved: string): Promise<string | null> => {
+type OriginalReadResult =
+    | { kind: "found"; content: string }
+    | { kind: "missing" }
+    | { kind: "error"; message: string };
+
+const readOriginal = async (resolved: string): Promise<OriginalReadResult> => {
     try {
-        return await fs.readFile(resolved, "utf8");
-    } catch {
-        return null;
+        return { kind: "found", content: await fs.readFile(resolved, "utf8") };
+    } catch (error) {
+        const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
+        if (code === "ENOENT") {
+            return { kind: "missing" };
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        return { kind: "error", message };
     }
 };
 
@@ -95,16 +105,27 @@ export const applyPatchBlocks = async (
         }
 
         const original = await readOriginal(resolved);
-        if (!alreadyHandled.has(relative)) {
-            if (original === null) {
-                created.push(relative);
-            } else {
-                newBackups[relative] = original;
-            }
+        if (original.kind === "error") {
+            skipped.push(`${block.path} (read failed: ${original.message})`);
+            continue;
         }
 
-        await fs.mkdir(path.dirname(resolved), { recursive: true });
-        await fs.writeFile(resolved, block.content, "utf8");
+        try {
+            await fs.mkdir(path.dirname(resolved), { recursive: true });
+            await fs.writeFile(resolved, block.content, "utf8");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            skipped.push(`${block.path} (write failed: ${message})`);
+            continue;
+        }
+
+        if (!alreadyHandled.has(relative)) {
+            if (original.kind === "missing") {
+                created.push(relative);
+            } else {
+                newBackups[relative] = original.content;
+            }
+        }
         applied.push(relative);
     }
 

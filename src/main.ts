@@ -15,6 +15,11 @@ const MAX_DEBATE_ITERATIONS = 4;
 // architect pass each loop.
 const MAX_CONTEXT_FETCHES = 2;
 const MAX_VERIFY_ATTEMPTS = 2;
+// Bounds pure patch-format retries independently of MAX_VERIFY_ATTEMPTS. A
+// reminder to emit <<<PATCH>>> blocks almost always lands on the first retry;
+// beyond this cap the coder cannot produce applicable blocks, so we finalize
+// rather than keep paying for coder passes.
+const MAX_PATCH_FORMAT_RETRIES = 2;
 const COST_BUDGET_SOFT_CEILING_RATIO = 0.95;
 const COST_BUDGET_MIN_REMAINING_USD = 0.005;
 const PROJECTED_CONTEXT_REFETCH_CYCLE_USD = 0.08;
@@ -594,12 +599,20 @@ const verify = async (state: GraphStateValue) => {
 // ever written to disk; pristine contents are recorded for rollback in finalize.
 const applyPatches = async (state: GraphStateValue) => {
     if (!state.patchApplicationEnabled || state.complexity === "pure_reasoning") {
-        return {};
+        return { patchApplicationFailed: false, awaitingPatchReformat: false };
     }
 
     const blocks = parsePatchBlocks(state.currentDraft || "");
     if (blocks.length === 0) {
-        return { patchReport: "Patch application enabled but the draft contained no structured <<<PATCH>>> blocks; nothing written." };
+        const report = "Patch application enabled but the draft contained no structured <<<PATCH>>> blocks; verification was skipped because no repository files changed.";
+        return {
+            patchApplicationFailed: true,
+            verificationPassed: false,
+            verificationReport: `${report} Emit complete file contents in <<<PATCH file="relative/path">>> blocks.`,
+            patchFormatRetries: (state.patchFormatRetries ?? 0) + 1,
+            awaitingPatchReformat: true,
+            patchReport: report,
+        };
     }
 
     // Files whose pristine state was already captured on an earlier pass (the
@@ -610,8 +623,20 @@ const applyPatches = async (state: GraphStateValue) => {
         ...(state.patchCreatedFiles ?? []),
     ]);
     const result = await applyPatchBlocks(blocks, alreadyHandled);
+    if (result.applied.length === 0) {
+        return {
+            patchApplicationFailed: true,
+            verificationPassed: false,
+            verificationReport: `${result.report} Verification was skipped because patch guards prevented every file write.`,
+            patchFormatRetries: (state.patchFormatRetries ?? 0) + 1,
+            awaitingPatchReformat: true,
+            patchReport: result.report,
+        };
+    }
 
     return {
+        patchApplicationFailed: false,
+        awaitingPatchReformat: false,
         patchApplied: state.patchApplied || result.applied.length > 0,
         appliedFiles: result.applied,
         patchBackups: result.newBackups,
@@ -639,6 +664,13 @@ const finalize = async (state: GraphStateValue) => {
         return {
             finalAnswer: answer,
             patchReport: `${state.patchReport ?? ""}\nVerification passed; kept ${kept.length} applied file(s): ${kept.join(", ")}.`.trim(),
+        };
+    }
+
+    if (state.patchApplicationFailed) {
+        return {
+            finalAnswer: answer,
+            patchReport: `${state.patchReport ?? ""}\nVerification did not run because patch application failed.`.trim(),
         };
     }
 
@@ -709,10 +741,31 @@ const routeAfterFrontierCritic = (state: GraphStateValue): string => {
     return routeDebate(state);
 };
 
+const routeAfterApplyPatches = (state: GraphStateValue): string => {
+    if (!state.patchApplicationFailed) {
+        return "verify";
+    }
+    if (
+        isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD)
+        || (state.patchFormatRetries ?? 0) >= MAX_PATCH_FORMAT_RETRIES
+    ) {
+        return "finalize";
+    }
+    return "claudeCoder";
+};
+
+const routeAfterCoder = (state: GraphStateValue): string => {
+    // A pure patch-format retry (the coder forgot the <<<PATCH>>> blocks) does
+    // not change the logic the critics already approved, so re-emit straight
+    // into applyPatches instead of paying for another full frontier (and maybe
+    // strong) critic pass.
+    return state.awaitingPatchReformat ? "applyPatches" : "frontierCritic";
+};
+
 const routeAfterVerify = (state: GraphStateValue): string => {
     // Stop the verify/fix cycle once budget or the attempt cap is reached.
-    // Patches are not applied to disk, so an objectively failing typecheck can
-    // never be "fixed" by another coder pass here; cap it to avoid wasted loops.
+    // Patch application may retry through the coder, but keep the loop bounded
+    // so a failing typecheck or malformed patch format cannot spin indefinitely.
     if (
         state.verificationPassed
         || isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD)
@@ -756,7 +809,10 @@ export const buildMainGraph = () => {
             claudeCoder: "claudeCoder",
             finalize: "finalize",
         })
-        .addEdge("claudeCoder", "frontierCritic")
+        .addConditionalEdges("claudeCoder", routeAfterCoder, {
+            frontierCritic: "frontierCritic",
+            applyPatches: "applyPatches",
+        })
         .addConditionalEdges("frontierCritic", routeAfterFrontierCritic, {
             claudeCoder: "claudeCoder",
             swarm: "swarm",
@@ -771,7 +827,11 @@ export const buildMainGraph = () => {
             applyPatches: "applyPatches",
         })
         .addEdge("smeTiebreaker", "applyPatches")
-        .addEdge("applyPatches", "verify")
+        .addConditionalEdges("applyPatches", routeAfterApplyPatches, {
+            verify: "verify",
+            claudeCoder: "claudeCoder",
+            finalize: "finalize",
+        })
         .addConditionalEdges("verify", routeAfterVerify, {
             finalize: "finalize",
             claudeCoder: "claudeCoder",

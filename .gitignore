@@ -5,3 +5,6 @@ dist/
 .openclaw_artifacts/
 .openclaw_state/
 *.last-good
+.patch-smoke-*
+.idea/
+.vscode/

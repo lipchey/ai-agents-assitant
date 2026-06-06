@@ -112,6 +112,10 @@ export const GraphState = Annotation.Root({
         reducer: (_left, right) => right,
         default: () => false,
     }),
+    patchApplicationFailed: Annotation<boolean>({
+        reducer: (_left, right) => right,
+        default: () => false,
+    }),
     appliedFiles: Annotation<string[]>({
         reducer: concatArrays,
         default: () => [],
@@ -143,6 +147,21 @@ export const GraphState = Annotation.Root({
     verifyAttempts: Annotation<number>({
         reducer: (_left, right) => right,
         default: () => 0,
+    }),
+    // Counts pure patch-format retries (the coder produced a draft with no
+    // applicable <<<PATCH>>> blocks). Kept separate from `verifyAttempts` so a
+    // formatting slip — which does not change the already-approved logic — never
+    // consumes one of the real verify/fix attempts.
+    patchFormatRetries: Annotation<number>({
+        reducer: (_left, right) => right,
+        default: () => 0,
+    }),
+    // Set when `applyPatches` bounced a draft back to the coder solely to fix
+    // patch formatting. The post-coder router reads it to skip the full critic
+    // cycle and re-enter `applyPatches` directly.
+    awaitingPatchReformat: Annotation<boolean>({
+        reducer: (_left, right) => right,
+        default: () => false,
     }),
 
     totalCost: Annotation<number>({
