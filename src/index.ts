@@ -21,10 +21,17 @@ const run = async (): Promise<void> => {
 
     try {
         const graph = buildMainGraph();
-        const finalState = await graph.invoke({
-            originalTask: task,
-            tokenBudget: 100,
-        });
+        const finalState = await graph.invoke(
+            {
+                originalTask: task,
+                tokenBudget: 100,
+            },
+            // Headroom above the worst-case bounded flow (~22 super-steps with the
+            // context-fetch, debate, and verify caps) so a legitimate multi-cycle
+            // run never trips LangGraph's default recursion limit of 25 and throws
+            // away all telemetry. The per-cycle caps are the real termination guard.
+            { recursionLimit: 50 },
+        );
 
         console.log("=== FINAL ANSWER ===");
         console.log(finalState.finalAnswer || finalState.bestDraft || finalState.currentDraft || "(no final answer)");

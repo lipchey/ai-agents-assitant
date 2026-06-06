@@ -1,4 +1,4 @@
-import { END, START, StateGraph, interrupt } from "@langchain/langgraph";
+import { END, START, StateGraph } from "@langchain/langgraph";
 import { FailureType, WorkerKind, WorkerStatus } from "./enums.js";
 import { SwarmWorkerState, type ToolCallRecord } from "./state.js";
 import { callLlm, openclawRpc, storeArtifact, type OpenClawRpcArgs } from "./tools/openclaw.js";
@@ -168,19 +168,18 @@ const smeOracle = async (state: WorkerState) => {
 };
 
 const humanGate = (state: WorkerState) => {
-    const decision = interrupt({
-        reason: state.failureType,
-        query: state.escalationQuery,
-    }) as { resolved?: boolean; fix?: string } | undefined;
-
-    if (decision?.resolved) {
-        return {
-            status: WorkerStatus.WORKING,
-            escalationResponse: decision.fix ?? "",
-        };
-    }
-
-    return { status: WorkerStatus.BLOCKED };
+    // Environment failures (missing binary, permissions, gateway/timeout) need
+    // out-of-band human resolution. A live HITL channel requires the swarm to be
+    // compiled with a checkpointer and a resume loop in the caller; neither is
+    // wired in this runtime, and calling `interrupt()` without a checkpointer
+    // throws and crashes the whole run. Until that infrastructure exists, block
+    // gracefully and surface actionable detail up through the firewall instead.
+    const failure = state.failureType ?? FailureType.UNKNOWN;
+    const reason = state.escalationQuery ?? "unknown environment error";
+    return {
+        status: WorkerStatus.BLOCKED,
+        escalationResponse: `Manual resolution required (${failure}): ${reason}`,
+    };
 };
 
 const workerCompress = async (state: WorkerState) => {

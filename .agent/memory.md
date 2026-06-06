@@ -53,3 +53,23 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 - **MVP Reached:** The project has an executable LangGraph `src/index.ts` entrypoint that ensures OpenClaw Gateway readiness, invokes the full graph, and reports final telemetry.
 - **Validated locally:** `npx tsc --noEmit`, `npm test`, OpenClaw config validation, and a local `openclawRpc("run_tests")` smoke test pass. Full live end-to-end model execution still depends on valid provider credentials and a reachable OpenClaw Gateway/runtime.
 - **Open implementation gap:** The debate loop now produces corrected drafts and runs objective typecheck verification, but it still does not apply generated code patches automatically. If true autonomous file mutation is required, add a guarded patch-application stage with review/verification gates.
+
+---
+
+## 5. Audit Log (2026-06-05) — loop/token-burn & bug hardening
+
+Senior audit of the dual-graph framework. Architecture matches the design (cheap models for `router`/`firewall`, frontier for `architect`/`critic`/`sme`; firewall compression; SOS escalation). Fixed the following defects. `tsc --noEmit` passes after all changes.
+
+**FIXED — Unbounded context-refetch loop (token burn + crash).** `routeDebate` checked `needsMoreContext` *before* the iteration cap with no counter, so a critic that kept asking for context looped `swarm → firewall → claudeArchitect(Opus) → claudeCoder → openaiCritic → swarm …`. `codeExplorer` runs a *deterministic* `find_files`+`grep_code`, so refetches add no new information yet pay for an Opus pass every cycle. Worst case (~40+ super-steps) trips LangGraph's default `recursionLimit` of 25 and throws away all telemetry *before* `tokenBudget` drains. Fix: added `contextFetches` state counter (incremented in `swarmNode`) + `MAX_CONTEXT_FETCHES = 2`; `routeDebate` now prefers `consensus → verify` and only refetches under the cap.
+
+**FIXED — Unbounded verify/fix loop.** Patches are never applied to disk, so an objectively failing `npm run typecheck` can never be "fixed" by another coder pass, yet `routeAfterVerify` looped `verify → claudeCoder → … → verify`. Fix: added `verifyAttempts` counter + `MAX_VERIFY_ATTEMPTS = 2`; `routeAfterVerify` finalizes once the cap (or budget) is hit.
+
+**FIXED — `humanGate` crash on every environment failure.** It called `interrupt()`, but the swarm is compiled without a checkpointer and the caller has no resume loop, so `interrupt()` throws and aborts the whole run. Environment failures (missing binary, permissions, gateway/timeout, unreachable `web_search`) are common and all routed here. Fix: `humanGate` now blocks gracefully (`WorkerStatus.BLOCKED` + actionable `escalationResponse`) so the failure detail propagates up through the firewall instead of crashing. NOTE: true HITL still needs a checkpointer + resume loop (related to the open patch-application work).
+
+**FIXED — Meaningless verification for `pure_reasoning`.** `verify` ran `npm run typecheck` even for designs/explanations (no code to compile), producing a misleading "verified" report and a wasted subprocess. Fix: `verify` short-circuits to accept the consensus draft when `complexity === "pure_reasoning"`.
+
+**FIXED — `undefined` fed to Opus architect.** On the `pure_reasoning` path the swarm/firewall never run, so `compressedContext` was `undefined` and interpolated literally as `"Compressed context:\nundefined"` into the architect prompt, degrading output. Fix: that line is now omitted when empty.
+
+**FIXED — `recursionLimit` headroom.** `graph.invoke` now passes `{ recursionLimit: 50 }` so legitimate bounded multi-cycle runs (~22 super-steps worst case) never trip the default-25 ceiling and lose telemetry. The per-cycle caps above remain the real termination guard.
+
+**Known minor (not changed):** `usageStats` aliases the swarm's `workerCompress` cost under the `firewall` key and merges swarm `smeOracle` with main `smeTiebreaker` under `sme`. `totalCost`/`totalTokens` totals are still correct; only the per-role breakdown is slightly conflated. `tokenBudget` is an abstract step budget (units, not real tokens) — intentional, but misnamed. Live end-to-end run still blocked on provider credentials + reachable Gateway (couldn't execute here).

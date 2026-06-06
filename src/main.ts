@@ -5,6 +5,12 @@ import { buildSwarm } from "./swarm.js";
 import { callLlm, openclawRpc } from "./tools/openclaw.js";
 
 const MAX_DEBATE_ITERATIONS = 4;
+// Hard caps on the two reentrant cycles. The swarm runs once on the primary
+// route, so allowing 2 total context fetches permits exactly one debate-driven
+// refetch before we stop paying for redundant (and, for codeExplorer,
+// deterministic) tool runs plus an Opus architect pass each loop.
+const MAX_CONTEXT_FETCHES = 2;
+const MAX_VERIFY_ATTEMPTS = 2;
 const ARCHITECT_COST = 5;
 const CODER_COST = 3;
 const CRITIC_COST = 4;
@@ -188,6 +194,7 @@ const swarmNode = async (state: GraphStateValue) => {
         swarmSummary: result.workerSummary || result.rawToolOutput || fallbackSummary,
         swarmStatus: result.status,
         artifactIndex: result.producedArtifacts,
+        contextFetches: (state.contextFetches ?? 0) + 1,
         totalCost: result.totalCost,
         totalTokens: result.totalTokens,
         usageStats: result.usageStats,
@@ -214,7 +221,7 @@ const claudeArchitect = async (state: GraphStateValue) => {
         ].join(" "),
         [
             `Task:\n${state.originalTask}`,
-            `Compressed context:\n${state.compressedContext}`,
+            state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
         ].filter(Boolean).join("\n\n"),
     );
@@ -303,6 +310,20 @@ const smeTiebreaker = async (state: GraphStateValue) => {
 };
 
 const verify = async (state: GraphStateValue) => {
+    const verifyAttempts = (state.verifyAttempts ?? 0) + 1;
+
+    // Pure-reasoning output (designs, explanations, plans) has no code to
+    // compile, so running `npm run typecheck` here proves nothing and only
+    // produces a misleading "verificationReport". Accept the consensus draft.
+    if (state.complexity === "pure_reasoning") {
+        return {
+            verificationPassed: true,
+            verificationReport: "Skipped objective typecheck: pure_reasoning output has no code to compile.",
+            bestDraft: state.currentDraft || state.bestDraft || "",
+            verifyAttempts,
+        };
+    }
+
     try {
         const report = await openclawRpc(
             "run_tests",
@@ -316,6 +337,7 @@ const verify = async (state: GraphStateValue) => {
             verificationPassed: passed,
             verificationReport: JSON.stringify(report, null, 2),
             bestDraft: passed ? state.currentDraft : state.bestDraft || "",
+            verifyAttempts,
             tokenBudget: Math.max(0, state.tokenBudget - VERIFY_COST),
         };
     } catch (error) {
@@ -323,6 +345,7 @@ const verify = async (state: GraphStateValue) => {
         return {
             verificationPassed: false,
             verificationReport: `Verification failed before tests completed: ${message}`,
+            verifyAttempts,
             tokenBudget: Math.max(0, state.tokenBudget - VERIFY_COST),
         };
     }
@@ -347,11 +370,18 @@ const routeDebate = (state: GraphStateValue): string => {
     if ((state.tokenBudget ?? 0) <= 0) {
         return "verify";
     }
-    if (state.needsMoreContext) {
-        return "swarm";
-    }
+    // Consensus wins over a late "needs more context" so we don't bounce back
+    // into the swarm after the critic has already approved the draft.
     if (state.consensusReached) {
         return "verify";
+    }
+    // Only refetch context while under the hard cap. Without this, a critic that
+    // keeps asking for more context loops swarm -> firewall -> architect(Opus)
+    // -> coder -> critic indefinitely (re-running deterministic tools), burning
+    // frontier tokens and tripping the graph recursion limit before tokenBudget
+    // ever drains.
+    if (state.needsMoreContext && (state.contextFetches ?? 0) < MAX_CONTEXT_FETCHES) {
+        return "swarm";
     }
     if (state.debateIterations >= MAX_DEBATE_ITERATIONS) {
         return "smeTiebreaker";
@@ -360,7 +390,14 @@ const routeDebate = (state: GraphStateValue): string => {
 };
 
 const routeAfterVerify = (state: GraphStateValue): string => {
-    if (state.verificationPassed || (state.tokenBudget ?? 0) <= 0) {
+    // Stop the verify/fix cycle once budget or the attempt cap is reached.
+    // Patches are not applied to disk, so an objectively failing typecheck can
+    // never be "fixed" by another coder pass here; cap it to avoid wasted loops.
+    if (
+        state.verificationPassed
+        || (state.tokenBudget ?? 0) <= 0
+        || (state.verifyAttempts ?? 0) >= MAX_VERIFY_ATTEMPTS
+    ) {
         return "finalize";
     }
     return "claudeCoder";

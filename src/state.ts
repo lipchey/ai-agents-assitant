@@ -74,6 +74,20 @@ export const GraphState = Annotation.Root({
     tokenBudget: Annotation<number>,
     finalAnswer: Annotation<string>,
 
+    // Loop guards. These bound the two reentrant cycles (context refetch and
+    // verify/fix) independently of the abstract tokenBudget so a misbehaving
+    // critic/verifier cannot burn frontier-model tokens or trip the graph
+    // recursion limit. Last-write-wins with an explicit default of 0 so they
+    // are safe to read in routers before any node has set them.
+    contextFetches: Annotation<number>({
+        reducer: (_left, right) => right,
+        default: () => 0,
+    }),
+    verifyAttempts: Annotation<number>({
+        reducer: (_left, right) => right,
+        default: () => 0,
+    }),
+
     totalCost: Annotation<number>({
         reducer: sumNumbers,
         default: () => 0,
