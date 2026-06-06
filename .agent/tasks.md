@@ -22,3 +22,5 @@
 - [x] Cache `pricing.json` loading per process
 - [ ] Add guarded patch-application stage if the framework should mutate repository files autonomously instead of returning draft patches
 - [ ] Wire a real HITL channel (compile swarm with a checkpointer + caller resume loop) to restore `humanGate` interrupt-based escalation
+- [x] Author centralized per-agent system prompts in `src/prompts.ts` (environment, global goal, upstream/downstream data flow, tool boundaries, output contracts) for the 10 LLM-calling nodes; keep `system` strings constant for prompt caching and preserve existing JSON contracts
+- [ ] (Capability) Upgrade Swarm workers from fixed deterministic tool plans to LLM-planned ReAct-style agents: the lead delegator and `codeExplorer`/`infraOps`/`webResearcher` decide tools/paths/commands per step (read specific files, follow imports, refine searches), while keeping workspace-path bounds, command allowlists, no shell interpolation, per-worker call/loop caps, and artifact storage. Reuses the `src/prompts.ts` prompt layer.

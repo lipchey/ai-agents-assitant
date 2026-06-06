@@ -118,3 +118,17 @@ Senior audit of the dual-graph framework. Architecture matches the design (cheap
 **FIXED — Anthropic cache accounting guard.** `calculateUsage` treats `input_tokens`/`uncached_input_tokens` as the non-cached Anthropic input when present, and subtracts cache-read tokens from OpenAI-style `prompt_tokens` when needed so cache-read input is not counted twice.
 
 **CHANGED — Pricing cache.** `pricing.json` is read once per process through a module-level cache instead of on every LLM call.
+
+---
+
+## 9. Audit Log (2026-06-06) — centralized per-agent system prompts
+
+**CHANGED — Added `src/prompts.ts` as the single source of truth for system prompts.** All 10 LLM-calling nodes now import constant `system` strings from `SystemPrompts` instead of inline literals: main-graph `complexityRouter`, `directResponder`, `frontierArchitect`, `claudeArchitect`, `claudeCoder`, `frontierCritic`, `openaiCritic`, `smeTiebreaker`; swarm `smeOracle`, `workerCompress`. The non-LLM nodes (`firewall`, `codeExplorer`, `infraOps`, `webResearcher`, `leadDelegator`, `humanGate`, `verify`, `finalize`) are deterministic and intentionally have no prompt.
+
+**Each prompt now states the agent's operating context:** the dual-graph environment and global cost-optimization mission, its upstream source and downstream destination in the pipeline, its tool boundaries (reasoning nodes cannot call tools — execution is Swarm-only; only the deterministic workers touch `find_files`/`grep_code`/`shell_exec`/`web_search`), and its exact output contract.
+
+**Two-tier design for cost/efficiency.** A small `CORE` block (identity + universal rules: use-only-given-context, no-tools, be-terse) is prepended to every role. A larger `REASONING_CONTEXT` block (mission + data-flow diagram) is added ONLY to decision-making roles (`complexityRouter`, `frontierArchitect`, `claudeArchitect`, `claudeCoder`, `frontierCritic`, `openaiCritic`, `smeTiebreaker`); the cheap utility roles (`directResponder`, `workerCompress`, `smeOracle`) get `CORE` only so a generic preamble does not dilute instruction-following on small/fast models. Escalation criteria in `frontierArchitect`/`frontierCritic` are intentionally aligned with the deterministic `STRONG_ESCALATION_SIGNALS` in `main.ts` so heuristic and model reinforce each other on the system's biggest cost lever.
+
+**Cache-friendly.** `system` strings are constants; all task/state-specific content stays in the `user` message, so the stable system prefix is prompt-cacheable across repeated same-role calls (debate/verify loops). JSON output contracts were preserved byte-for-byte so the existing parsers (`parseRouterDecision`, `parseFrontierArchitectureDecision`, `parseFrontierCriticDecision`, `parseCriticDecision`) keep working.
+
+**Validated locally:** `npx tsc --noEmit` and `npm test` pass after these changes.

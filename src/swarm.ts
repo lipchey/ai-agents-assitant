@@ -1,5 +1,6 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { FailureType, WorkerKind, WorkerStatus } from "./enums.js";
+import { SystemPrompts } from "./prompts.js";
 import { SwarmWorkerState, type ToolCallRecord, type UsageBreakdown } from "./state.js";
 import { callLlm, openclawRpc, storeArtifact, type LlmCallResult, type OpenClawRpcArgs } from "./tools/openclaw.js";
 
@@ -241,7 +242,7 @@ const webResearcher = (state: WorkerState) => {
 const smeOracle = async (state: WorkerState) => {
     const result = await callLlm(
         "frontier",
-        "You are a subject-matter expert. Return concise recovery advice for the worker.",
+        SystemPrompts.smeOracle,
         state.escalationQuery,
         { maxTokens: 900, reasoningEffort: "high", thinking: "enabled" },
     );
@@ -272,11 +273,7 @@ const humanGate = (state: WorkerState) => {
 const workerCompress = async (state: WorkerState) => {
     const result = await callLlm(
         "firewall",
-        [
-            "Summarize raw tool output for a reasoning model.",
-            "Preserve file paths, commands, exit statuses, errors, and artifact handles.",
-            "Return compact JSON with keys: findings, evidence, risks, artifacts.",
-        ].join(" "),
+        SystemPrompts.workerCompress,
         state.rawToolOutput || JSON.stringify(state.toolCalls),
         { maxTokens: 1_200, responseFormat: "json_object", thinking: "disabled" },
     );

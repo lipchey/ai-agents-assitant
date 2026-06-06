@@ -1,5 +1,6 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { WorkerKind, WorkerStatus } from "./enums.js";
+import { SystemPrompts } from "./prompts.js";
 import { GraphState, type UsageBreakdown } from "./state.js";
 import { buildSwarm } from "./swarm.js";
 import { callLlm, openclawRpc, type LlmCallResult } from "./tools/openclaw.js";
@@ -307,12 +308,7 @@ const extractToolStatus = (report: Record<string, unknown>): { status: string; e
 const complexityRouter = async (state: GraphStateValue) => {
     const result = await callLlm(
         "router",
-        [
-            "Classify the user task for an autonomous software agent.",
-            "Return only JSON:",
-            "{\"complexity\":\"trivial|pure_reasoning|tool_complex\",\"routeConfidence\":0.0}",
-            "Use tool_complex when repository inspection, execution, current docs, or file changes are needed.",
-        ].join(" "),
+        SystemPrompts.complexityRouter,
         state.originalTask,
         { maxTokens: 160, responseFormat: "json_object", thinking: "disabled" },
     );
@@ -333,7 +329,7 @@ const complexityRouter = async (state: GraphStateValue) => {
 const directResponder = async (state: GraphStateValue) => {
     const result = await callLlm(
         "router",
-        "Answer the user directly and concisely. Do not invent tool results.",
+        SystemPrompts.directResponder,
         state.originalTask,
         { maxTokens: 800, thinking: "disabled" },
     );
@@ -387,13 +383,7 @@ const firewall = async (state: GraphStateValue) => {
 const frontierArchitect = async (state: GraphStateValue) => {
     const result = await callLlm(
         "frontier",
-        [
-            "You are the low-cost frontier architecture lead for an autonomous software agent.",
-            "Create a concise technical specification that can be handed to an implementation model.",
-            "Return only JSON with keys:",
-            "{\"architectureSpec\":\"string\",\"confidence\":0.0,\"escalateToStrong\":boolean,\"escalationReason\":\"string\"}.",
-            "Set escalateToStrong true for security, data-loss, broad orchestration, ambiguous high-impact changes, or low confidence.",
-        ].join(" "),
+        SystemPrompts.frontierArchitect,
         [
             `Task:\n${state.originalTask}`,
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
@@ -423,11 +413,7 @@ const frontierArchitect = async (state: GraphStateValue) => {
 const claudeArchitect = async (state: GraphStateValue) => {
     const result = await callLlm(
         "architect",
-        [
-            "You are the architecture lead.",
-            "Produce a concise technical specification or correction plan.",
-            "Use only the supplied task, compressed execution context, and verification feedback.",
-        ].join(" "),
+        SystemPrompts.claudeArchitect,
         [
             `Task:\n${state.originalTask}`,
             state.frontierDraft ? `Low-cost frontier draft to verify or improve:\n${state.frontierDraft}` : "",
@@ -449,11 +435,7 @@ const claudeArchitect = async (state: GraphStateValue) => {
 const claudeCoder = async (state: GraphStateValue) => {
     const result = await callLlm(
         "coder",
-        [
-            "You are the implementation agent.",
-            "Produce the smallest concrete draft that satisfies the architecture and critique.",
-            "When code changes are required, describe exact patches and verification commands.",
-        ].join(" "),
+        SystemPrompts.claudeCoder,
         [
             `Spec:\n${state.architectureSpec}`,
             `Critiques to fix:\n${state.debateSummary || "None"}`,
@@ -472,13 +454,7 @@ const claudeCoder = async (state: GraphStateValue) => {
 const frontierCritic = async (state: GraphStateValue) => {
     const result = await callLlm(
         "frontier",
-        [
-            "Critique the draft as a low-cost frontier reviewer. Do not rewrite it.",
-            "Return only JSON with keys:",
-            "{\"consensus\":boolean,\"needsMoreContext\":boolean,\"requiresStrongCritic\":boolean,\"confidence\":0.0,\"critique\":\"string\",\"escalationReason\":\"string\"}.",
-            "Set consensus true only when the draft is ready for objective verification.",
-            "Set requiresStrongCritic true when the task is high-risk, the critique is uncertain, or a stronger model should review before verification.",
-        ].join(" "),
+        SystemPrompts.frontierCritic,
         [
             `Task:\n${state.originalTask}`,
             `Draft:\n${state.currentDraft}`,
@@ -512,12 +488,7 @@ const frontierCritic = async (state: GraphStateValue) => {
 const openaiCritic = async (state: GraphStateValue) => {
     const result = await callLlm(
         "critic",
-        [
-            "Critique the draft. Do not rewrite it.",
-            "Return only JSON with keys:",
-            "{\"consensus\":boolean,\"needsMoreContext\":boolean,\"critique\":\"string\"}",
-            "Set consensus true only when the draft is ready for objective verification.",
-        ].join(" "),
+        SystemPrompts.openaiCritic,
         [
             `Task:\n${state.originalTask}`,
             `Draft:\n${state.currentDraft}`,
@@ -546,7 +517,7 @@ const openaiCritic = async (state: GraphStateValue) => {
 const smeTiebreaker = async (state: GraphStateValue) => {
     const result = await callLlm(
         "sme",
-        "Make the final call. Return the best corrected draft, not a meta-discussion.",
+        SystemPrompts.smeTiebreaker,
         [
             `Task:\n${state.originalTask}`,
             `Current draft:\n${state.currentDraft}`,
