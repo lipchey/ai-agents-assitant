@@ -8,6 +8,7 @@ export {
     startOpenClawGateway,
     stopOpenClawGateway,
 } from "./gateway.ts";
+export { DEFAULT_OPENCLAW_MODEL, DEFAULT_TIMEOUT_S, SAFE_DIRECT_EXEC_COMMANDS, STRONG_REASONING_AGENT_ID } from "../consts";
 export { invokeGatewayTool, jsonPost } from "./http.ts";
 export { callLlm } from "./llm.ts";
 export { runLocalPseudoTool } from "./local-tools.ts";

@@ -221,3 +221,10 @@ each constant is imported from `src/consts/*` on one path only (barrels may stil
 re-export a constant when it is part of the public surface, e.g.
 `HITL_RESOLVER_CONFIG_KEY` through `src/hitl/`). `.env.example` now lists every
 `EnvVar` the app reads.
+
+Tooling follow-up (same day): `src/tools/` and `src/swarm/` barrels retain
+compatibility re-exports for previously exposed constants while implementations
+still import constants from `src/consts/*` directly. CI and package engines pin
+Node to the modern patch range required by OpenClaw transitive dependencies.
+Prettier scripts intentionally target project configuration files only; source
+formatting remains explicit to avoid repo-wide churn.

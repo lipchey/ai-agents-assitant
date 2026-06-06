@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "scripts": {
     "start": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write --ignore-unknown .prettierrc.json .editorconfig .github/workflows/ci.yml package.json eslint.config.js",
+    "format:check": "prettier --check --ignore-unknown .prettierrc.json .editorconfig .github/workflows/ci.yml package.json eslint.config.js",
     "smoke:hitl": "tsx scripts/hitl-smoke.ts",
     "smoke:react": "tsx scripts/react-smoke.ts",
     "smoke:patch": "tsx scripts/patch-smoke.ts",

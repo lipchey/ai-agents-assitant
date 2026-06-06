@@ -10,6 +10,8 @@ export {
     workerCompress,
 } from "./nodes.ts";
 export { runReactWorker } from "./react-worker.ts";
+export { WORKER_PROMPTS } from "../prompts";
+export { MAX_ESCALATION_ATTEMPTS, WORKER_TOOLS, WORKER_USAGE_KEY } from "../consts";
 export {
     delegateToWorker,
     routeAfterHuman,

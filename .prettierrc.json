@@ -1,9 +1,17 @@
 {
-    "tabWidth": 4,
-    "printWidth": 120,
-    "semi": true,
-    "singleQuote": false,
-    "trailingComma": "all",
-    "arrowParens": "always",
-    "endOfLine": "lf"
+  "tabWidth": 4,
+  "printWidth": 120,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": ["*.json", "*.json5", "*.yml", "*.yaml", "*.md"],
+      "options": {
+        "tabWidth": 2
+      }
+    }
+  ]
 }
