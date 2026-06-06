@@ -7,6 +7,8 @@ export const ModelRef = {
     DEEPSEEK_FLASH: "deepseek/deepseek-v4-flash",
 } as const;
 
+export type ModelRef = (typeof ModelRef)[keyof typeof ModelRef];
+
 export const ModelRole = {
     ROUTER: "router",
     FRONTIER: "frontier",
@@ -17,5 +19,7 @@ export const ModelRole = {
     WORKER: "worker",
     FIREWALL: "firewall",
 } as const;
+
+export type ModelRole = (typeof ModelRole)[keyof typeof ModelRole];
 
 export const RESPONSE_FORMAT_JSON = "json_object" as const;

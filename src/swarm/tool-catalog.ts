@@ -2,23 +2,21 @@
 import { ToolName } from "../consts/tools.js";
 import { UsageKey } from "../consts/usage.js";
 import { WorkerKind } from "../consts/worker.js";
-import type { UsageKey as UsageKeyType } from "../types/consts/usage.js";
-import type { WorkerKind as WorkerKindType } from "../types/consts/worker.js";
 import { SystemPrompts } from "../prompts.js";
 
-export const WORKER_TOOLS: Record<WorkerKindType, readonly string[]> = {
+export const WORKER_TOOLS: Record<WorkerKind, readonly string[]> = {
     [WorkerKind.CODE_EXPLORER]: [ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],
     [WorkerKind.INFRA_OPS]: [ToolName.SHELL_EXEC, ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],
     [WorkerKind.WEB_RESEARCHER]: [ToolName.WEB_LOOKUP],
 };
 
-export const WORKER_PROMPTS: Record<WorkerKindType, string> = {
+export const WORKER_PROMPTS: Record<WorkerKind, string> = {
     [WorkerKind.CODE_EXPLORER]: SystemPrompts.codeExplorer,
     [WorkerKind.INFRA_OPS]: SystemPrompts.infraOps,
     [WorkerKind.WEB_RESEARCHER]: SystemPrompts.webResearcher,
 };
 
-export const WORKER_USAGE_KEY: Record<WorkerKindType, UsageKeyType> = {
+export const WORKER_USAGE_KEY: Record<WorkerKind, UsageKey> = {
     [WorkerKind.CODE_EXPLORER]: UsageKey.CODE_EXPLORER,
     [WorkerKind.INFRA_OPS]: UsageKey.INFRA_OPS,
     [WorkerKind.WEB_RESEARCHER]: UsageKey.WEB_RESEARCHER,

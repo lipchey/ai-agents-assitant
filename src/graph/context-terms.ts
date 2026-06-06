@@ -1,6 +1,5 @@
 /* Refetches are targeted from critique terms to avoid paying for repeated inventory. */
 import { WorkerKind } from "../consts/worker.js";
-import type { WorkerKind as WorkerKindType } from "../types/consts/worker.js";
 import type { GraphStateValue } from "../types/graph/state.js";
 
 const MAX_CONTEXT_SEARCH_TERMS = 10;
@@ -53,7 +52,7 @@ export const buildSwarmSubtask = (state: GraphStateValue): string => {
     return state.originalTask;
 };
 
-export const selectWorkerKind = (task: string): WorkerKindType => {
+export const selectWorkerKind = (task: string): WorkerKind => {
     const normalized = task.toLowerCase();
     if (/\b(latest|docs|documentation|web|internet|search|browse|research)\b/u.test(normalized)) {
         return WorkerKind.WEB_RESEARCHER;

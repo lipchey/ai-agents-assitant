@@ -8,8 +8,7 @@ import { asRecord, extractJsonObject } from "../shared/json.js";
 import { safeJson, truncate } from "../shared/text.js";
 import { emptyUsage, usageFromLlm } from "../shared/usage.js";
 import { callLlm } from "../tools/openclaw.js";
-import type { WorkerKind as WorkerKindType } from "../types/consts/worker.js";
-import type { SwarmWorkerStateValue } from "../types/swarm/state.js";
+import type { SwarmWorkerStateValue } from "../state/swarm-state.js";
 import { runReactWorker } from "./react-worker.js";
 
 /* Blocked-worker fallbacks must not leak a full raw transcript into reasoning prompts. */
@@ -19,7 +18,7 @@ export const codeExplorer = (state: SwarmWorkerStateValue) => runReactWorker(sta
 export const infraOps = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS);
 export const webResearcher = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER);
 
-const parseWorkerKind = (content: string, fallback: WorkerKindType): WorkerKindType => {
+const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
     const parsed = asRecord(extractJsonObject(content));
     const value = typeof parsed?.workerKind === "string" ? parsed.workerKind.trim().toLowerCase() : "";
     switch (value) {

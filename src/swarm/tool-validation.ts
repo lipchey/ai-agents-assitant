@@ -4,10 +4,6 @@ import { FailureType, WorkerKind } from "../consts/worker.js";
 import { asRecord, extractJsonObject } from "../shared/json.js";
 import { clampInt, readString } from "../shared/text.js";
 import { SAFE_DIRECT_EXEC_COMMANDS, type OpenClawRpcArgs } from "../tools/openclaw.js";
-import type {
-    FailureType as FailureTypeType,
-    WorkerKind as WorkerKindType,
-} from "../types/consts/worker.js";
 import type { ReactDecision, SanitizedAction } from "../types/swarm/react.js";
 import { WORKER_TOOLS } from "./tool-catalog.js";
 
@@ -33,7 +29,7 @@ export const parseReactDecision = (content: string): ReactDecision => {
 };
 
 export const sanitizeToolArgs = (
-    kind: WorkerKindType,
+    kind: WorkerKind,
     tool: string,
     rawArgs: OpenClawRpcArgs,
 ): SanitizedAction => {
@@ -93,7 +89,7 @@ export const sanitizeToolArgs = (
 };
 
 /* Environment failures need HITL; reasoning errors go back to the worker. */
-export const classifyFailure = (errorMessage: string): FailureTypeType => {
+export const classifyFailure = (errorMessage: string): FailureType => {
     const normalized = errorMessage.toLowerCase();
     if (
         normalized.includes("not available")

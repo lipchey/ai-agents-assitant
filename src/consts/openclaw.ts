@@ -9,3 +9,5 @@ export const OpenClawControl = {
     HEALTH_ENDPOINT: "/healthz",
     MODELS_ENDPOINT: "/v1/models",
 } as const;
+
+export type OpenClawControl = (typeof OpenClawControl)[keyof typeof OpenClawControl];

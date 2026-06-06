@@ -14,3 +14,5 @@ export const UsageKey = {
     FRONTIER_SME: "frontierSme",
     FIREWALL: "firewall",
 } as const;
+
+export type UsageKey = (typeof UsageKey)[keyof typeof UsageKey];

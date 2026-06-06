@@ -14,6 +14,8 @@ export const MainNode = {
     FINALIZE: "finalize",
 } as const;
 
+export type MainNode = (typeof MainNode)[keyof typeof MainNode];
+
 export const SwarmNode = {
     LEAD_DELEGATOR: "leadDelegator",
     CODE_EXPLORER: "codeExplorer",
@@ -24,6 +26,8 @@ export const SwarmNode = {
     WORKER_COMPRESS: "workerCompress",
     BLOCKED: "blocked",
 } as const;
+
+export type SwarmNode = (typeof SwarmNode)[keyof typeof SwarmNode];
 
 /* Route token, not a node name, so conditional edges can target blocked explicitly. */
 export const SWARM_BLOCKED_ROUTE = "__blocked__";

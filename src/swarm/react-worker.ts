@@ -6,12 +6,8 @@ import { errorMessage, readString, safeJson, stringifyPretty, truncate } from ".
 import { emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared/usage.js";
 import type { ToolCallRecord } from "../state.js";
 import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools/openclaw.js";
-import type {
-    FailureType as FailureTypeType,
-    WorkerKind as WorkerKindType,
-} from "../types/consts/worker.js";
 import type { ReactStep } from "../types/swarm/react.js";
-import type { SwarmWorkerStateValue } from "../types/swarm/state.js";
+import type { SwarmWorkerStateValue } from "../state/swarm-state.js";
 import { WORKER_PROMPTS, WORKER_USAGE_KEY } from "./tool-catalog.js";
 import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.js";
 
@@ -55,7 +51,7 @@ const composeRaw = (rawOutputs: string[], finalSummary: string): string => {
     return parts.join("\n\n");
 };
 
-export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerKindType) => {
+export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerKind) => {
     const system = WORKER_PROMPTS[kind];
     const usageKey = WORKER_USAGE_KEY[kind];
     const attempts = (state.attempts ?? 0) + 1;
@@ -70,7 +66,7 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
     let successfulToolCalls = 0;
     let finalSummary = "";
 
-    const escalate = (failureType: FailureTypeType, escalationQuery: string) => ({
+    const escalate = (failureType: FailureType, escalationQuery: string) => ({
         status: WorkerStatus.ESCALATING,
         failureType,
         attempts,

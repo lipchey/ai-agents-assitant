@@ -9,11 +9,15 @@ export const ToolName = {
     WEB_SEARCH: "web_search",
 } as const;
 
+export type ToolName = (typeof ToolName)[keyof typeof ToolName];
+
 export const ToolStatus = {
     COMPLETED: "completed",
     FAILED: "failed",
     TIMED_OUT: "timed_out",
 } as const;
+
+export type ToolStatus = (typeof ToolStatus)[keyof typeof ToolStatus];
 
 /* Must stay allowlisted in SAFE_DIRECT_EXEC_COMMANDS. */
 export const VERIFY_TYPECHECK_COMMAND = "npm run typecheck";

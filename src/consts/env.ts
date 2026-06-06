@@ -9,6 +9,8 @@ export const EnvVar = {
     STATE_DIR: "OPENCLAW_STATE_DIR",
 } as const;
 
+export type EnvVar = (typeof EnvVar)[keyof typeof EnvVar];
+
 const TRUTHY_ENV_PATTERN = /^(1|true|yes|on)$/iu;
 
 export const isTruthyEnv = (value: string | undefined): boolean =>

@@ -4,8 +4,6 @@ import path from "node:path";
 import type { LlmUsage } from "../shared/usage.js";
 import type { ModelPricing, ProviderUsage } from "../types/tools/pricing.js";
 
-export type { ModelPricing, ProviderUsage } from "../types/tools/pricing.js";
-
 let pricingCache: Promise<Record<string, ModelPricing>> | undefined;
 
 export const loadPricing = (): Promise<Record<string, ModelPricing>> => {

@@ -1,10 +1,9 @@
-import { ModelRole } from "../consts/models.js";
 import { OpenClawControl } from "../consts/openclaw.js";
 import { OpenClawError } from "./errors.js";
 import { jsonPost } from "./http.js";
 import { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID, modelForRole } from "./models.js";
 import { calculateUsage, loadPricing } from "./pricing.js";
-import type { ModelRole as ModelRoleType } from "../types/consts/models.js";
+import type { ModelRole } from "../consts/models.js";
 import type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "../types/tools/llm.js";
 import type { JsonObject } from "../types/tools/rpc.js";
 
@@ -32,7 +31,7 @@ const contentToString = (content: unknown): string => {
 };
 
 export const callLlm = async (
-    role: ModelRoleType,
+    role: ModelRole,
     system: string,
     user: string,
     options: LlmCallOptions = {},

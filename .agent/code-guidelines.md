@@ -24,11 +24,12 @@ silently at runtime instead of at compile time.
   `consts/graph.ts`, `consts/worker.ts`, `consts/usage.ts`,
   `consts/env.ts`, `consts/tuning.ts`, and `consts/web.ts`.
 - Each closed runtime group is an `as const` object paired with a same-named
-  union type in [src/types/consts/](../src/types/consts/): `ToolName`,
+  union type in the same [src/consts/](../src/consts/) module: `ToolName`,
   `ModelRef`, `ModelRole`, `MainNode`, `SwarmNode`, `UsageKey`, `ToolStatus`,
   `EnvVar`, `OpenClawControl`, `WorkerStatus`, `FailureType`, `WorkerKind`.
-  Import runtime values from `src/consts/*`; import annotation-only unions with
-  `import type` from `src/types/consts/*`.
+  Import annotation-only unions with `import type` from `src/consts/*`; if a
+  module uses the symbol as both a runtime value and a type, use one normal
+  `src/consts/*` import. There is no separate `src/types/consts/*` layer.
 - `ModelRef` values **must** stay byte-equal to the keys in
   [src/consts/pricing/model-pricing.json](../src/consts/pricing/model-pricing.json)
   (the cost lookup is keyed on them).

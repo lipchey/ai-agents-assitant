@@ -3,8 +3,8 @@ import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { WorkerStatus } from "../../consts/worker.js";
 import { driveSwarmWithHitl, readHitlResolver, type HitlDrivableGraph } from "../../hitl.js";
 import { buildSwarm } from "../../swarm.js";
+import type { SwarmWorkerStateValue } from "../../state/swarm-state.js";
 import type { GraphStateValue } from "../../types/graph/state.js";
-import type { SwarmWorkerStateValue } from "../../types/swarm/state.js";
 import { buildSwarmSubtask, selectWorkerKind } from "../context-terms.js";
 
 export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {

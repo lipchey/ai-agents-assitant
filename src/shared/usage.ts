@@ -1,4 +1,4 @@
-import type { UsageKey } from "../types/consts/usage.js";
+import type { UsageKey } from "../consts/usage.js";
 import type { LlmUsage, UsageBreakdown, UsageStats } from "../types/usage.js";
 
 export type { LlmUsage, UsageBreakdown, UsageStats } from "../types/usage.js";

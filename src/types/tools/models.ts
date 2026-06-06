@@ -1,4 +1,4 @@
-import type { ModelRef } from "../consts/models.js";
+import type { ModelRef } from "../../consts/models.js";
 
 export type ModelProvider = "anthropic" | "deepseek" | "openai" | "unknown";
 

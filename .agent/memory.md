@@ -148,8 +148,9 @@ present, and `UsageStats` is a sparse `UsageKey`-indexed record with totals in
 ## 5. Code Organization Rules That Matter
 
 Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
-- Define runtime scalars once in `src/consts/*`; pair `as const` objects with
-  same-named union types in `src/types/consts/*`.
+- Define runtime scalars once in `src/consts/*`; pair each closed `as const`
+  object with its same-named union type in the same consts module. There is no
+  separate `src/types/consts/*` layer.
 - Keep `ModelRef` values byte-equal to
   `src/consts/pricing/model-pricing.json` keys.
 - Shared/public types live under `src/types/*`; implementation modules may
