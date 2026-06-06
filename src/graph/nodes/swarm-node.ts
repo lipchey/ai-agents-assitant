@@ -6,7 +6,7 @@ import { driveSwarmWithHitl } from "../../hitl/swarm-driver.ts";
 import { buildSwarm } from "../../swarm/build.ts";
 import type { SwarmWorkerStateValue } from "../../state/swarm-state.ts";
 import type { GraphStateValue } from "../../types/graph/state.ts";
-import type { HitlDrivableGraph } from "../../types/hitl/index.ts";
+import type { HitlDrivableGraph } from "../../types/hitl";
 import { buildSwarmSubtask, selectWorkerKind } from "../context-terms.ts";
 
 export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {

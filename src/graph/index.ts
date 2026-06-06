@@ -41,4 +41,4 @@ export {
     smeTiebreaker,
     swarmNode,
     verify,
-} from "./nodes/index.ts";
+} from "./nodes";

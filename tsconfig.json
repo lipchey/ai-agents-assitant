@@ -7,7 +7,7 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
+    "module": "esnext",
     "target": "es2022",
     "types": ["node"],
     // For nodejs:
@@ -41,7 +41,7 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
 
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "rewriteRelativeImportExtensions": true,
   }
 }

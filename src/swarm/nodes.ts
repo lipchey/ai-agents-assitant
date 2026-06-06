@@ -2,12 +2,12 @@ import { interrupt } from "@langchain/langgraph";
 import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.ts";
 import { UsageKey } from "../consts/usage.ts";
 import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.ts";
-import { SystemPrompts } from "../prompts/index.ts";
+import { SystemPrompts } from "../prompts";
 import { asRecord, extractJsonObject } from "../shared/json.ts";
 import { safeJson, truncate } from "../shared/text.ts";
 import { emptyUsage, usageFromLlm } from "../shared/usage.ts";
 import { callLlm } from "../tools/openclaw.ts";
-import type { HitlInterruptPayload, HitlResolution } from "../types/hitl/index.ts";
+import type { HitlInterruptPayload, HitlResolution } from "../types/hitl";
 import type { SwarmWorkerStateValue } from "../state/swarm-state.ts";
 import { runReactWorker } from "./react-worker.ts";
 

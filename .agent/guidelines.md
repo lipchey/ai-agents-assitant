@@ -7,7 +7,7 @@
 
 ## 2. Code Style
 - **TypeScript First**: Enforce strict typing. Do not use generic objects when an interface or `typeof State.State` can be used.
-- **ESM Syntax**: This project is configured as `type: module`. Use explicit `.ts` extensions in local TypeScript source imports (e.g., `import { foo } from "./state/graph-state.ts";`). `rewriteRelativeImportExtensions` rewrites them to `.js` for emitted Node ESM output.
+- **ESM Syntax**: This project is configured as `type: module` with TypeScript `bundler` resolution. Use explicit `.ts` extensions for concrete local TypeScript file imports (e.g., `import { foo } from "./state/graph-state.ts";`), but import `index.ts` barrels from the owning folder (e.g., `import { foo } from "./state";`). `rewriteRelativeImportExtensions` rewrites concrete `.ts` imports to `.js` on emit.
 - **Closed value sets**: Rely on defined const objects (`WorkerStatus`, `FailureType`, `WorkerKind`) and their union types instead of scattered booleans/strings for control flow.
 
 ## 3. Operations & Memory Automation

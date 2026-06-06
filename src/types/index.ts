@@ -4,7 +4,7 @@ export type {
     FrontierCriticDecision,
     GraphStateValue,
     RouterDecision,
-} from "./graph/index.ts";
+} from "./graph";
 export type {
     HitlConfig,
     HitlDrivableGraph,
@@ -12,11 +12,11 @@ export type {
     HitlInterruptPayload,
     HitlResolution,
     HitlResolver,
-} from "./hitl/index.ts";
-export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./patching/index.ts";
+} from "./hitl";
+export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./patching";
 export type { SystemPromptKey } from "./prompts.ts";
-export type { DebateEntry, ToolCallRecord } from "./state/index.ts";
-export type { ReactDecision, ReactStep, SanitizedAction } from "./swarm/index.ts";
+export type { DebateEntry, ToolCallRecord } from "./state";
+export type { ReactDecision, ReactStep, SanitizedAction } from "./swarm";
 export type {
     ChatCompletionResponse,
     JsonObject,
@@ -28,5 +28,5 @@ export type {
     OpenClawRpcArgs,
     OpenClawRpcOptions,
     ProviderUsage,
-} from "./tools/index.ts";
+} from "./tools";
 export type { LlmUsage, UsageBreakdown, UsageStats } from "./usage.ts";

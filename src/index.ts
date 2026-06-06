@@ -6,20 +6,20 @@ export {
     driveSwarmWithHitl,
     HITL_RESOLVER_CONFIG_KEY,
     readHitlResolver,
-} from "./hitl/index.ts";
+} from "./hitl";
 export type {
     HitlDrivableGraph,
     HitlGraphRunConfig,
     HitlInterruptPayload,
     HitlResolution,
     HitlResolver,
-} from "./types/hitl/index.ts";
+} from "./types/hitl";
 
-export { applyPatchBlocks, parsePatchBlocks, rollbackPatches } from "./patching/index.ts";
-export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./types/patching/index.ts";
+export { applyPatchBlocks, parsePatchBlocks, rollbackPatches } from "./patching";
+export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./types/patching";
 
-export { SystemPrompts } from "./prompts/index.ts";
-export type { SystemPromptKey } from "./prompts/index.ts";
+export { SystemPrompts } from "./prompts";
+export type { SystemPromptKey } from "./prompts";
 
 export { GraphState } from "./state/graph-state.ts";
 export { SwarmWorkerState } from "./state/swarm-state.ts";

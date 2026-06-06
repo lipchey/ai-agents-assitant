@@ -1,6 +1,6 @@
 import { ModelRole } from "../../consts/models.ts";
 import { UsageKey } from "../../consts/usage.ts";
-import { SystemPrompts } from "../../prompts/index.ts";
+import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared/usage.ts";
 import { callLlm } from "../../tools/openclaw.ts";
 import type { GraphStateValue } from "../../types/graph/state.ts";

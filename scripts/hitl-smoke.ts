@@ -9,7 +9,7 @@ import {
     type HitlDrivableGraph,
     type HitlInterruptPayload,
     type HitlResolver,
-} from "../src/index.ts";
+} from "../src";
 
 type WorkerState = typeof SwarmWorkerState.State;
 

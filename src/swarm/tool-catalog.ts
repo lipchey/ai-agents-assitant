@@ -2,7 +2,7 @@
 import { ToolName } from "../consts/tools.ts";
 import { UsageKey } from "../consts/usage.ts";
 import { WorkerKind } from "../consts/worker.ts";
-import { SystemPrompts } from "../prompts/index.ts";
+import { SystemPrompts } from "../prompts";
 
 export const WORKER_TOOLS: Record<WorkerKind, readonly string[]> = {
     [WorkerKind.CODE_EXPLORER]: [ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],

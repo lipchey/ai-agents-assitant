@@ -6,4 +6,4 @@ export type {
     HitlInterruptPayload,
     HitlResolution,
     HitlResolver,
-} from "../types/hitl/index.ts";
+} from "../types/hitl";

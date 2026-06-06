@@ -102,14 +102,16 @@ never re-list those fields inline.
 - Every folder root that owns multiple TypeScript modules should expose an
   `index.ts` barrel with explicit named exports. Consumers outside that
   subsystem boundary may import from the folder barrel instead of a concrete
-  file when the symbol is part of the folder's public surface.
+  file when the symbol is part of the folder's public surface. Import the
+  owning folder itself, not `/index.ts`.
 - **Cycle safety:** modules *inside* a subsystem import each other by concrete
   file, **not** the barrel. A subsystem barrel must not be imported by a file it
   re-exports. Keep dependencies a DAG (shared types in a leaf module, e.g.
   `types/tools/rpc.ts`, `tools/errors.ts`).
-- ESM is mandatory: use explicit `.ts` extensions in local TypeScript source
-  imports. `rewriteRelativeImportExtensions` rewrites them to `.js` for emitted
-  Node ESM output.
+- ESM is mandatory: use explicit `.ts` extensions for concrete local TypeScript
+  file imports. Import `index.ts` barrels from the owning folder. TypeScript
+  uses `bundler` resolution for those folder-barrel specifiers, and
+  `rewriteRelativeImportExtensions` rewrites concrete `.ts` imports on emit.
 
 ## 4. TypeScript — quality typing
 

@@ -127,8 +127,10 @@ barrel `src/index.ts`. The CLI lives in `src/main.ts`; importing `src/index.ts`
 must not start the agent.
 Subsystem roots with multiple TypeScript modules also expose named-export
 `index.ts` barrels (for example `src/graph/`, `src/swarm/`, `src/tools/`,
-`src/consts/`, `src/shared/`, and `src/types/*`). Internal subsystem modules
-still import concrete files to preserve cycle safety.
+`src/consts/`, `src/shared/`, and `src/types/*`). Barrel consumers import the
+owning folder, not `/index.ts`; concrete local file imports keep explicit `.ts`
+extensions. Internal subsystem modules still import concrete files to preserve
+cycle safety.
 
 OpenClaw details:
 - Chat calls use `/v1/chat/completions` with `x-openclaw-model`; default body
@@ -163,9 +165,10 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
 - Use shared helpers in `src/shared/*` for JSON extraction, text coercion, error
   formatting, usage merging, and telemetry shape.
 - Internal modules import concrete files, not subsystem barrels they re-export.
-- Use explicit `.ts` extensions in local TypeScript source imports.
-  `rewriteRelativeImportExtensions` rewrites them to `.js` for emitted Node ESM
-  output.
+- Use explicit `.ts` extensions for concrete local TypeScript file imports.
+  Import `index.ts` barrels from the owning folder; TypeScript uses `bundler`
+  resolution so folder-barrel specifiers typecheck, while
+  `rewriteRelativeImportExtensions` rewrites concrete `.ts` imports on emit.
 - `src/` root is reserved for `main.ts` as the executable entrypoint and
   `index.ts` as the single public export barrel. Feature modules, domain types,
   adapters, constants, and runtime data should live under their owning folders.
