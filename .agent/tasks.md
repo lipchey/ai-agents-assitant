@@ -10,6 +10,7 @@ theme below; remaining ideas are in the Backlog.
 - [x] Scaffold LangGraph dual-graph architecture; typed Swarm + Graph states.
 - [x] Wire LLM APIs through `callLlm`; robust `openclawRpc` wrapper; `src/index.ts` entrypoint.
 - [x] Correct OpenClaw Gateway contract (`/v1/chat/completions`, `x-openclaw-model`, lifecycle, artifacts); real `/tools/invoke` for `web_search` + safe local pseudo-tool adapters.
+- [x] Rewrite the web search provider to Tavily (primary, rich mode) with a DuckDuckGo (key-free) fallback on any failure — wrapper-driven failover in `src/tools/openclaw.ts`, config + env (see memory §14). Brave was dropped: its API dashboard is geo-blocked in Ukraine.
 - [x] Main graph invokes the Swarm sub-graph via explicit state mapping.
 
 ### Control flow & safety
@@ -33,3 +34,4 @@ theme below; remaining ideas are in the Backlog.
 
 ## Backlog (not scheduled)
 - [ ] MAIN-graph HITL: wire `interrupt()`-based approval for the reasoning layer (today only the swarm's environment-failure gate is wired).
+- [ ] Logging system: when structured logging is added, emit warnings for empty DuckDuckGo fallback results so zero-hit searches are visible without failing the worker.

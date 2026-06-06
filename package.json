@@ -9,7 +9,8 @@
     "test": "npm run typecheck",
     "smoke:hitl": "tsx scripts/hitl-smoke.ts",
     "smoke:react": "tsx scripts/react-smoke.ts",
-    "smoke:patch": "tsx scripts/patch-smoke.ts"
+    "smoke:patch": "tsx scripts/patch-smoke.ts",
+    "smoke:websearch": "tsx scripts/websearch-smoke.ts"
   },
   "keywords": [],
   "author": "",

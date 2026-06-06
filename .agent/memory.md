@@ -37,7 +37,7 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 - **Specialized Workers (LLM-planned ReAct agents):** Each worker runs a bounded ReAct loop — the `worker`-role planner picks ONE tool per step, reads the real observation, and decides the next step (read specific files, follow imports, refine searches), up to `MAX_REACT_STEPS`. The safety envelope is enforced both at the worker (per-kind tool catalog `WORKER_TOOLS`, shell-allowlist pre-check, required-arg/limit validation in `sanitizeToolArgs`) and in the local OpenClaw adapters (workspace path bounds, exact command allowlist, no shell interpolation, artifact storage). Recoverable (reasoning) tool/validation errors are fed back in-loop, bounded by `MAX_REACT_TOOL_FAILURES`. See Audit Log §12.
   - `codeExplorer`: tools `find_files` / `grep_code` / `ast_read`.
   - `infraOps`: `shell_exec` (allowlisted) plus the read tools for inspection; a non-zero exit is reported as a finding, not a worker failure.
-  - `webResearcher`: `web_lookup` (→ OpenClaw `web_search`).
+  - `webResearcher`: `web_lookup` → a Tavily-primary / DuckDuckGo-fallback failover in `openclawRpc` (see Audit Log §14), not a bare `web_search` proxy.
 - **SOS Escalation Protocol:** 
   - If a worker fails, it branches based on failure type.
   - `reasoning` failures are escalated to an `smeOracle` powered by DeepSeek V4 Pro, which parses a condensed error essence and responds with advice. Control loops back to the worker, which now consumes that advice (and any `humanGate` retry guidance) as escalation context in its next ReAct attempt.
@@ -50,7 +50,7 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 
 - **Language:** TypeScript (ESM)
 - **Framework:** `@langchain/langgraph`
-- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). `src/tools/openclaw.ts` starts/probes a local loopback Gateway when needed, stores Gateway state in `.openclaw_state`, and calls `/v1/chat/completions` with `x-openclaw-model`. Normal calls use `model: "openclaw/default"`; adaptive Anthropic strong-reasoning calls use the configured `strong-reasoning` agent so OpenClaw's agent `thinkingDefault: "adaptive"` reaches the provider runtime. OpenClaw Gateway `/tools/invoke` is used only for tools actually available on that HTTP surface, currently `web_search`. Repository-local pseudo-tools (`run_tests`, `shell_exec`, `ast_read`, `find_files`, `grep_code`) are handled by deterministic local adapters with workspace path bounds, exact command allowlists, no shell interpolation, timeouts, and artifact storage.
+- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). `src/tools/openclaw.ts` starts/probes a local loopback Gateway when needed, stores Gateway state in `.openclaw_state`, and calls `/v1/chat/completions` with `x-openclaw-model`. Normal calls use `model: "openclaw/default"`; adaptive Anthropic strong-reasoning calls use the configured `strong-reasoning` agent so OpenClaw's agent `thinkingDefault: "adaptive"` reaches the provider runtime. OpenClaw Gateway `/tools/invoke` is used for the bundled web search tools — `tavily_search` (primary) and `web_search` (DuckDuckGo fallback); see Audit Log §14. Repository-local pseudo-tools (`run_tests`, `shell_exec`, `ast_read`, `find_files`, `grep_code`) are handled by deterministic local adapters with workspace path bounds, exact command allowlists, no shell interpolation, timeouts, and artifact storage.
 
 ---
 
@@ -60,6 +60,7 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 - **Validated locally:** `npx tsc --noEmit`, `npm test`, OpenClaw config validation, and a local `openclawRpc("run_tests")` smoke test pass. Full live end-to-end model execution still depends on valid provider credentials and a reachable OpenClaw Gateway/runtime.
 - **Patch application (guarded, opt-in):** The debate loop can now mutate repository files autonomously through the `applyPatches` node (see Audit Log 2026-06-06 below). It is OFF by default; when off, behavior is unchanged except for one no-op node in the path.
 - **HITL channel (wired):** The swarm's `humanGate` now uses real `interrupt()`-based escalation (checkpointer + caller resume loop, see Audit Log §11). The remaining related gap is on the MAIN graph: its own HITL escalation (e.g. interrupting the reasoning layer for approval) is not wired — only the swarm's environment-failure gate is. Swarm workers are now LLM-planned ReAct agents (Audit Log §12) that consume `smeOracle`/`humanGate` guidance as escalation context on retry, so the previous "deterministic tool plan" gap is closed.
+- **Logging backlog:** When the project gets a structured logging system, make empty DuckDuckGo fallback results visible as warnings. They should not fail the worker by default, but zero-hit fallback searches need observability.
 
 ---
 
@@ -202,3 +203,24 @@ Critical review of changes after `f67704ff23a4f3218575efcd791c7e1df7b3db8e` foun
 **ADDED — Patch smoke coverage.** `scripts/patch-smoke.ts` and `npm run smoke:patch` cover safe apply, workspace/protected/read-failed skips, all-skipped reporting, and rollback.
 
 **Validated locally:** `npm run typecheck`, `npm test`, `npm run smoke:patch`, `npm run smoke:react`, and `npm run smoke:hitl` pass. The `tsx` smoke scripts require running outside the restricted sandbox in this Codex environment because the sandbox denies tsx's IPC pipe (`listen EPERM`).
+
+---
+
+## 14. Audit Log (2026-06-06) — web search: Tavily primary + DuckDuckGo fallback
+
+**CONTEXT — why this needed code, not just config.** Investigated the bundled `openclaw` (`node_modules/openclaw/dist/runtime-C6RIaGHP.js`). The managed `web_search` tool resolves to a SINGLE provider with no per-call provider override (its JSON schema has no `provider` field) and no real runtime failover: its native fallback (a) is DISABLED whenever `tools.web.search.provider` is pinned, (b) only triggers on a `missing_*api_key` (provider unconfigured), not on runtime errors/timeouts/empty results, and (c) uses a fixed, non-configurable auto-detect order. So a genuine "Tavily first, fallback on any failure" cannot be expressed in OpenClaw config alone — it had to be driven from our wrapper.
+
+**CHANGED — `src/tools/openclaw.ts` drives the failover.** The `web_lookup` path no longer normalizes to a bare `web_search`. `openclawRpc` now routes `web_lookup` to `runWebLookupWithFallback`:
+- **Primary:** Tavily's dedicated `tavily_search` tool in rich mode (`search_depth: "advanced"`, `include_answer: true`, `max_results: 8`).
+- **Fallback (on ANY failure — error/timeout OR empty result):** the generic `web_search` tool, pinned to a provider in config (`FALLBACK_WEB_SEARCH_TOOL`/`FALLBACK_PROVIDER_LABEL`). Emptiness is probed tolerantly by `webSearchResultIsEmpty` (an `answer`/`summary` string or any non-empty top-level/one-level-nested array counts as usable), since providers return different shapes.
+- The post+retry loop was extracted into `invokeGatewayTool(tool, args, options)` (was inline in `openclawRpc`); `normalizeToolInvocation` is now just control-arg stripping. The returned object is tagged `searchProvider` (Tavily, or the fallback's reported `provider` id / `FALLBACK_PROVIDER_LABEL`) plus `tavilyFallbackReason` on fallback, for observability; the ReAct worker only stringifies the observation, so differing shapes are safe. If both providers fail, it throws an `OpenClawError` naming both.
+
+**FIXED — empty Tavily wrapper results now fall through.** `/tools/invoke` returns plugin tool results as `{ content, details }`; the human-readable `content` array is non-empty even when `details.results` is empty. `webSearchResultIsEmpty` now evaluates `details` when present, and `scripts/websearch-smoke.ts` stubs that real wrapper shape so empty Tavily responses correctly trigger DuckDuckGo fallback.
+
+**CHANGED — fallback provider is DuckDuckGo, not Brave.** Brave was the original pick, but its API dashboard (`api-dashboard.search.brave.com`) is geo-blocked (HTTP 403) in some regions incl. Ukraine, so an API key cannot be obtained. Switched the fallback to **DuckDuckGo** (provider id `duckduckgo`): a bundled, **key-free** `web_search` provider — no account, no env var, no geo-restriction. It is an experimental HTML scraper (can rate-limit/break), which is acceptable for a last-resort tier that runs only when Tavily fails.
+
+**CHANGED — config + env.** `openclaw.config.json5` enables the `tavily` plugin and pins `tools.web.search.provider: "duckduckgo"` (the fallback tier; DuckDuckGo needs no plugin entry). `.env`/`.env.example` replaced the dead `GOOGLE_SEARCH_CX`/`GOOGLE_SEARCH_API_KEY` (OpenClaw never read them — there is no Google CSE provider) with just `TAVILY_API_KEY`, which the Gateway reads. No key is needed for the fallback.
+
+**NOTE — `tavily_search` exposure.** The primary depends on the Tavily plugin tool being invokable via `/tools/invoke`. If it is ever unavailable, the wrapper degrades gracefully to the key-free DuckDuckGo fallback (never a hard break). To change the fallback provider later, repin `tools.web.search.provider`, add the provider's plugin entry + API key if it needs one, and update `FALLBACK_PROVIDER_LABEL`.
+
+**Validated locally:** `npx tsc --noEmit` / `npm test` pass; `openclaw config validate` reports the config valid; new `scripts/websearch-smoke.ts` (`npm run smoke:websearch`) stubs the `fetch` boundary to pin the real `openclawRpc → runWebLookupWithFallback → invokeGatewayTool` path: Tavily-success (fallback untouched, rich args sent), Tavily-error → fallback, empty-Tavily → fallback, both-fail throw, and missing-query rejection. The existing `smoke:react`/`smoke:patch`/`smoke:hitl` still pass.

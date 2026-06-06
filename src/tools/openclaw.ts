@@ -835,35 +835,31 @@ const omitControlArgs = (args: OpenClawRpcArgs): JsonObject => {
 const normalizeToolInvocation = (
     tool: string,
     args: OpenClawRpcArgs,
-): { tool: string; args: JsonObject } => {
-    switch (tool) {
-        case "web_lookup": {
-            const query = readString(args.query) ?? readString(args.subtask);
-            if (!query) {
-                throw new OpenClawError("web_lookup requires a query.");
-            }
-            return { tool: "web_search", args: { query } };
-        }
-        default:
-            return { tool, args: omitControlArgs(args) };
-    }
-};
+): { tool: string; args: JsonObject } => ({ tool, args: omitControlArgs(args) });
 
-export const openclawRpc = async (
+// --- Web search: Tavily primary, DuckDuckGo fallback -------------------------
+//
+// OpenClaw's managed `web_search` resolves to a SINGLE provider with no per-call
+// override and no runtime failover (its native fallback only covers a missing
+// API key, in a fixed auto-detect order). To get a real "Tavily first, fallback
+// on any failure" behavior we drive the failover here:
+//   1. Primary  -> Tavily's dedicated `tavily_search` tool (rich mode:
+//      advanced depth + AI answer).
+//   2. Fallback -> the generic `web_search` tool, pinned to a provider in
+//      openclaw.config.json5 (DuckDuckGo: key-free, no geo-restriction), on
+//      ANY Tavily error/timeout OR empty result.
+const TAVILY_SEARCH_TOOL = "tavily_search";
+const FALLBACK_WEB_SEARCH_TOOL = "web_search";
+// Label used when the generic web_search result does not report its own provider
+// id; keep aligned with tools.web.search.provider in openclaw.config.json5.
+const FALLBACK_PROVIDER_LABEL = "duckduckgo";
+const WEB_SEARCH_MAX_RESULTS = 8;
+
+const invokeGatewayTool = async (
     tool: string,
-    args: OpenClawRpcArgs,
+    args: JsonObject,
     options?: OpenClawRpcOptions,
 ): Promise<JsonObject> => {
-    if (args.requireConfirmation) {
-        throw new OpenClawError(`HITL_REQUIRED: confirmation required before executing ${tool}.`);
-    }
-
-    const localResult = await runLocalPseudoTool(tool, args, options);
-    if (localResult) {
-        return localResult;
-    }
-
-    const normalized = normalizeToolInvocation(tool, args);
     const maxRetries = options?.maxRetries ?? 1;
     let lastError: unknown;
 
@@ -872,8 +868,8 @@ export const openclawRpc = async (
             const response = await jsonPost<{ ok: boolean; result?: unknown; error?: { message?: string; type?: string } }>(
                 "/tools/invoke",
                 {
-                    tool: normalized.tool,
-                    args: normalized.args,
+                    tool,
+                    args,
                     sessionKey: options?.sessionKey ?? "main",
                     ...(options?.action ? { action: options.action } : {}),
                     ...(options?.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : {}),
@@ -882,7 +878,7 @@ export const openclawRpc = async (
             );
 
             if (!response.ok) {
-                throw new OpenClawError(response.error?.message ?? `OpenClaw rejected tool ${normalized.tool}.`);
+                throw new OpenClawError(response.error?.message ?? `OpenClaw rejected tool ${tool}.`);
             }
 
             if (!response.result || typeof response.result !== "object" || Array.isArray(response.result)) {
@@ -900,9 +896,116 @@ export const openclawRpc = async (
     }
 
     const message = lastError instanceof Error ? lastError.message : String(lastError);
-    throw new OpenClawError(`Failed to invoke OpenClaw tool ${tool} as ${normalized.tool}: ${message}`, {
-        cause: lastError,
-    });
+    throw new OpenClawError(`Failed to invoke OpenClaw tool ${tool}: ${message}`, { cause: lastError });
+};
+
+const isNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
+
+const readJsonObject = (value: unknown): JsonObject | undefined => {
+    return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : undefined;
+};
+
+const webSearchPayload = (result: JsonObject): JsonObject => {
+    // OpenClaw plugin tools return AgentToolResult wrappers:
+    // { content: [...human-readable text...], details: actualJsonPayload }.
+    // `content` is non-empty even when the search payload has zero hits, so the
+    // emptiness decision must prefer `details` when present.
+    return readJsonObject(result.details) ?? result;
+};
+
+// A search result is usable when it carries an AI answer/summary or at least one
+// result row. Providers differ in shape (Tavily: `results`/`answer`; the generic
+// tool: `results`/`web.results`/`value`), so probe the payload tolerantly:
+// top-level arrays plus one level into nested objects.
+const webSearchResultIsEmpty = (result: JsonObject): boolean => {
+    const payload = webSearchPayload(result);
+    if (readString(payload.answer) || readString(payload.summary)) {
+        return false;
+    }
+    for (const value of Object.values(payload)) {
+        if (isNonEmptyArray(value)) {
+            return false;
+        }
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+            for (const nested of Object.values(value as JsonObject)) {
+                if (isNonEmptyArray(nested)) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+};
+
+const runWebLookupWithFallback = async (
+    args: OpenClawRpcArgs,
+    options?: OpenClawRpcOptions,
+): Promise<JsonObject> => {
+    const query = readString(args.query) ?? readString(args.subtask);
+    if (!query) {
+        throw new OpenClawError("web_lookup requires a query.");
+    }
+
+    let tavilyFailure: string;
+    try {
+        const tavily = await invokeGatewayTool(
+            TAVILY_SEARCH_TOOL,
+            {
+                query,
+                search_depth: "advanced",
+                include_answer: true,
+                max_results: WEB_SEARCH_MAX_RESULTS,
+            },
+            options,
+        );
+        if (!webSearchResultIsEmpty(tavily)) {
+            return { ...tavily, searchProvider: "tavily" };
+        }
+        tavilyFailure = "tavily returned no results";
+    } catch (error) {
+        tavilyFailure = error instanceof Error ? error.message : String(error);
+    }
+
+    try {
+        const fallback = await invokeGatewayTool(
+            FALLBACK_WEB_SEARCH_TOOL,
+            { query, count: Math.min(WEB_SEARCH_MAX_RESULTS, 10) },
+            options,
+        );
+        const fallbackPayload = webSearchPayload(fallback);
+        const fallbackProvider = readString(fallback.provider)
+            ?? readString(fallbackPayload.provider)
+            ?? FALLBACK_PROVIDER_LABEL;
+        return { ...fallback, searchProvider: fallbackProvider, tavilyFallbackReason: tavilyFailure };
+    } catch (fallbackError) {
+        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        throw new OpenClawError(
+            `web_lookup failed: tavily(${tavilyFailure}); ${FALLBACK_PROVIDER_LABEL}(${fallbackMessage}).`,
+            { cause: fallbackError },
+        );
+    }
+};
+
+export const openclawRpc = async (
+    tool: string,
+    args: OpenClawRpcArgs,
+    options?: OpenClawRpcOptions,
+): Promise<JsonObject> => {
+    if (args.requireConfirmation) {
+        throw new OpenClawError(`HITL_REQUIRED: confirmation required before executing ${tool}.`);
+    }
+
+    const localResult = await runLocalPseudoTool(tool, args, options);
+    if (localResult) {
+        return localResult;
+    }
+
+    if (tool === "web_lookup") {
+        return runWebLookupWithFallback(args, options);
+    }
+
+    const normalized = normalizeToolInvocation(tool, args);
+    return invokeGatewayTool(normalized.tool, normalized.args, options);
 };
 
 export const storeArtifact = async (blob: string): Promise<string> => {
