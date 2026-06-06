@@ -49,7 +49,7 @@ Handles tool execution via the `OpenClaw` RPC bridge.
 
 - **Language:** TypeScript (ESM)
 - **Framework:** `@langchain/langgraph`
-- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). `src/tools/openclaw.ts` starts/probes a local loopback Gateway when needed, stores Gateway state in `.openclaw_state`, and calls `/v1/chat/completions` with `model: "openclaw/default"` plus `x-openclaw-model`. OpenClaw Gateway `/tools/invoke` is used only for tools actually available on that HTTP surface, currently `web_search`. Repository-local pseudo-tools (`run_tests`, `shell_exec`, `ast_read`, `find_files`, `grep_code`) are handled by deterministic local adapters with workspace path bounds, exact command allowlists, no shell interpolation, timeouts, and artifact storage.
+- **Orchestrator Tooling Bridge:** OpenClaw (Internal Module). `src/tools/openclaw.ts` starts/probes a local loopback Gateway when needed, stores Gateway state in `.openclaw_state`, and calls `/v1/chat/completions` with `x-openclaw-model`. Normal calls use `model: "openclaw/default"`; adaptive Anthropic strong-reasoning calls use the configured `strong-reasoning` agent so OpenClaw's agent `thinkingDefault: "adaptive"` reaches the provider runtime. OpenClaw Gateway `/tools/invoke` is used only for tools actually available on that HTTP surface, currently `web_search`. Repository-local pseudo-tools (`run_tests`, `shell_exec`, `ast_read`, `find_files`, `grep_code`) are handled by deterministic local adapters with workspace path bounds, exact command allowlists, no shell interpolation, timeouts, and artifact storage.
 
 ---
 
@@ -106,3 +106,15 @@ Senior audit of the dual-graph framework. Architecture matches the design (cheap
 **FIXED — `recursionLimit` headroom.** `graph.invoke` now passes `{ recursionLimit: 50 }` so legitimate bounded multi-cycle runs (~22 super-steps worst case) never trip the default-25 ceiling and lose telemetry. The per-cycle caps above remain the real termination guard.
 
 **Known minor:** `usageStats` aliases the swarm's `workerCompress` cost under the `firewall` key. `totalCost`/`totalTokens` totals are still correct; only that per-role breakdown is slightly conflated. Live end-to-end run still depends on valid provider credentials and a reachable Gateway/runtime.
+
+---
+
+## 8. Audit Log (2026-06-06) — Opus adaptive thinking, pure reasoning finalization, usage hardening
+
+**CHANGED — Provider-aware OpenClaw LLM payloads.** `callLlm` now derives provider routing from `modelForRole`; Claude Opus routes omit `temperature`, Anthropic thinking uses `thinking: { type: "adaptive" }` plus `output_config.effort` instead of OpenAI-style `reasoning_effort`, and the configured `strong-reasoning` Gateway agent gives current OpenClaw Chat Completions a real adaptive-thinking path. `strong-reasoning` shares the `main` agentDir so existing portable auth profiles do not need to be duplicated and the historical default agent id remains unchanged.
+
+**CHANGED — Pure reasoning finalizes from reasoning roles.** `pure_reasoning` tasks now finalize from `frontierArchitect` or `claudeArchitect` output and do not pass through the implementation-focused `claudeCoder` prompt.
+
+**FIXED — Anthropic cache accounting guard.** `calculateUsage` treats `input_tokens`/`uncached_input_tokens` as the non-cached Anthropic input when present, and subtracts cache-read tokens from OpenAI-style `prompt_tokens` when needed so cache-read input is not counted twice.
+
+**CHANGED — Pricing cache.** `pricing.json` is read once per process through a module-level cache instead of on every LLM call.

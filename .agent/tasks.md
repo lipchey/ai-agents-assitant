@@ -17,5 +17,8 @@
 - [x] Replace abstract `tokenBudget` with a real `costBudgetUsd` graph budget and USD-aware debate/refetch routing
 - [x] Make debate-driven context refetch targeted from `debateSummary`/latest critique and vary `codeExplorer` grep terms
 - [x] Account for cache-hit/cache-write input pricing in LLM telemetry for DeepSeek, Anthropic, and OpenAI usage fields
+- [x] Make Opus calls provider-aware: no temperature, adaptive thinking, Anthropic `output_config.effort`, and current OpenClaw `strong-reasoning` agent routing
+- [x] Finalize `pure_reasoning` tasks from reasoning roles instead of the coder prompt
+- [x] Cache `pricing.json` loading per process
 - [ ] Add guarded patch-application stage if the framework should mutate repository files autonomously instead of returning draft patches
 - [ ] Wire a real HITL channel (compile swarm with a checkpointer + caller resume loop) to restore `humanGate` interrupt-based escalation

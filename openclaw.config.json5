@@ -27,6 +27,18 @@
         "deepseek/deepseek-v4-flash": { alias: "DeepSeek Fast" },
       },
     },
+    list: [
+      {
+        id: "main",
+        default: true,
+      },
+      {
+        id: "strong-reasoning",
+        agentDir: ".openclaw_state/agents/main/agent",
+        thinkingDefault: "adaptive",
+        reasoningDefault: "off",
+      },
+    ],
   },
   tools: {
     profile: "coding",

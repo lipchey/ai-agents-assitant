@@ -435,6 +435,7 @@ const claudeArchitect = async (state: GraphStateValue) => {
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
         ].filter(Boolean).join("\n\n"),
+        { thinking: "adaptive", reasoningEffort: "high" },
     );
 
     return {
@@ -551,6 +552,7 @@ const smeTiebreaker = async (state: GraphStateValue) => {
             `Current draft:\n${state.currentDraft}`,
             `Debate summary:\n${state.debateSummary}`,
         ].join("\n\n"),
+        { thinking: "adaptive", reasoningEffort: "high" },
     );
     return {
         currentDraft: result.content,
@@ -620,10 +622,20 @@ const routeAfterFrontierArchitect = (state: GraphStateValue): string => {
     if (isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD)) {
         return "finalize";
     }
+    if (state.complexity === "pure_reasoning") {
+        if (state.strongEscalationRequired && canSpendUsd(state, PROJECTED_STRONG_ARCHITECT_USD)) {
+            return "claudeArchitect";
+        }
+        return "finalize";
+    }
     if (state.strongEscalationRequired && canSpendUsd(state, PROJECTED_STRONG_ARCHITECT_USD + PROJECTED_CODER_REVIEW_CYCLE_USD)) {
         return "claudeArchitect";
     }
     return "claudeCoder";
+};
+
+const routeAfterClaudeArchitect = (state: GraphStateValue): string => {
+    return state.complexity === "pure_reasoning" ? "finalize" : "claudeCoder";
 };
 
 const routeDebate = (state: GraphStateValue): string => {
@@ -702,7 +714,10 @@ export const buildMainGraph = () => {
             claudeCoder: "claudeCoder",
             finalize: "finalize",
         })
-        .addEdge("claudeArchitect", "claudeCoder")
+        .addConditionalEdges("claudeArchitect", routeAfterClaudeArchitect, {
+            claudeCoder: "claudeCoder",
+            finalize: "finalize",
+        })
         .addEdge("claudeCoder", "frontierCritic")
         .addConditionalEdges("frontierCritic", routeAfterFrontierCritic, {
             claudeCoder: "claudeCoder",
