@@ -9,6 +9,15 @@ export const ModelRef = {
 
 export type ModelRef = (typeof ModelRef)[keyof typeof ModelRef];
 
+export const ModelProvider = {
+    ANTHROPIC: "anthropic",
+    DEEPSEEK: "deepseek",
+    OPENAI: "openai",
+    UNKNOWN: "unknown",
+} as const;
+
+export type ModelProvider = (typeof ModelProvider)[keyof typeof ModelProvider];
+
 export const ModelRole = {
     ROUTER: "router",
     FRONTIER: "frontier",
@@ -21,5 +30,30 @@ export const ModelRole = {
 } as const;
 
 export type ModelRole = (typeof ModelRole)[keyof typeof ModelRole];
+
+export const ChatRole = {
+    SYSTEM: "system",
+    USER: "user",
+} as const;
+
+export type ChatRole = (typeof ChatRole)[keyof typeof ChatRole];
+
+export const ReasoningEffort = {
+    LOW: "low",
+    MEDIUM: "medium",
+    HIGH: "high",
+    XHIGH: "xhigh",
+    MAX: "max",
+} as const;
+
+export type ReasoningEffort = (typeof ReasoningEffort)[keyof typeof ReasoningEffort];
+
+export const ThinkingMode = {
+    ADAPTIVE: "adaptive",
+    ENABLED: "enabled",
+    DISABLED: "disabled",
+} as const;
+
+export type ThinkingMode = (typeof ThinkingMode)[keyof typeof ThinkingMode];
 
 export const RESPONSE_FORMAT_JSON = "json_object" as const;

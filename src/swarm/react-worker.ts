@@ -8,7 +8,9 @@ import {
     MAX_PRIOR_TRANSCRIPT_CHARS,
     MAX_REACT_STEPS,
     MAX_REACT_TOOL_FAILURES,
+    ReactDecisionKind,
     SHELL_EXEC_TIMEOUT_S,
+    ThinkingMode,
     TOOL_TIMEOUT_S,
     ToolName,
     WorkerKind,
@@ -88,7 +90,7 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
             planResult = await callLlm(ModelRole.WORKER, system, buildWorkerContext(state, steps), {
                 maxTokens: 700,
                 responseFormat: RESPONSE_FORMAT_JSON,
-                thinking: "disabled",
+                thinking: ThinkingMode.DISABLED,
             });
         } catch (error) {
             /* Planner gateway/timeout failures are environment issues, not graph crashes. */
@@ -98,7 +100,7 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
         usage = mergeUsage(usage, usageFromLlm(planResult));
 
         const decision = parseReactDecision(planResult.content);
-        if (decision.kind === "final") {
+        if (decision.kind === ReactDecisionKind.FINAL) {
             finalSummary = decision.final;
             break;
         }

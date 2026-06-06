@@ -1,4 +1,10 @@
 import assert from "node:assert/strict";
+import {
+    FALLBACK_PROVIDER_LABEL,
+    PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+    TAVILY_SEARCH_DEPTH,
+    ToolName,
+} from "../src/consts";
 import { openclawRpc } from "../src/tools/openclaw.ts";
 
 type GatewayBody = { ok: boolean; result?: unknown; error?: { message?: string } };
@@ -37,47 +43,47 @@ const toolResult = (details: Record<string, unknown>): Record<string, unknown> =
 /* JSON Gateway tools put the machine payload in details, not content. */
 const fallbackOk: GatewayBody = {
     ok: true,
-    result: toolResult({ provider: "duckduckgo", results: [{ title: "ddg hit" }] }),
+    result: toolResult({ provider: FALLBACK_PROVIDER_LABEL, results: [{ title: "ddg hit" }] }),
 };
 
 const run = async (): Promise<void> => {
     reset((tool) =>
-        tool === "tavily_search"
+        tool === ToolName.TAVILY_SEARCH
             ? { ok: true, result: toolResult({ answer: "AI summary", results: [{ title: "t", url: "u" }] }) }
             : fallbackOk,
     );
-    let res = await openclawRpc("web_lookup", { query: "langgraph swarm" }, { maxRetries: 0 });
-    assert.equal(res.searchProvider, "tavily", "A: Tavily should answer");
-    assert.ok(calls.some((c) => c.tool === "tavily_search"), "A: tavily_search called");
-    assert.ok(!calls.some((c) => c.tool === "web_search"), "A: fallback must NOT be called");
-    const tavilyArgs = calls.find((c) => c.tool === "tavily_search")!.args;
-    assert.equal(tavilyArgs.search_depth, "advanced", "A: rich search_depth sent");
+    let res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "langgraph swarm" }, { maxRetries: 0 });
+    assert.equal(res.searchProvider, PRIMARY_WEB_SEARCH_PROVIDER_LABEL, "A: Tavily should answer");
+    assert.ok(calls.some((c) => c.tool === ToolName.TAVILY_SEARCH), "A: tavily_search called");
+    assert.ok(!calls.some((c) => c.tool === ToolName.WEB_SEARCH), "A: fallback must NOT be called");
+    const tavilyArgs = calls.find((c) => c.tool === ToolName.TAVILY_SEARCH)!.args;
+    assert.equal(tavilyArgs.search_depth, TAVILY_SEARCH_DEPTH, "A: rich search_depth sent");
     assert.equal(tavilyArgs.include_answer, true, "A: rich include_answer sent");
 
     reset((tool) =>
-        tool === "tavily_search" ? { ok: false, error: { message: "tavily 500" } } : fallbackOk,
+        tool === ToolName.TAVILY_SEARCH ? { ok: false, error: { message: "tavily 500" } } : fallbackOk,
     );
-    res = await openclawRpc("web_lookup", { query: "x" }, { maxRetries: 0 });
-    assert.equal(res.searchProvider, "duckduckgo", "B: fallback on Tavily error");
+    res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 });
+    assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "B: fallback on Tavily error");
     assert.ok(String(res.tavilyFallbackReason).includes("tavily 500"), "B: reason carries Tavily error");
 
     reset((tool) =>
-        tool === "tavily_search" ? { ok: true, result: toolResult({ results: [], answer: "" }) } : fallbackOk,
+        tool === ToolName.TAVILY_SEARCH ? { ok: true, result: toolResult({ results: [], answer: "" }) } : fallbackOk,
     );
-    res = await openclawRpc("web_lookup", { query: "x" }, { maxRetries: 0 });
-    assert.equal(res.searchProvider, "duckduckgo", "C: fallback on empty Tavily");
-    assert.equal(res.tavilyFallbackReason, "tavily returned no results", "C: empty-result reason");
+    res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 });
+    assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "C: fallback on empty Tavily");
+    assert.equal(res.tavilyFallbackReason, `${PRIMARY_WEB_SEARCH_PROVIDER_LABEL} returned no results`, "C: empty-result reason");
 
     reset(() => ({ ok: false, error: { message: "down" } }));
     await assert.rejects(
-        () => openclawRpc("web_lookup", { query: "x" }, { maxRetries: 0 }),
+        () => openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 }),
         (err: Error) => /tavily\(/.test(err.message) && /duckduckgo\(/.test(err.message),
         "D: both-fail error mentions Tavily and DuckDuckGo",
     );
 
     reset(() => fallbackOk);
     await assert.rejects(
-        () => openclawRpc("web_lookup", {}, { maxRetries: 0 }),
+        () => openclawRpc(ToolName.WEB_LOOKUP, {}, { maxRetries: 0 }),
         /web_lookup requires a query/,
         "E: missing query rejected",
     );

@@ -1,3 +1,5 @@
+import { OriginalReadKind } from "../../consts";
+
 export type PatchBlock = {
     path: string;
     content: string;
@@ -11,6 +13,6 @@ export type ApplyPatchesResult = {
 };
 
 export type OriginalReadResult =
-    | { kind: "found"; content: string }
-    | { kind: "missing" }
-    | { kind: "error"; message: string };
+    | { kind: typeof OriginalReadKind.FOUND; content: string }
+    | { kind: typeof OriginalReadKind.MISSING }
+    | { kind: typeof OriginalReadKind.ERROR; message: string };

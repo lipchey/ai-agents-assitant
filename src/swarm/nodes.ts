@@ -3,10 +3,14 @@ import {
     ModelRole,
     RESPONSE_FORMAT_JSON,
     FailureType,
+    HitlInterruptKind,
+    HitlResolutionAction,
     MAX_BLOCKED_FALLBACK_CHARS,
+    ReasoningEffort,
     UsageKey,
     WorkerKind,
     WorkerStatus,
+    ThinkingMode,
 } from "../consts";
 import { SystemPrompts } from "../prompts";
 import { asRecord, extractJsonObject, safeJson, truncate, emptyUsage, usageFromLlm } from "../shared";
@@ -48,7 +52,7 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
                 state.escalationResponse ? `Escalation guidance:\n${state.escalationResponse}` : "",
                 `Heuristic suggestion: ${seededKind}`,
             ].filter(Boolean).join("\n\n"),
-            { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON, thinking: "disabled" },
+            { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
         );
         selectedKind = parseWorkerKind(result.content, seededKind);
         usage = usageFromLlm(result);
@@ -73,7 +77,7 @@ export const smeOracle = async (state: SwarmWorkerStateValue) => {
         ModelRole.FRONTIER,
         SystemPrompts.smeOracle,
         state.escalationQuery,
-        { maxTokens: 900, reasoningEffort: "high", thinking: "enabled" },
+        { maxTokens: 900, reasoningEffort: ReasoningEffort.HIGH, thinking: ThinkingMode.ENABLED },
     );
     return {
         escalationResponse: result.content,
@@ -90,7 +94,7 @@ export const humanGate = (state: SwarmWorkerStateValue) => {
     const reason = state.escalationQuery ?? "unknown environment error";
 
     const payload: HitlInterruptPayload = {
-        kind: "environment_failure",
+        kind: HitlInterruptKind.ENVIRONMENT_FAILURE,
         failureType: failure,
         workerKind: state.workerKind,
         subtask: state.subtask,
@@ -99,7 +103,7 @@ export const humanGate = (state: SwarmWorkerStateValue) => {
     };
     const resolution = interrupt<HitlInterruptPayload, HitlResolution>(payload);
 
-    if (!resolution || resolution.action === "abort") {
+    if (!resolution || resolution.action === HitlResolutionAction.ABORT) {
         return {
             status: WorkerStatus.BLOCKED,
             escalationResponse: `Manual resolution required (${failure}): ${reason}`,
@@ -120,7 +124,7 @@ export const workerCompress = async (state: SwarmWorkerStateValue) => {
         ModelRole.FIREWALL,
         SystemPrompts.workerCompress,
         state.rawToolOutput || safeJson(state.toolCalls),
-        { maxTokens: 1_200, responseFormat: RESPONSE_FORMAT_JSON, thinking: "disabled" },
+        { maxTokens: 1_200, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
     );
     return {
         workerSummary: result.content,

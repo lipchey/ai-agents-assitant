@@ -1,5 +1,5 @@
 /* Network-free guard layer before any planner-proposed tool call runs. */
-import { ToolName, FailureType, SAFE_DIRECT_EXEC_COMMANDS, SHELL_EXEC_TIMEOUT_S, WorkerKind, WORKER_TOOLS } from "../consts";
+import { ToolName, FailureType, ReactDecisionKind, SAFE_DIRECT_EXEC_COMMANDS, SHELL_EXEC_TIMEOUT_S, WorkerKind, WORKER_TOOLS } from "../consts";
 import { asRecord, extractJsonObject, clampInt, readString } from "../shared";
 import type { OpenClawRpcArgs } from "../tools";
 import type { ReactDecision, SanitizedAction } from "../types/swarm";
@@ -13,14 +13,14 @@ export const parseReactDecision = (content: string): ReactDecision => {
     const tool = readString(action?.tool);
     if (tool) {
         const rawArgs = asRecord(action?.args);
-        return { kind: "act", thought, tool, args: (rawArgs ?? {}) as OpenClawRpcArgs };
+        return { kind: ReactDecisionKind.ACT, thought, tool, args: (rawArgs ?? {}) as OpenClawRpcArgs };
     }
     const final = typeof parsed?.final === "string" ? parsed.final.trim() : "";
     if (final) {
-        return { kind: "final", thought, final };
+        return { kind: ReactDecisionKind.FINAL, thought, final };
     }
     /* Prose fallback converges instead of spending more planner steps. */
-    return { kind: "final", thought, final: content.trim() };
+    return { kind: ReactDecisionKind.FINAL, thought, final: content.trim() };
 };
 
 export const sanitizeToolArgs = (

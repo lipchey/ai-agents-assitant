@@ -1,4 +1,11 @@
-import { ModelRole, RESPONSE_FORMAT_JSON, CONFIDENCE_ESCALATION_THRESHOLD, UsageKey } from "../../consts";
+import {
+    ModelRole,
+    RESPONSE_FORMAT_JSON,
+    CONFIDENCE_ESCALATION_THRESHOLD,
+    ReasoningEffort,
+    ThinkingMode,
+    UsageKey,
+} from "../../consts";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -15,7 +22,12 @@ export const frontierArchitect = async (state: GraphStateValue) => {
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
         ].filter(Boolean).join("\n\n"),
-        { maxTokens: 2_400, reasoningEffort: "high", responseFormat: RESPONSE_FORMAT_JSON, thinking: "enabled" },
+        {
+            maxTokens: 2_400,
+            reasoningEffort: ReasoningEffort.HIGH,
+            responseFormat: RESPONSE_FORMAT_JSON,
+            thinking: ThinkingMode.ENABLED,
+        },
     );
     const decision = parseFrontierArchitectureDecision(result.content);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
@@ -49,7 +61,7 @@ export const claudeArchitect = async (state: GraphStateValue) => {
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
         ].filter(Boolean).join("\n\n"),
-        { thinking: "adaptive", reasoningEffort: "high" },
+        { thinking: ThinkingMode.ADAPTIVE, reasoningEffort: ReasoningEffort.HIGH },
     );
 
     return {

@@ -1,4 +1,12 @@
-import { ModelRole, RESPONSE_FORMAT_JSON, CONFIDENCE_ESCALATION_THRESHOLD, RECENT_DEBATE_WINDOW, UsageKey } from "../../consts";
+import {
+    ModelRole,
+    RESPONSE_FORMAT_JSON,
+    CONFIDENCE_ESCALATION_THRESHOLD,
+    RECENT_DEBATE_WINDOW,
+    ReasoningEffort,
+    ThinkingMode,
+    UsageKey,
+} from "../../consts";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -16,7 +24,12 @@ export const frontierCritic = async (state: GraphStateValue) => {
             `Debate so far:\n${JSON.stringify(state.debateThread.slice(-RECENT_DEBATE_WINDOW))}`,
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
         ].filter(Boolean).join("\n\n"),
-        { maxTokens: 1_400, reasoningEffort: "high", responseFormat: RESPONSE_FORMAT_JSON, thinking: "enabled" },
+        {
+            maxTokens: 1_400,
+            reasoningEffort: ReasoningEffort.HIGH,
+            responseFormat: RESPONSE_FORMAT_JSON,
+            thinking: ThinkingMode.ENABLED,
+        },
     );
     const decision = parseFrontierCriticDecision(result.content);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);

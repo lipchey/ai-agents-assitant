@@ -1,13 +1,29 @@
 export { EnvVar, isTruthyEnv } from "./env.ts";
 export {
     CONTEXT_TERM_STOP_WORDS,
+    GraphComplexity,
     MainNode,
     STRONG_ESCALATION_SIGNALS,
     SWARM_BLOCKED_ROUTE,
     SwarmNode,
+    isGraphComplexity,
 } from "./graph.ts";
-export { HITL_RESOLVER_CONFIG_KEY } from "./hitl.ts";
-export { ModelRef, ModelRole, RESPONSE_FORMAT_JSON } from "./models.ts";
+export {
+    HITL_RESOLVER_CONFIG_KEY,
+    HITL_THREAD_CONFIG_KEY,
+    HITL_THREAD_ID_PREFIX,
+    HitlInterruptKind,
+    HitlResolutionAction,
+} from "./hitl.ts";
+export {
+    ChatRole,
+    ModelProvider,
+    ModelRef,
+    ModelRole,
+    ReasoningEffort,
+    RESPONSE_FORMAT_JSON,
+    ThinkingMode,
+} from "./models.ts";
 export {
     DEFAULT_GATEWAY_TOKEN,
     DEFAULT_GATEWAY_URL,
@@ -21,12 +37,17 @@ export {
     STARTUP_TIMEOUT_MS,
     STRONG_REASONING_AGENT_ID,
 } from "./openclaw.ts";
-export { PATCH_BLOCK, PROTECTED_SEGMENTS } from "./patching.ts";
+export { MISSING_FILE_ERROR_CODE, OriginalReadKind, PATCH_BLOCK, PROTECTED_SEGMENTS } from "./patching.ts";
 export {
+    GIT_STATUS_SHORT_COMMAND,
     KILL_GRACE_MS,
     MAX_PROCESS_OUTPUT_CHARS,
+    NPM_RUN_BUILD_COMMAND,
+    NPM_RUN_TEST_COMMAND,
+    NPM_TEST_COMMAND,
     SAFE_COMMAND_SPECS,
     SAFE_DIRECT_EXEC_COMMANDS,
+    TSC_NO_EMIT_COMMAND,
     ToolName,
     ToolStatus,
     VERIFY_TYPECHECK_COMMAND,
@@ -67,12 +88,15 @@ export { UsageKey } from "./usage.ts";
 export {
     FALLBACK_PROVIDER_LABEL,
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+    TAVILY_SEARCH_DEPTH,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
     WEB_SEARCH_MAX_RESULTS,
 } from "./web.ts";
 export { WORKER_PROMPTS } from "./worker-prompts.ts";
 export {
     FailureType,
+    ReactDecisionKind,
+    UNKNOWN_WORKER_STATUS_LABEL,
     WorkerKind,
     WorkerStatus,
     WORKER_NODE,

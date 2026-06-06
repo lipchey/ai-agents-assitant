@@ -1,3 +1,16 @@
+export const GraphComplexity = {
+    TRIVIAL: "trivial",
+    TOOL_COMPLEX: "tool_complex",
+    PURE_REASONING: "pure_reasoning",
+} as const;
+
+export type GraphComplexity = (typeof GraphComplexity)[keyof typeof GraphComplexity];
+
+const GRAPH_COMPLEXITY_VALUES = new Set<string>(Object.values(GraphComplexity));
+
+export const isGraphComplexity = (value: unknown): value is GraphComplexity =>
+    typeof value === "string" && GRAPH_COMPLEXITY_VALUES.has(value);
+
 export const MainNode = {
     COMPLEXITY_ROUTER: "complexityRouter",
     DIRECT_RESPONDER: "directResponder",

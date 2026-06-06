@@ -159,8 +159,10 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
   object with its same-named union type in the same consts module. There is no
   separate `src/types/consts/*` layer.
 - Constant audit on 2026-06-06 centralized runtime caps, timeouts, route maps,
-  allowlists, patch guards, HITL config keys, and web fallback knobs under
-  `src/consts/*`. Prompt cache anchors remain in `src/prompts/` by design.
+  allowlists, graph complexity values, ReAct decision kinds, patch read result
+  kinds, HITL config/actions/interrupt kinds, model provider/thinking controls,
+  patch guards, and web fallback knobs under `src/consts/*`. Prompt cache
+  anchors remain in `src/prompts/` by design.
 - Keep `ModelRef` values byte-equal to
   `src/consts/pricing/model-pricing.json` keys.
 - Shared/public types live under `src/types/*`; implementation modules may

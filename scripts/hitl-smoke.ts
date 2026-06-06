@@ -1,6 +1,6 @@
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import assert from "node:assert/strict";
-import { FailureType, WorkerKind, WorkerStatus } from "../src/consts/worker.ts";
+import { FailureType, HitlInterruptKind, HitlResolutionAction, SwarmNode, WorkerKind, WorkerStatus } from "../src/consts";
 import {
     autoAbortResolver,
     driveSwarmWithHitl,
@@ -12,6 +12,11 @@ import {
 } from "../src";
 
 type WorkerState = typeof SwarmWorkerState.State;
+
+const TestNode = {
+    WORKER: "worker",
+    END: "end",
+} as const;
 
 /* Mirrors a missing-binary failure the model cannot fix without HITL guidance. */
 const fakeWorker = (state: WorkerState) => {
@@ -31,17 +36,23 @@ const fakeWorker = (state: WorkerState) => {
 };
 
 const afterWorker = (state: WorkerState): string =>
-    state.status === WorkerStatus.DONE ? "end" : "humanGate";
+    state.status === WorkerStatus.DONE ? TestNode.END : SwarmNode.HUMAN_GATE;
 const afterHuman = (state: WorkerState): string =>
-    state.status === WorkerStatus.BLOCKED ? "end" : "worker";
+    state.status === WorkerStatus.BLOCKED ? TestNode.END : TestNode.WORKER;
 
 const buildTestGraph = () =>
     new StateGraph(SwarmWorkerState)
-        .addNode("worker", fakeWorker)
-        .addNode("humanGate", humanGate)
-        .addEdge(START, "worker")
-        .addConditionalEdges("worker", afterWorker, { humanGate: "humanGate", end: END })
-        .addConditionalEdges("humanGate", afterHuman, { worker: "worker", end: END })
+        .addNode(TestNode.WORKER, fakeWorker)
+        .addNode(SwarmNode.HUMAN_GATE, humanGate)
+        .addEdge(START, TestNode.WORKER)
+        .addConditionalEdges(TestNode.WORKER, afterWorker, {
+            [SwarmNode.HUMAN_GATE]: SwarmNode.HUMAN_GATE,
+            [TestNode.END]: END,
+        })
+        .addConditionalEdges(SwarmNode.HUMAN_GATE, afterHuman, {
+            [TestNode.WORKER]: TestNode.WORKER,
+            [TestNode.END]: END,
+        })
         .compile({ checkpointer: new MemorySaver() });
 
 const initialInput = {
@@ -69,7 +80,7 @@ const run = async (): Promise<void> => {
     let captured: HitlInterruptPayload | undefined;
     const retryResolver: HitlResolver = async (request) => {
         captured = request;
-        return { action: "retry", guidance: "installed ripgrep; please retry" };
+        return { action: HitlResolutionAction.RETRY, guidance: "installed ripgrep; please retry" };
     };
     const retryState = await driveSwarmWithHitl(
         asDrivable(buildTestGraph()),
@@ -78,7 +89,7 @@ const run = async (): Promise<void> => {
         { threadId: "smoke-retry" },
     );
     assert.ok(captured, "resolver must receive the interrupt payload");
-    assert.equal(captured?.kind, "environment_failure");
+    assert.equal(captured?.kind, HitlInterruptKind.ENVIRONMENT_FAILURE);
     assert.equal(captured?.failureType, FailureType.ENVIRONMENT);
     assert.equal(captured?.workerKind, WorkerKind.CODE_EXPLORER);
     assert.match(captured?.reason ?? "", /command not found/u);

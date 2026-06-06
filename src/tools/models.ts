@@ -1,5 +1,5 @@
-import { ModelRef, ModelRole } from "../consts";
-import type { ModelProvider, ModelRouting } from "../types/tools";
+import { ModelProvider, ModelRef, ModelRole } from "../consts";
+import type { ModelRouting } from "../types/tools";
 
 export type { ModelProvider, ModelRouting } from "../types/tools";
 
@@ -7,9 +7,9 @@ export { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID } from "../consts";
 
 export const providerForModel = (modelRef: string): ModelProvider => {
     const provider = modelRef.split("/", 1)[0];
-    return provider === "anthropic" || provider === "deepseek" || provider === "openai"
+    return provider === ModelProvider.ANTHROPIC || provider === ModelProvider.DEEPSEEK || provider === ModelProvider.OPENAI
         ? provider
-        : "unknown";
+        : ModelProvider.UNKNOWN;
 };
 
 const isClaudeOpusModel = (modelRef: string): boolean => /^anthropic\/claude-opus-/u.test(modelRef);

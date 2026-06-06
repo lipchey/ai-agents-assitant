@@ -1,5 +1,7 @@
+import type { GraphComplexity } from "../../consts";
+
 export type RouterDecision = {
-    complexity: "trivial" | "tool_complex" | "pure_reasoning";
+    complexity: GraphComplexity;
     routeConfidence: number;
 };
 

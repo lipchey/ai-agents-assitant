@@ -1,4 +1,4 @@
-import { ModelRole, UsageKey } from "../../consts";
+import { ModelRole, ReasoningEffort, ThinkingMode, UsageKey } from "../../consts";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -13,7 +13,7 @@ export const smeTiebreaker = async (state: GraphStateValue) => {
             `Current draft:\n${state.currentDraft}`,
             `Debate summary:\n${state.debateSummary}`,
         ].join("\n\n"),
-        { thinking: "adaptive", reasoningEffort: "high" },
+        { thinking: ThinkingMode.ADAPTIVE, reasoningEffort: ReasoningEffort.HIGH },
     );
     return {
         currentDraft: result.content,

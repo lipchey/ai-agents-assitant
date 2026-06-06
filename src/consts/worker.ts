@@ -30,6 +30,15 @@ export const WorkerKind = {
 
 export type WorkerKind = (typeof WorkerKind)[keyof typeof WorkerKind];
 
+export const ReactDecisionKind = {
+    ACT: "act",
+    FINAL: "final",
+} as const;
+
+export type ReactDecisionKind = (typeof ReactDecisionKind)[keyof typeof ReactDecisionKind];
+
+export const UNKNOWN_WORKER_STATUS_LABEL = "unknown";
+
 export const WORKER_NODE: Record<WorkerKind, SwarmNode> = {
     [WorkerKind.CODE_EXPLORER]: SwarmNode.CODE_EXPLORER,
     [WorkerKind.INFRA_OPS]: SwarmNode.INFRA_OPS,

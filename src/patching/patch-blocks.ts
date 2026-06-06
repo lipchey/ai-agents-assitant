@@ -1,7 +1,7 @@
 /* Opt-in patches are structured-only and snapshot pristine files for rollback. */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { PATCH_BLOCK, PROTECTED_SEGMENTS } from "../consts";
+import { MISSING_FILE_ERROR_CODE, OriginalReadKind, PATCH_BLOCK, PROTECTED_SEGMENTS } from "../consts";
 import { resolveWorkspacePath } from "../tools";
 import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "../types/patching";
 
@@ -26,14 +26,14 @@ export const parsePatchBlocks = (draft: string): PatchBlock[] => {
 
 const readOriginal = async (resolved: string): Promise<OriginalReadResult> => {
     try {
-        return { kind: "found", content: await fs.readFile(resolved, "utf8") };
+        return { kind: OriginalReadKind.FOUND, content: await fs.readFile(resolved, "utf8") };
     } catch (error) {
         const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
-        if (code === "ENOENT") {
-            return { kind: "missing" };
+        if (code === MISSING_FILE_ERROR_CODE) {
+            return { kind: OriginalReadKind.MISSING };
         }
         const message = error instanceof Error ? error.message : String(error);
-        return { kind: "error", message };
+        return { kind: OriginalReadKind.ERROR, message };
     }
 };
 
@@ -62,7 +62,7 @@ export const applyPatchBlocks = async (
         }
 
         const original = await readOriginal(resolved);
-        if (original.kind === "error") {
+        if (original.kind === OriginalReadKind.ERROR) {
             skipped.push(`${block.path} (read failed: ${original.message})`);
             continue;
         }
@@ -77,7 +77,7 @@ export const applyPatchBlocks = async (
         }
 
         if (!alreadyHandled.has(relative)) {
-            if (original.kind === "missing") {
+            if (original.kind === OriginalReadKind.MISSING) {
                 created.push(relative);
             } else {
                 newBackups[relative] = original.content;

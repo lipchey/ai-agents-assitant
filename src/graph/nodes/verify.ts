@@ -1,5 +1,5 @@
 /* Consensus is not correctness; code paths still need an objective typecheck. */
-import { ToolName, ToolStatus, VERIFY_RPC_TIMEOUT_S, VERIFY_TIMEOUT_S, VERIFY_TYPECHECK_COMMAND } from "../../consts";
+import { GraphComplexity, ToolName, ToolStatus, VERIFY_RPC_TIMEOUT_S, VERIFY_TIMEOUT_S, VERIFY_TYPECHECK_COMMAND } from "../../consts";
 import { errorMessage } from "../../shared";
 import { openclawRpc } from "../../tools";
 import { extractToolStatus } from "../parsers.ts";
@@ -8,7 +8,7 @@ import type { GraphStateValue } from "../../types/graph";
 export const verify = async (state: GraphStateValue) => {
     const verifyAttempts = (state.verifyAttempts ?? 0) + 1;
 
-    if (state.complexity === "pure_reasoning") {
+    if (state.complexity === GraphComplexity.PURE_REASONING) {
         return {
             verificationPassed: true,
             verificationReport: "Skipped objective typecheck: pure_reasoning output has no code to compile.",

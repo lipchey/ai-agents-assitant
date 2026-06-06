@@ -1,6 +1,6 @@
-import type { ModelRef } from "../../consts";
+import type { ModelProvider, ModelRef } from "../../consts";
 
-export type ModelProvider = "anthropic" | "deepseek" | "openai" | "unknown";
+export type { ModelProvider } from "../../consts";
 
 export type ModelRouting = {
     modelRef: ModelRef;

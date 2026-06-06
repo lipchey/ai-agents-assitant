@@ -1,6 +1,6 @@
 /* Fresh swarm runs keep HITL checkpoints isolated between debate refetches. */
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { WorkerStatus } from "../../consts";
+import { UNKNOWN_WORKER_STATUS_LABEL, WorkerStatus } from "../../consts";
 import { readHitlResolver, driveSwarmWithHitl } from "../../hitl";
 import { buildSwarm } from "../../swarm";
 import type { SwarmWorkerStateValue } from "../../state";
@@ -24,7 +24,7 @@ export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnab
         readHitlResolver(config),
     );
     const fallbackSummary = [
-        `Swarm finished with status: ${result.status ?? "unknown"}.`,
+        `Swarm finished with status: ${result.status ?? UNKNOWN_WORKER_STATUS_LABEL}.`,
         result.escalationQuery ? `Escalation query: ${result.escalationQuery}` : "",
         result.rawToolOutput ? "Raw output was captured in artifacts." : "",
     ].filter(Boolean).join(" ");

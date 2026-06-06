@@ -1,8 +1,9 @@
 import type { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
+import { HITL_THREAD_CONFIG_KEY, HitlInterruptKind, HitlResolutionAction } from "../../consts";
 import type { FailureType, WorkerKind } from "../../consts";
 
 export type HitlInterruptPayload = {
-    kind: "environment_failure";
+    kind: typeof HitlInterruptKind.ENVIRONMENT_FAILURE;
     failureType: FailureType;
     workerKind: WorkerKind;
     subtask: string;
@@ -11,12 +12,12 @@ export type HitlInterruptPayload = {
 };
 
 export type HitlResolution =
-    | { action: "retry"; guidance: string }
-    | { action: "abort"; guidance?: string };
+    | { action: typeof HitlResolutionAction.RETRY; guidance: string }
+    | { action: typeof HitlResolutionAction.ABORT; guidance?: string };
 
 export type HitlResolver = (request: HitlInterruptPayload) => Promise<HitlResolution>;
 
-export type HitlGraphRunConfig = { configurable: { thread_id: string }; recursionLimit?: number };
+export type HitlGraphRunConfig = { configurable: { [HITL_THREAD_CONFIG_KEY]: string }; recursionLimit?: number };
 
 export interface HitlDrivableGraph<TInput, TState> {
     invoke(input: TInput | Command, config: HitlGraphRunConfig): Promise<TState>;

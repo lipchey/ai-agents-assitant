@@ -1,4 +1,5 @@
 import {
+    GraphComplexity,
     MainNode,
     MAX_CONTEXT_FETCHES,
     MAX_DEBATE_ITERATIONS,
@@ -17,10 +18,10 @@ import {
 import type { GraphStateValue } from "../types/graph";
 
 export const routeByComplexity = (state: GraphStateValue): string => {
-    if (state.complexity === "trivial") {
+    if (state.complexity === GraphComplexity.TRIVIAL) {
         return MainNode.DIRECT_RESPONDER;
     }
-    if (state.complexity === "pure_reasoning") {
+    if (state.complexity === GraphComplexity.PURE_REASONING) {
         return MainNode.FRONTIER_ARCHITECT;
     }
     return MainNode.SWARM;
@@ -30,7 +31,7 @@ export const routeAfterFrontierArchitect = (state: GraphStateValue): string => {
     if (isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD)) {
         return MainNode.FINALIZE;
     }
-    if (state.complexity === "pure_reasoning") {
+    if (state.complexity === GraphComplexity.PURE_REASONING) {
         return state.strongEscalationRequired && canSpendUsd(state, PROJECTED_STRONG_ARCHITECT_USD)
             ? MainNode.CLAUDE_ARCHITECT
             : MainNode.FINALIZE;
@@ -42,7 +43,7 @@ export const routeAfterFrontierArchitect = (state: GraphStateValue): string => {
 };
 
 export const routeAfterClaudeArchitect = (state: GraphStateValue): string =>
-    state.complexity === "pure_reasoning" ? MainNode.FINALIZE : MainNode.CLAUDE_CODER;
+    state.complexity === GraphComplexity.PURE_REASONING ? MainNode.FINALIZE : MainNode.CLAUDE_CODER;
 
 export const routeDebate = (state: GraphStateValue): string => {
     /* Consensus wins over a late needsMoreContext so an approved draft does not refetch. */

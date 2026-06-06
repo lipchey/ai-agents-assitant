@@ -2,12 +2,12 @@
 
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { createInterface } from "node:readline/promises";
-import { HITL_RESOLVER_CONFIG_KEY } from "../consts";
+import { HITL_RESOLVER_CONFIG_KEY, HitlResolutionAction } from "../consts";
 import type { HitlResolver } from "../types/hitl";
 
 export { HITL_RESOLVER_CONFIG_KEY } from "../consts";
 
-export const autoAbortResolver: HitlResolver = async () => ({ action: "abort" });
+export const autoAbortResolver: HitlResolver = async () => ({ action: HitlResolutionAction.ABORT });
 
 /* Non-TTY runs must never hang waiting for operator input. */
 export const createStdinHitlResolver = (): HitlResolver => {
@@ -26,7 +26,9 @@ export const createStdinHitlResolver = (): HitlResolver => {
             const answer = (await rl.question(
                 "Resolve the issue out-of-band, then enter retry guidance — or leave blank to abort: ",
             )).trim();
-            return answer ? { action: "retry", guidance: answer } : { action: "abort" };
+            return answer
+                ? { action: HitlResolutionAction.RETRY, guidance: answer }
+                : { action: HitlResolutionAction.ABORT };
         } finally {
             rl.close();
         }

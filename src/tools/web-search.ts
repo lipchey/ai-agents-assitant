@@ -3,6 +3,7 @@ import {
     ToolName,
     FALLBACK_PROVIDER_LABEL,
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+    TAVILY_SEARCH_DEPTH,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
     WEB_SEARCH_MAX_RESULTS,
 } from "../consts";
@@ -54,7 +55,7 @@ export const runWebLookupWithFallback = async (
     try {
         const tavily = await invokeGatewayTool(
             ToolName.TAVILY_SEARCH,
-            { query, search_depth: "advanced", include_answer: true, max_results: WEB_SEARCH_MAX_RESULTS },
+            { query, search_depth: TAVILY_SEARCH_DEPTH, include_answer: true, max_results: WEB_SEARCH_MAX_RESULTS },
             options,
         );
         if (!webSearchResultIsEmpty(tavily)) {

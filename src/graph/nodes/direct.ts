@@ -1,4 +1,4 @@
-import { ModelRole, UsageKey } from "../../consts";
+import { ModelRole, ThinkingMode, UsageKey } from "../../consts";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -9,7 +9,7 @@ export const directResponder = async (state: GraphStateValue) => {
         ModelRole.ROUTER,
         SystemPrompts.directResponder,
         state.originalTask,
-        { maxTokens: 800, thinking: "disabled" },
+        { maxTokens: 800, thinking: ThinkingMode.DISABLED },
     );
     return {
         currentDraft: result.content,

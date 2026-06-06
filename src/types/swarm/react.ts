@@ -1,8 +1,9 @@
+import { ReactDecisionKind } from "../../consts";
 import type { OpenClawRpcArgs } from "../tools";
 
 export type ReactDecision =
-    | { kind: "act"; thought: string; tool: string; args: OpenClawRpcArgs }
-    | { kind: "final"; thought: string; final: string };
+    | { kind: typeof ReactDecisionKind.ACT; thought: string; tool: string; args: OpenClawRpcArgs }
+    | { kind: typeof ReactDecisionKind.FINAL; thought: string; final: string };
 
 export type ReactStep = {
     thought: string;

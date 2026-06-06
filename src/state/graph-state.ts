@@ -1,12 +1,13 @@
 import { Annotation } from "@langchain/langgraph";
 import { DEFAULT_COST_BUDGET_USD, WorkerStatus } from "../consts";
 import { mergeUsageStats, type UsageStats } from "../shared";
+import type { GraphComplexity } from "../consts";
 import type { DebateEntry } from "../types/state";
 import { concatArrays, lastWriteWins, mergeDicts, sumNumbers } from "./reducers.ts";
 
 export const GraphState = Annotation.Root({
     originalTask: Annotation<string>,
-    complexity: Annotation<"trivial" | "tool_complex" | "pure_reasoning">,
+    complexity: Annotation<GraphComplexity>,
     routeConfidence: Annotation<number>,
     compressedContext: Annotation<string>,
     swarmSummary: Annotation<string>,

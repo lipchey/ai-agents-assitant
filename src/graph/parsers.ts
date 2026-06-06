@@ -1,5 +1,5 @@
 /* Malformed model JSON degrades to heuristics instead of crashing the graph. */
-import { CONFIDENCE_ESCALATION_THRESHOLD } from "../consts";
+import { CONFIDENCE_ESCALATION_THRESHOLD, GraphComplexity, isGraphComplexity } from "../consts";
 import { asRecord, extractJsonObject, clamp01 } from "../shared";
 import type {
     CriticDecision,
@@ -14,12 +14,12 @@ const heuristicComplexity = (task: string): RouterDecision => {
     const reasoningSignals = ["explain", "design", "architecture", "compare", "plan"];
 
     if (toolSignals.some((signal) => normalized.includes(signal))) {
-        return { complexity: "tool_complex", routeConfidence: 0.75 };
+        return { complexity: GraphComplexity.TOOL_COMPLEX, routeConfidence: 0.75 };
     }
     if (reasoningSignals.some((signal) => normalized.includes(signal))) {
-        return { complexity: "pure_reasoning", routeConfidence: 0.65 };
+        return { complexity: GraphComplexity.PURE_REASONING, routeConfidence: 0.65 };
     }
-    return { complexity: "trivial", routeConfidence: 0.6 };
+    return { complexity: GraphComplexity.TRIVIAL, routeConfidence: 0.6 };
 };
 
 export const parseRouterDecision = (content: string, task: string): RouterDecision => {
@@ -27,10 +27,7 @@ export const parseRouterDecision = (content: string, task: string): RouterDecisi
     const complexity = parsed?.complexity;
     const confidence = parsed?.routeConfidence;
 
-    if (
-        (complexity === "trivial" || complexity === "tool_complex" || complexity === "pure_reasoning")
-        && typeof confidence === "number"
-    ) {
+    if (isGraphComplexity(complexity) && typeof confidence === "number") {
         return { complexity, routeConfidence: clamp01(confidence) };
     }
     return heuristicComplexity(task);

@@ -1,4 +1,4 @@
-import { ModelRole, RESPONSE_FORMAT_JSON, DEFAULT_COST_BUDGET_USD, UsageKey } from "../../consts";
+import { ModelRole, RESPONSE_FORMAT_JSON, DEFAULT_COST_BUDGET_USD, ThinkingMode, UsageKey } from "../../consts";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -10,7 +10,7 @@ export const complexityRouter = async (state: GraphStateValue) => {
         ModelRole.ROUTER,
         SystemPrompts.complexityRouter,
         state.originalTask,
-        { maxTokens: 160, responseFormat: RESPONSE_FORMAT_JSON, thinking: "disabled" },
+        { maxTokens: 160, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
     );
     const decision = parseRouterDecision(result.content, state.originalTask);
 

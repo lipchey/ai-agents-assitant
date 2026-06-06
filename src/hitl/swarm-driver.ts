@@ -1,6 +1,11 @@
 import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph";
 import { randomUUID } from "node:crypto";
-import { DEFAULT_MAX_HITL_ROUNDS } from "../consts";
+import {
+    DEFAULT_MAX_HITL_ROUNDS,
+    HITL_THREAD_CONFIG_KEY,
+    HITL_THREAD_ID_PREFIX,
+    HitlResolutionAction,
+} from "../consts";
 import type {
     HitlDrivableGraph,
     HitlGraphRunConfig,
@@ -16,7 +21,7 @@ export const driveSwarmWithHitl = async <TInput, TState>(
     options?: { threadId?: string; maxRounds?: number },
 ): Promise<TState> => {
     const config: HitlGraphRunConfig = {
-        configurable: { thread_id: options?.threadId ?? `swarm-${randomUUID()}` },
+        configurable: { [HITL_THREAD_CONFIG_KEY]: options?.threadId ?? `${HITL_THREAD_ID_PREFIX}${randomUUID()}` },
     };
     const maxRounds = options?.maxRounds ?? DEFAULT_MAX_HITL_ROUNDS;
 
@@ -24,13 +29,13 @@ export const driveSwarmWithHitl = async <TInput, TState>(
 
     for (let round = 0; round < maxRounds && isInterrupted<HitlInterruptPayload>(result); round += 1) {
         const request = result[INTERRUPT]?.[0]?.value;
-        const resolution: HitlResolution = request ? await resolver(request) : { action: "abort" };
+        const resolution: HitlResolution = request ? await resolver(request) : { action: HitlResolutionAction.ABORT };
         result = await graph.invoke(new Command({ resume: resolution }), config);
     }
 
     /* Force termination if a pathological graph still interrupts after the cap. */
     if (isInterrupted<HitlInterruptPayload>(result)) {
-        const abort: HitlResolution = { action: "abort" };
+        const abort: HitlResolution = { action: HitlResolutionAction.ABORT };
         result = await graph.invoke(new Command({ resume: abort }), config);
     }
 

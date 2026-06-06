@@ -1,4 +1,4 @@
-import { OpenClawControl } from "../consts";
+import { ChatRole, ModelProvider, OpenClawControl, ThinkingMode } from "../consts";
 import { OpenClawError } from "./errors.ts";
 import { jsonPost } from "./http.ts";
 import { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID, modelForRole } from "./models.ts";
@@ -38,14 +38,14 @@ export const callLlm = async (
 ): Promise<LlmCallResult> => {
     const { modelRef, provider, temperature } = modelForRole(role);
     /* Adaptive Anthropic thinking requires the strong-reasoning OpenClaw agent. */
-    const agentId = provider === "anthropic" && options.thinking === "adaptive"
+    const agentId = provider === ModelProvider.ANTHROPIC && options.thinking === ThinkingMode.ADAPTIVE
         ? STRONG_REASONING_AGENT_ID
         : undefined;
     const body: JsonObject = {
         model: agentId ? `openclaw/${agentId}` : DEFAULT_OPENCLAW_MODEL,
         messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
+            { role: ChatRole.SYSTEM, content: system },
+            { role: ChatRole.USER, content: user },
         ],
         stream: false,
         user: `ai-agents-assitant:${role}`,
@@ -61,12 +61,12 @@ export const callLlm = async (
         body.response_format = { type: options.responseFormat };
     }
 
-    if (provider === "anthropic") {
+    if (provider === ModelProvider.ANTHROPIC) {
         /* Anthropic uses thinking + output_config.effort, not reasoning_effort. */
         if (options.thinking !== undefined) {
             body.thinking = { type: options.thinking };
         }
-        if (options.thinking !== undefined && options.thinking !== "disabled" && options.reasoningEffort !== undefined) {
+        if (options.thinking !== undefined && options.thinking !== ThinkingMode.DISABLED && options.reasoningEffort !== undefined) {
             body.output_config = { effort: options.reasoningEffort };
         }
     } else {
@@ -74,7 +74,7 @@ export const callLlm = async (
             body.reasoning_effort = options.reasoningEffort;
         }
         if (options.thinking !== undefined) {
-            body.thinking = { type: options.thinking === "adaptive" ? "enabled" : options.thinking };
+            body.thinking = { type: options.thinking === ThinkingMode.ADAPTIVE ? ThinkingMode.ENABLED : options.thinking };
         }
     }
 
