@@ -1,13 +1,10 @@
 import { Annotation } from "@langchain/langgraph";
-import { DEFAULT_COST_BUDGET_USD } from "../constants.js";
-import { WorkerStatus } from "../enums.js";
+import { DEFAULT_COST_BUDGET_USD } from "../consts/tuning.js";
+import { WorkerStatus } from "../consts/worker.js";
 import { mergeUsageStats, type UsageStats } from "../shared/usage.js";
+import type { WorkerStatus as WorkerStatusType } from "../types/consts/worker.js";
+import type { DebateEntry } from "../types/state/graph.js";
 import { concatArrays, lastWriteWins, mergeDicts, sumNumbers } from "./reducers.js";
-
-export type DebateEntry = {
-    round: number;
-    critique: string;
-};
 
 export const GraphState = Annotation.Root({
     originalTask: Annotation<string>,
@@ -15,7 +12,7 @@ export const GraphState = Annotation.Root({
     routeConfidence: Annotation<number>,
     compressedContext: Annotation<string>,
     swarmSummary: Annotation<string>,
-    swarmStatus: Annotation<WorkerStatus>,
+    swarmStatus: Annotation<WorkerStatusType>,
     artifactIndex: Annotation<Record<string, string>>({
         reducer: mergeDicts,
         default: () => ({}),

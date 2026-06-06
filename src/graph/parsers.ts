@@ -1,31 +1,13 @@
 /* Malformed model JSON degrades to heuristics instead of crashing the graph. */
-import { CONFIDENCE_ESCALATION_THRESHOLD } from "../constants.js";
+import { CONFIDENCE_ESCALATION_THRESHOLD } from "../consts/tuning.js";
 import { asRecord, extractJsonObject } from "../shared/json.js";
 import { clamp01 } from "../shared/text.js";
-
-export type RouterDecision = {
-    complexity: "trivial" | "tool_complex" | "pure_reasoning";
-    routeConfidence: number;
-};
-
-export type CriticDecision = {
-    consensus: boolean;
-    needsMoreContext: boolean;
-    critique: string;
-};
-
-export type FrontierArchitectureDecision = {
-    architectureSpec: string;
-    confidence: number;
-    escalateToStrong: boolean;
-    escalationReason: string;
-};
-
-export type FrontierCriticDecision = CriticDecision & {
-    confidence: number;
-    requiresStrongCritic: boolean;
-    escalationReason: string;
-};
+import type {
+    CriticDecision,
+    FrontierArchitectureDecision,
+    FrontierCriticDecision,
+    RouterDecision,
+} from "../types/graph/parsers.js";
 
 const heuristicComplexity = (task: string): RouterDecision => {
     const normalized = task.toLowerCase();

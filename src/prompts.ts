@@ -6,4 +6,4 @@ export const SystemPrompts = {
     ...workerPrompts,
 } as const;
 
-export type SystemPromptKey = keyof typeof SystemPrompts;
+export type { SystemPromptKey } from "./types/prompts.js";

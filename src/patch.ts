@@ -2,18 +2,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveWorkspacePath } from "./tools/openclaw.js";
+import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./types/patching/index.js";
 
-export type PatchBlock = {
-    path: string;
-    content: string;
-};
-
-export type ApplyPatchesResult = {
-    applied: string[];
-    newBackups: Record<string, string>;
-    created: string[];
-    report: string;
-};
+export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./types/patching/index.js";
 
 const PATCH_BLOCK = /<<<PATCH\s+(?:file|path)\s*=\s*"([^"]+)"\s*>>>\r?\n([\s\S]*?)\r?\n?<<<END\s+PATCH>>>/gu;
 const PROTECTED_SEGMENTS = new Set([".git", "node_modules"]);
@@ -36,11 +27,6 @@ export const parsePatchBlocks = (draft: string): PatchBlock[] => {
     }
     return [...byPath.entries()].map(([targetPath, content]) => ({ path: targetPath, content }));
 };
-
-type OriginalReadResult =
-    | { kind: "found"; content: string }
-    | { kind: "missing" }
-    | { kind: "error"; message: string };
 
 const readOriginal = async (resolved: string): Promise<OriginalReadResult> => {
     try {

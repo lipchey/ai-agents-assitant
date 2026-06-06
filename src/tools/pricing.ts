@@ -2,40 +2,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { LlmUsage } from "../shared/usage.js";
+import type { ModelPricing, ProviderUsage } from "../types/tools/pricing.js";
 
-export type ModelPricing = {
-    inputPer1M: number;
-    outputPer1M: number;
-    inputCacheHitPer1M?: number;
-    inputCacheMissPer1M?: number;
-    inputCacheWritePer1M?: number;
-    inputCacheWrite5mPer1M?: number;
-    inputCacheWrite1hPer1M?: number;
-};
-
-export type ProviderUsage = {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-    input_tokens?: number;
-    output_tokens?: number;
-    uncached_input_tokens?: number;
-    prompt_cache_hit_tokens?: number;
-    prompt_cache_miss_tokens?: number;
-    prompt_tokens_details?: { cached_tokens?: number };
-    input_tokens_details?: { cached_tokens?: number };
-    cache_read_input_tokens?: number;
-    cache_creation_input_tokens?: number;
-    cache_creation?: {
-        ephemeral_5m_input_tokens?: number;
-        ephemeral_1h_input_tokens?: number;
-    };
-};
+export type { ModelPricing, ProviderUsage } from "../types/tools/pricing.js";
 
 let pricingCache: Promise<Record<string, ModelPricing>> | undefined;
 
 export const loadPricing = (): Promise<Record<string, ModelPricing>> => {
-    pricingCache ??= fs.readFile(path.join(process.cwd(), "src", "pricing.json"), "utf8")
+    pricingCache ??= fs.readFile(path.join(process.cwd(), "src", "consts", "pricing", "model-pricing.json"), "utf8")
         .then((pricingFile) => JSON.parse(pricingFile) as Record<string, ModelPricing>)
         .catch(() => ({}));
     return pricingCache;

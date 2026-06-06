@@ -1,12 +1,9 @@
-import { ModelRef, ModelRole, OpenClawControl } from "../constants.js";
+import { ModelRef, ModelRole } from "../consts/models.js";
+import { OpenClawControl } from "../consts/openclaw.js";
+import type { ModelRef as ModelRefType, ModelRole as ModelRoleType } from "../types/consts/models.js";
+import type { ModelProvider, ModelRouting } from "../types/tools/models.js";
 
-export type ModelProvider = "anthropic" | "deepseek" | "openai" | "unknown";
-
-export type ModelRouting = {
-    modelRef: ModelRef;
-    provider: ModelProvider;
-    temperature?: number;
-};
+export type { ModelProvider, ModelRouting } from "../types/tools/models.js";
 
 export const DEFAULT_OPENCLAW_MODEL = OpenClawControl.DEFAULT_MODEL;
 export const STRONG_REASONING_AGENT_ID = OpenClawControl.STRONG_REASONING_AGENT_ID;
@@ -21,7 +18,7 @@ export const providerForModel = (modelRef: string): ModelProvider => {
 const isClaudeOpusModel = (modelRef: string): boolean => /^anthropic\/claude-opus-/u.test(modelRef);
 
 /* Claude Opus rejects temperature alongside adaptive thinking. */
-const route = (modelRef: ModelRef, temperature?: number): ModelRouting => ({
+const route = (modelRef: ModelRefType, temperature?: number): ModelRouting => ({
     modelRef,
     provider: providerForModel(modelRef),
     ...(!isClaudeOpusModel(modelRef) && temperature !== undefined ? { temperature } : {}),
@@ -31,7 +28,7 @@ const assertNeverRole = (role: never): never => {
     throw new Error(`Unhandled model role: ${String(role)}`);
 };
 
-export const modelForRole = (role: ModelRole): ModelRouting => {
+export const modelForRole = (role: ModelRoleType): ModelRouting => {
     switch (role) {
         case ModelRole.ARCHITECT:
         case ModelRole.SME:

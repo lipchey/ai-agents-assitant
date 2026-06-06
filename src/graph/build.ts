@@ -1,5 +1,5 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
-import { MainNode } from "../constants.js";
+import { MainNode } from "../consts/graph.js";
 import { GraphState } from "../state.js";
 import { applyPatches } from "./nodes/apply-patches.js";
 import { claudeArchitect, frontierArchitect } from "./nodes/architects.js";

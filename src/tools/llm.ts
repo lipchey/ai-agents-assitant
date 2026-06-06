@@ -1,24 +1,14 @@
-import { ModelRole, OpenClawControl } from "../constants.js";
-import type { LlmUsage } from "../shared/usage.js";
+import { ModelRole } from "../consts/models.js";
+import { OpenClawControl } from "../consts/openclaw.js";
 import { OpenClawError } from "./errors.js";
 import { jsonPost } from "./http.js";
 import { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID, modelForRole } from "./models.js";
-import { calculateUsage, loadPricing, type ProviderUsage } from "./pricing.js";
-import type { JsonObject } from "./types.js";
+import { calculateUsage, loadPricing } from "./pricing.js";
+import type { ModelRole as ModelRoleType } from "../types/consts/models.js";
+import type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "../types/tools/llm.js";
+import type { JsonObject } from "../types/tools/rpc.js";
 
-type ChatCompletionResponse = {
-    choices?: Array<{ message?: { content?: unknown } }>;
-    usage?: ProviderUsage;
-};
-
-export type LlmCallResult = LlmUsage & { content: string };
-
-export type LlmCallOptions = {
-    maxTokens?: number;
-    reasoningEffort?: "low" | "medium" | "high" | "xhigh" | "max";
-    responseFormat?: "json_object";
-    thinking?: "adaptive" | "enabled" | "disabled";
-};
+export type { LlmCallOptions, LlmCallResult } from "../types/tools/llm.js";
 
 const contentToString = (content: unknown): string => {
     if (typeof content === "string") {
@@ -42,7 +32,7 @@ const contentToString = (content: unknown): string => {
 };
 
 export const callLlm = async (
-    role: ModelRole,
+    role: ModelRoleType,
     system: string,
     user: string,
     options: LlmCallOptions = {},

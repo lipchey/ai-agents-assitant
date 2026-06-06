@@ -4,22 +4,21 @@ import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline/promises";
-import type { FailureType, WorkerKind } from "./enums.js";
+import type {
+    HitlDrivableGraph,
+    HitlGraphRunConfig,
+    HitlInterruptPayload,
+    HitlResolution,
+    HitlResolver,
+} from "./types/hitl/index.js";
 
-export type HitlInterruptPayload = {
-    kind: "environment_failure";
-    failureType: FailureType;
-    workerKind: WorkerKind;
-    subtask: string;
-    reason: string;
-    escalationAttempt: number;
-};
-
-export type HitlResolution =
-    | { action: "retry"; guidance: string }
-    | { action: "abort"; guidance?: string };
-
-export type HitlResolver = (request: HitlInterruptPayload) => Promise<HitlResolution>;
+export type {
+    HitlDrivableGraph,
+    HitlGraphRunConfig,
+    HitlInterruptPayload,
+    HitlResolution,
+    HitlResolver,
+} from "./types/hitl/index.js";
 
 export const HITL_RESOLVER_CONFIG_KEY = "hitlResolver";
 
@@ -56,12 +55,6 @@ export const readHitlResolver = (config?: LangGraphRunnableConfig): HitlResolver
     const resolver = config?.configurable?.[HITL_RESOLVER_CONFIG_KEY];
     return typeof resolver === "function" ? (resolver as HitlResolver) : autoAbortResolver;
 };
-
-type HitlGraphRunConfig = { configurable: { thread_id: string }; recursionLimit?: number };
-
-export interface HitlDrivableGraph<TInput, TState> {
-    invoke(input: TInput | Command, config: HitlGraphRunConfig): Promise<TState>;
-}
 
 export const driveSwarmWithHitl = async <TInput, TState>(
     graph: HitlDrivableGraph<TInput, TState>,

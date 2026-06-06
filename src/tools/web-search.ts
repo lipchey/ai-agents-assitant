@@ -1,9 +1,10 @@
 /* OpenClaw web_search lacks provider override/runtime failover, so Tavily -> DuckDuckGo is explicit. */
-import { FALLBACK_PROVIDER_LABEL, ToolName, WEB_SEARCH_MAX_RESULTS } from "../constants.js";
+import { ToolName } from "../consts/tools.js";
+import { FALLBACK_PROVIDER_LABEL, WEB_SEARCH_MAX_RESULTS } from "../consts/web.js";
 import { errorMessage, readString } from "../shared/text.js";
+import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.js";
 import { OpenClawError } from "./errors.js";
 import { invokeGatewayTool } from "./http.js";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "./types.js";
 
 const isNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
 

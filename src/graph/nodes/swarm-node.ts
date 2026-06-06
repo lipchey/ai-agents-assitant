@@ -1,13 +1,11 @@
 /* Fresh swarm runs keep HITL checkpoints isolated between debate refetches. */
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { WorkerStatus } from "../../enums.js";
+import { WorkerStatus } from "../../consts/worker.js";
 import { driveSwarmWithHitl, readHitlResolver, type HitlDrivableGraph } from "../../hitl.js";
-import { SwarmWorkerState } from "../../state.js";
 import { buildSwarm } from "../../swarm.js";
+import type { GraphStateValue } from "../../types/graph/state.js";
+import type { SwarmWorkerStateValue } from "../../types/swarm/state.js";
 import { buildSwarmSubtask, selectWorkerKind } from "../context-terms.js";
-import type { GraphStateValue } from "../types.js";
-
-type SwarmStateValue = typeof SwarmWorkerState.State;
 
 export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const swarm = buildSwarm();
@@ -20,7 +18,7 @@ export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnab
         escalationAttempts: 0,
     };
     const result = await driveSwarmWithHitl(
-        swarm as HitlDrivableGraph<typeof initialInput, SwarmStateValue>,
+        swarm as HitlDrivableGraph<typeof initialInput, SwarmWorkerStateValue>,
         initialInput,
         readHitlResolver(config),
     );

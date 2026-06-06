@@ -138,22 +138,30 @@ OpenClaw details:
   but experimental; empty fallback results should become warnings when structured
   logging exists.
 
-Telemetry: `callLlm` calculates cost from `src/pricing.json`, including provider
-cache fields when present, and `UsageStats` is a sparse `UsageKey`-indexed
-record with totals in `totalCost` and `totalTokens`.
+Telemetry: `callLlm` calculates cost from
+`src/consts/pricing/model-pricing.json`, including provider cache fields when
+present, and `UsageStats` is a sparse `UsageKey`-indexed record with totals in
+`totalCost` and `totalTokens`.
 
 ---
 
 ## 5. Code Organization Rules That Matter
 
 Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
-- Define runtime scalars once in `src/constants.ts`; pair `as const` objects with
-  same-named union types.
-- Keep `ModelRef` values byte-equal to `src/pricing.json` keys.
+- Define runtime scalars once in `src/consts/*`; pair `as const` objects with
+  same-named union types in `src/types/consts/*`.
+- Keep `ModelRef` values byte-equal to
+  `src/consts/pricing/model-pricing.json` keys.
+- Shared/public types live under `src/types/*`; implementation modules may
+  re-export those types only to preserve public barrels.
 - Use shared helpers in `src/shared/*` for JSON extraction, text coercion, error
   formatting, usage merging, and telemetry shape.
 - Internal modules import concrete files, not subsystem barrels they re-export.
 - Always use explicit `.js` extensions in local ESM imports.
+- `src/` root is reserved for executable entrypoints, public barrels, and
+  temporary legacy root modules already tracked for cleanup. Feature modules,
+  domain types, adapters, constants, and runtime data should live under their
+  owning folders.
 - Prompts are cache anchors. Keep `SystemPrompts` output contracts aligned with
   parsers in `src/graph/parsers.ts` and `src/swarm/tool-validation.ts`.
 - Comments should explain non-obvious safety/cost/provider/order invariants.

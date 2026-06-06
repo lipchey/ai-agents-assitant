@@ -1,16 +1,19 @@
 /* Network-free guard layer before any planner-proposed tool call runs. */
-import { ToolName } from "../constants.js";
-import { FailureType, WorkerKind } from "../enums.js";
+import { ToolName } from "../consts/tools.js";
+import { FailureType, WorkerKind } from "../consts/worker.js";
 import { asRecord, extractJsonObject } from "../shared/json.js";
 import { clampInt, readString } from "../shared/text.js";
 import { SAFE_DIRECT_EXEC_COMMANDS, type OpenClawRpcArgs } from "../tools/openclaw.js";
+import type {
+    FailureType as FailureTypeType,
+    WorkerKind as WorkerKindType,
+} from "../types/consts/worker.js";
+import type { ReactDecision, SanitizedAction } from "../types/swarm/react.js";
 import { WORKER_TOOLS } from "./tool-catalog.js";
 
 const SHELL_EXEC_TIMEOUT_S = 120;
 
-export type ReactDecision =
-    | { kind: "act"; thought: string; tool: string; args: OpenClawRpcArgs }
-    | { kind: "final"; thought: string; final: string };
+export type { ReactDecision, SanitizedAction } from "../types/swarm/react.js";
 
 export const parseReactDecision = (content: string): ReactDecision => {
     const parsed = asRecord(extractJsonObject(content));
@@ -29,12 +32,8 @@ export const parseReactDecision = (content: string): ReactDecision => {
     return { kind: "final", thought, final: content.trim() };
 };
 
-type SanitizedAction =
-    | { ok: true; args: OpenClawRpcArgs }
-    | { ok: false; error: string };
-
 export const sanitizeToolArgs = (
-    kind: WorkerKind,
+    kind: WorkerKindType,
     tool: string,
     rawArgs: OpenClawRpcArgs,
 ): SanitizedAction => {
@@ -94,7 +93,7 @@ export const sanitizeToolArgs = (
 };
 
 /* Environment failures need HITL; reasoning errors go back to the worker. */
-export const classifyFailure = (errorMessage: string): FailureType => {
+export const classifyFailure = (errorMessage: string): FailureTypeType => {
     const normalized = errorMessage.toLowerCase();
     if (
         normalized.includes("not available")

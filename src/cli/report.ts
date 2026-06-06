@@ -1,4 +1,4 @@
-import type { GraphStateValue } from "../graph/types.js";
+import type { GraphStateValue } from "../types/graph/state.js";
 
 export const printReport = (finalState: GraphStateValue, costBudgetUsd: number): void => {
     console.log("=== FINAL ANSWER ===");

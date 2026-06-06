@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { WorkerKind } from "../src/enums.js";
+import { WorkerKind } from "../src/consts/worker.js";
 import { parseReactDecision, sanitizeToolArgs } from "../src/swarm.js";
 
 const run = (): void => {

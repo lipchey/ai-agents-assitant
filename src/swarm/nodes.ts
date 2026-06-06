@@ -1,25 +1,25 @@
 import { interrupt } from "@langchain/langgraph";
-import { ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../constants.js";
-import { FailureType, WorkerKind, WorkerStatus } from "../enums.js";
+import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.js";
+import { UsageKey } from "../consts/usage.js";
+import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.js";
 import type { HitlInterruptPayload, HitlResolution } from "../hitl.js";
 import { SystemPrompts } from "../prompts.js";
 import { asRecord, extractJsonObject } from "../shared/json.js";
 import { safeJson, truncate } from "../shared/text.js";
 import { emptyUsage, usageFromLlm } from "../shared/usage.js";
-import { SwarmWorkerState } from "../state.js";
 import { callLlm } from "../tools/openclaw.js";
+import type { WorkerKind as WorkerKindType } from "../types/consts/worker.js";
+import type { SwarmWorkerStateValue } from "../types/swarm/state.js";
 import { runReactWorker } from "./react-worker.js";
-
-type WorkerState = typeof SwarmWorkerState.State;
 
 /* Blocked-worker fallbacks must not leak a full raw transcript into reasoning prompts. */
 const MAX_BLOCKED_FALLBACK_CHARS = 600;
 
-export const codeExplorer = (state: WorkerState) => runReactWorker(state, WorkerKind.CODE_EXPLORER);
-export const infraOps = (state: WorkerState) => runReactWorker(state, WorkerKind.INFRA_OPS);
-export const webResearcher = (state: WorkerState) => runReactWorker(state, WorkerKind.WEB_RESEARCHER);
+export const codeExplorer = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER);
+export const infraOps = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS);
+export const webResearcher = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER);
 
-const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
+const parseWorkerKind = (content: string, fallback: WorkerKindType): WorkerKindType => {
     const parsed = asRecord(extractJsonObject(content));
     const value = typeof parsed?.workerKind === "string" ? parsed.workerKind.trim().toLowerCase() : "";
     switch (value) {
@@ -34,7 +34,7 @@ const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
     }
 };
 
-export const leadDelegator = async (state: WorkerState) => {
+export const leadDelegator = async (state: SwarmWorkerStateValue) => {
     const seededKind = state.workerKind ?? WorkerKind.CODE_EXPLORER;
     let selectedKind = seededKind;
     let usage = emptyUsage();
@@ -68,7 +68,7 @@ export const leadDelegator = async (state: WorkerState) => {
     };
 };
 
-export const smeOracle = async (state: WorkerState) => {
+export const smeOracle = async (state: SwarmWorkerStateValue) => {
     const result = await callLlm(
         ModelRole.FRONTIER,
         SystemPrompts.smeOracle,
@@ -85,7 +85,7 @@ export const smeOracle = async (state: WorkerState) => {
 };
 
 /* Nothing runs before interrupt(), so resume re-execution is safe. */
-export const humanGate = (state: WorkerState) => {
+export const humanGate = (state: SwarmWorkerStateValue) => {
     const failure = state.failureType ?? FailureType.UNKNOWN;
     const reason = state.escalationQuery ?? "unknown environment error";
 
@@ -115,7 +115,7 @@ export const humanGate = (state: WorkerState) => {
     };
 };
 
-export const workerCompress = async (state: WorkerState) => {
+export const workerCompress = async (state: SwarmWorkerStateValue) => {
     const result = await callLlm(
         ModelRole.FIREWALL,
         SystemPrompts.workerCompress,
@@ -130,7 +130,7 @@ export const workerCompress = async (state: WorkerState) => {
     };
 };
 
-export const blocked = (state: WorkerState) => {
+export const blocked = (state: SwarmWorkerStateValue) => {
     const failure = state.failureType ?? FailureType.UNKNOWN;
     const reason = state.escalationQuery
         || state.escalationResponse

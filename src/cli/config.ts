@@ -1,4 +1,5 @@
-import { DEFAULT_COST_BUDGET_USD, EnvVar, isTruthyEnv } from "../constants.js";
+import { EnvVar, isTruthyEnv } from "../consts/env.js";
+import { DEFAULT_COST_BUDGET_USD } from "../consts/tuning.js";
 import { autoAbortResolver, createStdinHitlResolver, type HitlResolver } from "../hitl.js";
 
 export const readCostBudgetUsd = (): number => {

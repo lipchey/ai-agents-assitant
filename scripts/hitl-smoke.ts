@@ -1,6 +1,6 @@
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import assert from "node:assert/strict";
-import { FailureType, WorkerKind, WorkerStatus } from "../src/enums.js";
+import { FailureType, WorkerKind, WorkerStatus } from "../src/consts/worker.js";
 import {
     autoAbortResolver,
     driveSwarmWithHitl,

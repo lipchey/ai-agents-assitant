@@ -1,14 +1,19 @@
 /* Recoverable reasoning errors stay in-loop; environment failures route to HITL. */
-import { ModelRole, RESPONSE_FORMAT_JSON, ToolName } from "../constants.js";
-import { FailureType, WorkerKind, WorkerStatus } from "../enums.js";
+import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.js";
+import { ToolName } from "../consts/tools.js";
+import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.js";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate } from "../shared/text.js";
 import { emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared/usage.js";
-import { SwarmWorkerState, type ToolCallRecord } from "../state.js";
+import type { ToolCallRecord } from "../state.js";
 import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools/openclaw.js";
+import type {
+    FailureType as FailureTypeType,
+    WorkerKind as WorkerKindType,
+} from "../types/consts/worker.js";
+import type { ReactStep } from "../types/swarm/react.js";
+import type { SwarmWorkerStateValue } from "../types/swarm/state.js";
 import { WORKER_PROMPTS, WORKER_USAGE_KEY } from "./tool-catalog.js";
 import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.js";
-
-type WorkerState = typeof SwarmWorkerState.State;
 
 const MAX_REACT_STEPS = 6;
 const MAX_REACT_TOOL_FAILURES = 3;
@@ -19,14 +24,7 @@ const MAX_ACTION_SUMMARY_CHARS = 200;
 const SHELL_EXEC_TIMEOUT_S = 120;
 const TOOL_TIMEOUT_S = 45;
 
-type ReactStep = {
-    thought: string;
-    summary: string;
-    observation: string;
-    ok: boolean;
-};
-
-const buildWorkerContext = (state: WorkerState, steps: ReactStep[]): string => {
+const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[]): string => {
     const guidance = readString(state.escalationResponse);
     const priorObservations = readString(state.rawToolOutput);
     const transcript = steps.length === 0
@@ -57,7 +55,7 @@ const composeRaw = (rawOutputs: string[], finalSummary: string): string => {
     return parts.join("\n\n");
 };
 
-export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
+export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerKindType) => {
     const system = WORKER_PROMPTS[kind];
     const usageKey = WORKER_USAGE_KEY[kind];
     const attempts = (state.attempts ?? 0) + 1;
@@ -72,7 +70,7 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
     let successfulToolCalls = 0;
     let finalSummary = "";
 
-    const escalate = (failureType: FailureType, escalationQuery: string) => ({
+    const escalate = (failureType: FailureTypeType, escalationQuery: string) => ({
         status: WorkerStatus.ESCALATING,
         failureType,
         attempts,

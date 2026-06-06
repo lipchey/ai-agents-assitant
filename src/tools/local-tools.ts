@@ -1,11 +1,11 @@
 /* Local pseudo-tools are the authoritative guard for path bounds and shell allowlists. */
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
-import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../constants.js";
+import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../consts/tools.js";
 import { clampInt, readNumber, readString, truncate } from "../shared/text.js";
+import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.js";
 import { OpenClawError } from "./errors.js";
 import { DEFAULT_TIMEOUT_S } from "./gateway.js";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "./types.js";
 import { resolveWorkspacePath } from "./workspace.js";
 
 const MAX_PROCESS_OUTPUT_CHARS = 200_000;

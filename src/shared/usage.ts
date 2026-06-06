@@ -1,26 +1,7 @@
-import type { UsageKey } from "../constants.js";
+import type { UsageKey } from "../types/consts/usage.js";
+import type { LlmUsage, UsageBreakdown, UsageStats } from "../types/usage.js";
 
-export type LlmUsage = {
-    tokens: number;
-    cost: number;
-    inputTokens: number;
-    outputTokens: number;
-    cachedInputTokens: number;
-    cacheMissInputTokens: number;
-    cacheWriteInputTokens: number;
-};
-
-export type UsageBreakdown = {
-    cost: number;
-    tokens: number;
-    inputTokens?: number;
-    outputTokens?: number;
-    cachedInputTokens?: number;
-    cacheMissInputTokens?: number;
-    cacheWriteInputTokens?: number;
-};
-
-export type UsageStats = Partial<Record<UsageKey, UsageBreakdown>>;
+export type { LlmUsage, UsageBreakdown, UsageStats } from "../types/usage.js";
 
 export const emptyUsage = (): UsageBreakdown => ({
     cost: 0,

@@ -8,7 +8,7 @@
 ## 2. Code Style
 - **TypeScript First**: Enforce strict typing. Do not use generic objects when an interface or `typeof State.State` can be used.
 - **ESM Syntax**: This project is configured as `type: module`. Always use `.js` extensions in local imports (e.g., `import { foo } from "./state.js";`).
-- **Enums**: Rely on defined enums (`WorkerStatus`, `FailureType`, `WorkerKind`) instead of scattered booleans for control flow.
+- **Closed value sets**: Rely on defined const objects (`WorkerStatus`, `FailureType`, `WorkerKind`) and their union types instead of scattered booleans/strings for control flow.
 
 ## 3. Operations & Memory Automation
 - **MEMORY AUTOMATION**: Before completing any task, you MUST update `.agent/memory.md` under the "Pending / Open Context" section if there are unresolved issues, or under "Architecture" if structural changes were made.

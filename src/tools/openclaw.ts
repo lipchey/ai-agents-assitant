@@ -5,4 +5,4 @@ export { SAFE_DIRECT_EXEC_COMMANDS } from "./local-tools.js";
 export { openclawRpc } from "./rpc.js";
 export { storeArtifact } from "./artifacts.js";
 export { resolveWorkspacePath } from "./workspace.js";
-export type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "./types.js";
+export type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.js";

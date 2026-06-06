@@ -14,16 +14,24 @@ one job, and the type checker catches mistakes the runtime would otherwise hide.
 
 Every tool name, model reference, model role, OpenClaw control identifier
 (Gateway endpoints, session keys, agent ids), graph node name, telemetry key,
-tool status, env-var name, and tuning threshold lives **once** in
-[src/constants.ts](../src/constants.ts) and is reused. Inline string/number
+tool status, env-var name, worker status/kind, and tuning threshold lives
+**once** in [src/consts/](../src/consts/) and is reused. Inline string/number
 literals for these are forbidden — a typo'd node name or `usageStats` key fails
 silently at runtime instead of at compile time.
 
-- Each group is an `as const` object paired with a same-named union type:
-  `ToolName`, `ModelRef`, `ModelRole`, `MainNode`, `SwarmNode`, `UsageKey`,
-  `ToolStatus`, `EnvVar`, `OpenClawControl`.
+- Runtime values are grouped by concern:
+  `consts/models.ts`, `consts/openclaw.ts`, `consts/tools.ts`,
+  `consts/graph.ts`, `consts/worker.ts`, `consts/usage.ts`,
+  `consts/env.ts`, `consts/tuning.ts`, and `consts/web.ts`.
+- Each closed runtime group is an `as const` object paired with a same-named
+  union type in [src/types/consts/](../src/types/consts/): `ToolName`,
+  `ModelRef`, `ModelRole`, `MainNode`, `SwarmNode`, `UsageKey`, `ToolStatus`,
+  `EnvVar`, `OpenClawControl`, `WorkerStatus`, `FailureType`, `WorkerKind`.
+  Import runtime values from `src/consts/*`; import annotation-only unions with
+  `import type` from `src/types/consts/*`.
 - `ModelRef` values **must** stay byte-equal to the keys in
-  [src/pricing.json](../src/pricing.json) (the cost lookup is keyed on them).
+  [src/consts/pricing/model-pricing.json](../src/consts/pricing/model-pricing.json)
+  (the cost lookup is keyed on them).
 - Tuning knobs are named constants with a one-line rationale
   (`CONFIDENCE_ESCALATION_THRESHOLD`, `DEFAULT_COST_BUDGET_USD`, the
   `PROJECTED_*` budget figures, the `MAX_*` loop caps).
@@ -37,12 +45,13 @@ Cross-cutting helpers belong in [src/shared/](../src/shared/):
 [json.ts](../src/shared/json.ts) (`extractJsonObject`, `asRecord`),
 [text.ts](../src/shared/text.ts) (`readString`, `readNumber`, `clampInt`,
 `clamp01`, `truncate`, `safeJson`, `stringifyPretty`, `stringifyError`,
-`errorMessage`), [usage.ts](../src/shared/usage.ts) (the usage shape +
-`emptyUsage`/`mergeUsage`/`usageFromLlm`/`mergeUsageStats`).
+`errorMessage`), [usage.ts](../src/shared/usage.ts)
+(`emptyUsage`/`mergeUsage`/`usageFromLlm`/`mergeUsageStats`).
 
 Before hand-rolling a coercion/stringify/merge helper, check `shared/` first.
-The usage 7-field shape is defined **once** (`LlmUsage`/`UsageBreakdown`) — never
-re-list those fields inline.
+The usage 7-field shape is defined **once** in
+[src/types/usage.ts](../src/types/usage.ts) (`LlmUsage`/`UsageBreakdown`) —
+never re-list those fields inline.
 
 ## 3. One responsibility per file; public API via barrels
 
@@ -52,6 +61,40 @@ re-list those fields inline.
   artifacts, rpc), `graph/*` (budget, escalation, parsers, context-terms,
   `nodes/<node>.ts`, routing, build), `swarm/*` (tool-catalog, tool-validation,
   react-worker, nodes, routing, build), `state/*`, `prompts/*`, `cli/*`.
+- The root of `src/` is reserved for:
+  - executable entrypoints (`index.ts`);
+  - public barrels (`main.ts`, `swarm.ts`, `state.ts`, `prompts.ts`);
+  - temporary legacy root modules that are already tracked for cleanup.
+  Do not add feature modules, domain enums, parsers, patching logic, HITL
+  drivers, adapters, or runtime data files directly under `src/`.
+- Put files next to their strongest owner:
+  - graph orchestration in `src/graph/`;
+  - graph node implementations in `src/graph/nodes/`;
+  - swarm orchestration, workers, worker routing, and worker validation in
+    `src/swarm/`;
+  - OpenClaw/Gateway adapters and local pseudo-tools in `src/tools/`;
+  - LangGraph state annotations and reducers in `src/state/`;
+  - prompt-cache anchors in `src/prompts/`;
+  - CLI argument/env/reporting concerns in `src/cli/`;
+  - runtime constants in `src/consts/`;
+  - shared/public type contracts in `src/types/`;
+  - reusable, dependency-light helpers in `src/shared/`.
+- Create a new top-level folder only for a real subsystem with multiple related
+  files and a stable boundary. Good candidates are domains such as `hitl/`,
+  `patching/`, or `domain/worker.ts`; bad candidates are vague buckets like
+  `utils/`, `misc/`, or `common/`.
+- Runtime data/config files should not be mixed with executable modules unless
+  they are private to that module. Project-level runtime constants and data live
+  under `src/consts/`; pricing data currently lives at
+  `src/consts/pricing/model-pricing.json`.
+- File and folder names use lower-kebab-case for multi-word modules
+  (`react-worker.ts`, `tool-validation.ts`) and domain-specific nouns over
+  implementation trivia. Avoid catch-all names like `helpers.ts`, `manager.ts`,
+  `service.ts`, `types.ts`, or `enums.ts` unless the file's owner and boundary
+  are unambiguous from its folder.
+- Split a file when it starts owning multiple roles, not just when it gets long:
+  parsing vs applying vs rollback, resolver types vs stdin resolver vs graph
+  driver, worker nodes vs recovery nodes, or gateway lifecycle vs HTTP calls.
 - **Barrels** keep the public import surface stable: `tools/openclaw.ts`,
   `main.ts`, `swarm.ts`, `state.ts`, `prompts.ts` re-export only. External
   consumers (and smoke scripts) import the barrel; never reach past it into a
@@ -59,7 +102,7 @@ re-list those fields inline.
 - **Cycle safety:** modules *inside* a subsystem import each other by concrete
   file, **not** the barrel. A subsystem barrel must not be imported by a file it
   re-exports. Keep dependencies a DAG (shared types in a leaf module, e.g.
-  `tools/types.ts`, `tools/errors.ts`).
+  `types/tools/rpc.ts`, `tools/errors.ts`).
 - ESM is mandatory: always use explicit `.js` extensions in local imports.
 
 ## 4. TypeScript — quality typing
@@ -73,8 +116,8 @@ re-list those fields inline.
 - Switches over a union should be exhaustive through an `assertNever`-style
   terminal branch, never a runtime fallback for a known role/kind; let the
   compiler flag a missing case.
-- Use the project enums (`WorkerStatus`, `FailureType`, `WorkerKind`) for control
-  flow, never scattered booleans/strings.
+- Use the project const objects (`WorkerStatus`, `FailureType`, `WorkerKind`) for
+  control flow, never scattered booleans/strings.
 - Keep `tsconfig` strictness (`strict`, `noUncheckedIndexedAccess`,
   `exactOptionalPropertyTypes`, `verbatimModuleSyntax`) green — use `import type`
   for type-only imports.
