@@ -1,4 +1,4 @@
-import { MainNode } from "../consts/graph.js";
+import { MainNode } from "../consts/graph.ts";
 import {
     PROJECTED_CODER_REVIEW_CYCLE_USD,
     PROJECTED_CONTEXT_REFETCH_CYCLE_USD,
@@ -7,8 +7,8 @@ import {
     PROJECTED_STRONG_CRITIC_USD,
     canSpendUsd,
     isCostBudgetNear,
-} from "./budget.js";
-import type { GraphStateValue } from "../types/graph/state.js";
+} from "./budget.ts";
+import type { GraphStateValue } from "../types/graph/state.ts";
 
 const MAX_DEBATE_ITERATIONS = 4;
 /* Two total fetches means the primary swarm pass plus one targeted refetch. */

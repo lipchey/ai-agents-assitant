@@ -1,9 +1,9 @@
 /* Consensus is not correctness; code paths still need an objective typecheck. */
-import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../../consts/tools.js";
-import { errorMessage } from "../../shared/text.js";
-import { openclawRpc } from "../../tools/openclaw.js";
-import { extractToolStatus } from "../parsers.js";
-import type { GraphStateValue } from "../../types/graph/state.js";
+import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../../consts/tools.ts";
+import { errorMessage } from "../../shared/text.ts";
+import { openclawRpc } from "../../tools/openclaw.ts";
+import { extractToolStatus } from "../parsers.ts";
+import type { GraphStateValue } from "../../types/graph/state.ts";
 
 const VERIFY_TIMEOUT_S = 120;
 const VERIFY_RPC_TIMEOUT_S = 150;

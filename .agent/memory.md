@@ -159,7 +159,9 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
 - Use shared helpers in `src/shared/*` for JSON extraction, text coercion, error
   formatting, usage merging, and telemetry shape.
 - Internal modules import concrete files, not subsystem barrels they re-export.
-- Always use explicit `.js` extensions in local ESM imports.
+- Use explicit `.ts` extensions in local TypeScript source imports.
+  `rewriteRelativeImportExtensions` rewrites them to `.js` for emitted Node ESM
+  output.
 - `src/` root is reserved for executable entrypoints and public barrels. Feature
   modules, domain types, adapters, constants, and runtime data should live under
   their owning folders. Patch implementation lives in `src/patching/`; HITL

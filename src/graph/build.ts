@@ -1,16 +1,16 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
-import { MainNode } from "../consts/graph.js";
-import { GraphState } from "../state.js";
-import { applyPatches } from "./nodes/apply-patches.js";
-import { claudeArchitect, frontierArchitect } from "./nodes/architects.js";
-import { claudeCoder } from "./nodes/coder.js";
-import { frontierCritic, openaiCritic } from "./nodes/critics.js";
-import { directResponder } from "./nodes/direct.js";
-import { finalize } from "./nodes/finalize.js";
-import { firewall, swarmNode } from "./nodes/swarm-node.js";
-import { complexityRouter } from "./nodes/router.js";
-import { smeTiebreaker } from "./nodes/tiebreaker.js";
-import { verify } from "./nodes/verify.js";
+import { MainNode } from "../consts/graph.ts";
+import { GraphState } from "../state.ts";
+import { applyPatches } from "./nodes/apply-patches.ts";
+import { claudeArchitect, frontierArchitect } from "./nodes/architects.ts";
+import { claudeCoder } from "./nodes/coder.ts";
+import { frontierCritic, openaiCritic } from "./nodes/critics.ts";
+import { directResponder } from "./nodes/direct.ts";
+import { finalize } from "./nodes/finalize.ts";
+import { firewall, swarmNode } from "./nodes/swarm-node.ts";
+import { complexityRouter } from "./nodes/router.ts";
+import { smeTiebreaker } from "./nodes/tiebreaker.ts";
+import { verify } from "./nodes/verify.ts";
 import {
     routeAfterApplyPatches,
     routeAfterClaudeArchitect,
@@ -20,7 +20,7 @@ import {
     routeAfterVerify,
     routeByComplexity,
     routeDebate,
-} from "./routing.js";
+} from "./routing.ts";
 
 export const buildMainGraph = () => {
     return new StateGraph(GraphState)

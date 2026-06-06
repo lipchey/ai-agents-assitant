@@ -1,8 +1,8 @@
 import { Annotation } from "@langchain/langgraph";
-import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.js";
-import { mergeUsageStats, type UsageStats } from "../shared/usage.js";
-import type { ToolCallRecord } from "../types/state/swarm.js";
-import { concatArrays, mergeDicts, sumNumbers } from "./reducers.js";
+import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.ts";
+import { mergeUsageStats, type UsageStats } from "../shared/usage.ts";
+import type { ToolCallRecord } from "../types/state/swarm.ts";
+import { concatArrays, mergeDicts, sumNumbers } from "./reducers.ts";
 
 export const SwarmWorkerState = Annotation.Root({
     subtask: Annotation<string>,

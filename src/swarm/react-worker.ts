@@ -1,15 +1,15 @@
 /* Recoverable reasoning errors stay in-loop; environment failures route to HITL. */
-import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.js";
-import { ToolName } from "../consts/tools.js";
-import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.js";
-import { errorMessage, readString, safeJson, stringifyPretty, truncate } from "../shared/text.js";
-import { emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared/usage.js";
-import type { ToolCallRecord } from "../state.js";
-import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools/openclaw.js";
-import type { ReactStep } from "../types/swarm/react.js";
-import type { SwarmWorkerStateValue } from "../state/swarm-state.js";
-import { WORKER_PROMPTS, WORKER_USAGE_KEY } from "./tool-catalog.js";
-import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.js";
+import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.ts";
+import { ToolName } from "../consts/tools.ts";
+import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.ts";
+import { errorMessage, readString, safeJson, stringifyPretty, truncate } from "../shared/text.ts";
+import { emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared/usage.ts";
+import type { ToolCallRecord } from "../state.ts";
+import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools/openclaw.ts";
+import type { ReactStep } from "../types/swarm/react.ts";
+import type { SwarmWorkerStateValue } from "../state/swarm-state.ts";
+import { WORKER_PROMPTS, WORKER_USAGE_KEY } from "./tool-catalog.ts";
+import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.ts";
 
 const MAX_REACT_STEPS = 6;
 const MAX_REACT_TOOL_FAILURES = 3;

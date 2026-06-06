@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { WorkerKind } from "../src/consts/worker.js";
-import { parseReactDecision, sanitizeToolArgs } from "../src/swarm.js";
+import { WorkerKind } from "../src/consts/worker.ts";
+import { parseReactDecision, sanitizeToolArgs } from "../src/swarm.ts";
 
 const run = (): void => {
     const act = parseReactDecision('{"thought":"look","action":{"tool":"grep_code","args":{"pattern":"callLlm"}}}');

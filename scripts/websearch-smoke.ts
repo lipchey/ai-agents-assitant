@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { openclawRpc } from "../src/tools/openclaw.js";
+import { openclawRpc } from "../src/tools/openclaw.ts";
 
 type GatewayBody = { ok: boolean; result?: unknown; error?: { message?: string } };
 type Handler = (tool: string, args: Record<string, unknown>) => GatewayBody;

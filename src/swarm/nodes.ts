@@ -1,15 +1,15 @@
 import { interrupt } from "@langchain/langgraph";
-import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.js";
-import { UsageKey } from "../consts/usage.js";
-import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.js";
-import { SystemPrompts } from "../prompts.js";
-import { asRecord, extractJsonObject } from "../shared/json.js";
-import { safeJson, truncate } from "../shared/text.js";
-import { emptyUsage, usageFromLlm } from "../shared/usage.js";
-import { callLlm } from "../tools/openclaw.js";
-import type { HitlInterruptPayload, HitlResolution } from "../types/hitl/index.js";
-import type { SwarmWorkerStateValue } from "../state/swarm-state.js";
-import { runReactWorker } from "./react-worker.js";
+import { ModelRole, RESPONSE_FORMAT_JSON } from "../consts/models.ts";
+import { UsageKey } from "../consts/usage.ts";
+import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.ts";
+import { SystemPrompts } from "../prompts.ts";
+import { asRecord, extractJsonObject } from "../shared/json.ts";
+import { safeJson, truncate } from "../shared/text.ts";
+import { emptyUsage, usageFromLlm } from "../shared/usage.ts";
+import { callLlm } from "../tools/openclaw.ts";
+import type { HitlInterruptPayload, HitlResolution } from "../types/hitl/index.ts";
+import type { SwarmWorkerStateValue } from "../state/swarm-state.ts";
+import { runReactWorker } from "./react-worker.ts";
 
 /* Blocked-worker fallbacks must not leak a full raw transcript into reasoning prompts. */
 const MAX_BLOCKED_FALLBACK_CHARS = 600;

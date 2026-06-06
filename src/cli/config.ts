@@ -1,7 +1,7 @@
-import { EnvVar, isTruthyEnv } from "../consts/env.js";
-import { DEFAULT_COST_BUDGET_USD } from "../consts/tuning.js";
-import { autoAbortResolver, createStdinHitlResolver } from "../hitl/resolvers.js";
-import type { HitlResolver } from "../types/hitl/index.js";
+import { EnvVar, isTruthyEnv } from "../consts/env.ts";
+import { DEFAULT_COST_BUDGET_USD } from "../consts/tuning.ts";
+import { autoAbortResolver, createStdinHitlResolver } from "../hitl/resolvers.ts";
+import type { HitlResolver } from "../types/hitl/index.ts";
 
 export const readCostBudgetUsd = (): number => {
     const configured = Number(process.env[EnvVar.COST_BUDGET_USD]);

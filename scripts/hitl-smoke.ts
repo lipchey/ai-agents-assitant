@@ -1,15 +1,15 @@
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import assert from "node:assert/strict";
-import { FailureType, WorkerKind, WorkerStatus } from "../src/consts/worker.js";
+import { FailureType, WorkerKind, WorkerStatus } from "../src/consts/worker.ts";
 import {
     autoAbortResolver,
     driveSwarmWithHitl,
     type HitlDrivableGraph,
     type HitlInterruptPayload,
     type HitlResolver,
-} from "../src/hitl.js";
-import { SwarmWorkerState } from "../src/state.js";
-import { humanGate } from "../src/swarm.js";
+} from "../src/hitl.ts";
+import { SwarmWorkerState } from "../src/state.ts";
+import { humanGate } from "../src/swarm.ts";
 
 type WorkerState = typeof SwarmWorkerState.State;
 

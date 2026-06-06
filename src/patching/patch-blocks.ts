@@ -1,8 +1,8 @@
 /* Opt-in patches are structured-only and snapshot pristine files for rollback. */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolveWorkspacePath } from "../tools/openclaw.js";
-import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "../types/patching/index.js";
+import { resolveWorkspacePath } from "../tools/openclaw.ts";
+import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "../types/patching/index.ts";
 
 const PATCH_BLOCK = /<<<PATCH\s+(?:file|path)\s*=\s*"([^"]+)"\s*>>>\r?\n([\s\S]*?)\r?\n?<<<END\s+PATCH>>>/gu;
 const PROTECTED_SEGMENTS = new Set([".git", "node_modules"]);

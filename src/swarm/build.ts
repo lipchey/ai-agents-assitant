@@ -1,9 +1,9 @@
 /* humanGate interrupt requires a checkpointer; each swarm run gets an isolated saver. */
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
-import { SWARM_BLOCKED_ROUTE, SwarmNode } from "../consts/graph.js";
-import { SwarmWorkerState } from "../state.js";
-import { blocked, codeExplorer, humanGate, infraOps, leadDelegator, smeOracle, webResearcher, workerCompress } from "./nodes.js";
-import { delegateToWorker, routeAfterHuman, routeAfterSme, routeAfterWorker } from "./routing.js";
+import { SWARM_BLOCKED_ROUTE, SwarmNode } from "../consts/graph.ts";
+import { SwarmWorkerState } from "../state.ts";
+import { blocked, codeExplorer, humanGate, infraOps, leadDelegator, smeOracle, webResearcher, workerCompress } from "./nodes.ts";
+import { delegateToWorker, routeAfterHuman, routeAfterSme, routeAfterWorker } from "./routing.ts";
 
 const WORKER_ROUTES = {
     [SwarmNode.CODE_EXPLORER]: SwarmNode.CODE_EXPLORER,

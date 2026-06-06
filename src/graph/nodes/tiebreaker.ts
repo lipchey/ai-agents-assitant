@@ -1,9 +1,9 @@
-import { ModelRole } from "../../consts/models.js";
-import { UsageKey } from "../../consts/usage.js";
-import { SystemPrompts } from "../../prompts.js";
-import { usageFromLlm } from "../../shared/usage.js";
-import { callLlm } from "../../tools/openclaw.js";
-import type { GraphStateValue } from "../../types/graph/state.js";
+import { ModelRole } from "../../consts/models.ts";
+import { UsageKey } from "../../consts/usage.ts";
+import { SystemPrompts } from "../../prompts.ts";
+import { usageFromLlm } from "../../shared/usage.ts";
+import { callLlm } from "../../tools/openclaw.ts";
+import type { GraphStateValue } from "../../types/graph/state.ts";
 
 export const smeTiebreaker = async (state: GraphStateValue) => {
     const result = await callLlm(

@@ -1,8 +1,8 @@
 /* Per-worker catalogs turn out-of-scope tools into recoverable planner feedback. */
-import { ToolName } from "../consts/tools.js";
-import { UsageKey } from "../consts/usage.js";
-import { WorkerKind } from "../consts/worker.js";
-import { SystemPrompts } from "../prompts.js";
+import { ToolName } from "../consts/tools.ts";
+import { UsageKey } from "../consts/usage.ts";
+import { WorkerKind } from "../consts/worker.ts";
+import { SystemPrompts } from "../prompts.ts";
 
 export const WORKER_TOOLS: Record<WorkerKind, readonly string[]> = {
     [WorkerKind.CODE_EXPLORER]: [ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],

@@ -1,8 +1,8 @@
 /* Provider cache-usage fields differ, so cost accounting normalizes them here. */
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { LlmUsage } from "../shared/usage.js";
-import type { ModelPricing, ProviderUsage } from "../types/tools/pricing.js";
+import type { LlmUsage } from "../shared/usage.ts";
+import type { ModelPricing, ProviderUsage } from "../types/tools/pricing.ts";
 
 let pricingCache: Promise<Record<string, ModelPricing>> | undefined;
 

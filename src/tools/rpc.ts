@@ -1,9 +1,9 @@
-import { ToolName } from "../consts/tools.js";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.js";
-import { OpenClawError } from "./errors.js";
-import { invokeGatewayTool } from "./http.js";
-import { runLocalPseudoTool } from "./local-tools.js";
-import { runWebLookupWithFallback } from "./web-search.js";
+import { ToolName } from "../consts/tools.ts";
+import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+import { OpenClawError } from "./errors.ts";
+import { invokeGatewayTool } from "./http.ts";
+import { runLocalPseudoTool } from "./local-tools.ts";
+import { runWebLookupWithFallback } from "./web-search.ts";
 
 /* Caller-side control args are not part of Gateway tool schemas. */
 const omitControlArgs = (args: OpenClawRpcArgs): JsonObject => {

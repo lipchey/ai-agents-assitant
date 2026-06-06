@@ -1,5 +1,5 @@
 /* Keep JSON output contracts byte-compatible with their parsers. */
-import { reasoning, utility } from "./core.js";
+import { reasoning, utility } from "./core.ts";
 
 export const reasoningPrompts = {
     complexityRouter: reasoning([

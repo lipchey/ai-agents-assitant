@@ -1,9 +1,9 @@
 import "dotenv/config";
-import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled } from "./cli/config.js";
-import { printReport } from "./cli/report.js";
-import { HITL_RESOLVER_CONFIG_KEY } from "./hitl/resolvers.js";
-import { buildMainGraph } from "./main.js";
-import { startOpenClawGateway, stopOpenClawGateway } from "./tools/openclaw.js";
+import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled } from "./cli/config.ts";
+import { printReport } from "./cli/report.ts";
+import { HITL_RESOLVER_CONFIG_KEY } from "./hitl/resolvers.ts";
+import { buildMainGraph } from "./main.ts";
+import { startOpenClawGateway, stopOpenClawGateway } from "./tools/openclaw.ts";
 
 /* Recursion headroom protects bounded loops; per-cycle caps remain the real guard. */
 const RECURSION_LIMIT = 50;

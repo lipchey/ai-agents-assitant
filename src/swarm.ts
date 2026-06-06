@@ -1,3 +1,3 @@
-export { buildSwarm } from "./swarm/build.js";
-export { humanGate } from "./swarm/nodes.js";
-export { parseReactDecision, sanitizeToolArgs } from "./swarm/tool-validation.js";
+export { buildSwarm } from "./swarm/build.ts";
+export { humanGate } from "./swarm/nodes.ts";
+export { parseReactDecision, sanitizeToolArgs } from "./swarm/tool-validation.ts";

@@ -1,6 +1,6 @@
 /* Refetches are targeted from critique terms to avoid paying for repeated inventory. */
-import { WorkerKind } from "../consts/worker.js";
-import type { GraphStateValue } from "../types/graph/state.js";
+import { WorkerKind } from "../consts/worker.ts";
+import type { GraphStateValue } from "../types/graph/state.ts";
 
 const MAX_CONTEXT_SEARCH_TERMS = 10;
 

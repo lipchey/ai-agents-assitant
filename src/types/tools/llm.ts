@@ -1,5 +1,5 @@
-import type { LlmUsage } from "../usage.js";
-import type { ProviderUsage } from "./pricing.js";
+import type { LlmUsage } from "../usage.ts";
+import type { ProviderUsage } from "./pricing.ts";
 
 export type ChatCompletionResponse = {
     choices?: Array<{ message?: { content?: unknown } }>;

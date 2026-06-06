@@ -1,1 +1,1 @@
-export { buildMainGraph } from "./graph/build.js";
+export { buildMainGraph } from "./graph/build.ts";

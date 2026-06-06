@@ -1,8 +1,8 @@
-import { OpenClawControl } from "../consts/openclaw.js";
-import { stringifyError } from "../shared/text.js";
-import type { JsonObject, OpenClawRpcOptions } from "../types/tools/rpc.js";
-import { OpenClawError } from "./errors.js";
-import { DEFAULT_TIMEOUT_S, authHeaders, getGatewayBaseUrl, sleep } from "./gateway.js";
+import { OpenClawControl } from "../consts/openclaw.ts";
+import { stringifyError } from "../shared/text.ts";
+import type { JsonObject, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+import { OpenClawError } from "./errors.ts";
+import { DEFAULT_TIMEOUT_S, authHeaders, getGatewayBaseUrl, sleep } from "./gateway.ts";
 
 export const jsonPost = async <T>(
     endpoint: string,

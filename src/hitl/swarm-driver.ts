@@ -6,7 +6,7 @@ import type {
     HitlInterruptPayload,
     HitlResolution,
     HitlResolver,
-} from "../types/hitl/index.js";
+} from "../types/hitl/index.ts";
 
 /* Defensive cap beyond the swarm's own escalation bound. */
 const DEFAULT_MAX_HITL_ROUNDS = 6;

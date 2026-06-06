@@ -1,4 +1,4 @@
-import { worker } from "./core.js";
+import { worker } from "./core.ts";
 
 export const workerPrompts = {
     codeExplorer: worker([

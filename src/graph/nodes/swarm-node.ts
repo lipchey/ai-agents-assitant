@@ -1,13 +1,13 @@
 /* Fresh swarm runs keep HITL checkpoints isolated between debate refetches. */
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { WorkerStatus } from "../../consts/worker.js";
-import { readHitlResolver } from "../../hitl/resolvers.js";
-import { driveSwarmWithHitl } from "../../hitl/swarm-driver.js";
-import { buildSwarm } from "../../swarm.js";
-import type { SwarmWorkerStateValue } from "../../state/swarm-state.js";
-import type { GraphStateValue } from "../../types/graph/state.js";
-import type { HitlDrivableGraph } from "../../types/hitl/index.js";
-import { buildSwarmSubtask, selectWorkerKind } from "../context-terms.js";
+import { WorkerStatus } from "../../consts/worker.ts";
+import { readHitlResolver } from "../../hitl/resolvers.ts";
+import { driveSwarmWithHitl } from "../../hitl/swarm-driver.ts";
+import { buildSwarm } from "../../swarm.ts";
+import type { SwarmWorkerStateValue } from "../../state/swarm-state.ts";
+import type { GraphStateValue } from "../../types/graph/state.ts";
+import type { HitlDrivableGraph } from "../../types/hitl/index.ts";
+import { buildSwarmSubtask, selectWorkerKind } from "../context-terms.ts";
 
 export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const swarm = buildSwarm();

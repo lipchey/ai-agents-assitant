@@ -1,6 +1,6 @@
-import { SWARM_BLOCKED_ROUTE, SwarmNode } from "../consts/graph.js";
-import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.js";
-import type { SwarmWorkerStateValue } from "../state/swarm-state.js";
+import { SWARM_BLOCKED_ROUTE, SwarmNode } from "../consts/graph.ts";
+import { FailureType, WorkerKind, WorkerStatus } from "../consts/worker.ts";
+import type { SwarmWorkerStateValue } from "../state/swarm-state.ts";
 
 /* Bounded retries keep SME/HITL escalation from cycling forever. */
 export const MAX_ESCALATION_ATTEMPTS = 2;

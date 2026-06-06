@@ -1,4 +1,4 @@
-import type { OpenClawRpcArgs } from "../tools/rpc.js";
+import type { OpenClawRpcArgs } from "../tools/rpc.ts";
 
 export type ReactDecision =
     | { kind: "act"; thought: string; tool: string; args: OpenClawRpcArgs }

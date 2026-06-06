@@ -1,4 +1,4 @@
-import type { UsageKey } from "../consts/usage.js";
+import type { UsageKey } from "../consts/usage.ts";
 
 export type LlmUsage = {
     tokens: number;

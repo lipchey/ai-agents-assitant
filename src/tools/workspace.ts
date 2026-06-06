@@ -1,6 +1,6 @@
 /* All filesystem-touching tools resolve here to prevent workspace escapes. */
 import path from "node:path";
-import { OpenClawError } from "./errors.js";
+import { OpenClawError } from "./errors.ts";
 
 export const resolveWorkspacePath = (inputPath: string): string => {
     const workspaceRoot = process.cwd();

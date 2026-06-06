@@ -104,7 +104,9 @@ never re-list those fields inline.
   file, **not** the barrel. A subsystem barrel must not be imported by a file it
   re-exports. Keep dependencies a DAG (shared types in a leaf module, e.g.
   `types/tools/rpc.ts`, `tools/errors.ts`).
-- ESM is mandatory: always use explicit `.js` extensions in local imports.
+- ESM is mandatory: use explicit `.ts` extensions in local TypeScript source
+  imports. `rewriteRelativeImportExtensions` rewrites them to `.js` for emitted
+  Node ESM output.
 
 ## 4. TypeScript — quality typing
 

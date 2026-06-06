@@ -1,6 +1,6 @@
 /* Failed guarded patch runs roll back here so the workspace is not left broken. */
-import { rollbackPatches } from "../../patching/patch-blocks.js";
-import type { GraphStateValue } from "../../types/graph/state.js";
+import { rollbackPatches } from "../../patching/patch-blocks.ts";
+import type { GraphStateValue } from "../../types/graph/state.ts";
 
 export const finalize = async (state: GraphStateValue) => {
     const answer = state.bestDraft || state.currentDraft || state.architectureSpec || "";

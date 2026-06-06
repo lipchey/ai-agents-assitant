@@ -1,3 +1,3 @@
-import { SystemPrompts } from "../prompts.js";
+import { SystemPrompts } from "../prompts.ts";
 
 export type SystemPromptKey = keyof typeof SystemPrompts;

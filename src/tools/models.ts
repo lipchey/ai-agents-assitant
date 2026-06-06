@@ -1,8 +1,8 @@
-import { ModelRef, ModelRole } from "../consts/models.js";
-import { OpenClawControl } from "../consts/openclaw.js";
-import type { ModelProvider, ModelRouting } from "../types/tools/models.js";
+import { ModelRef, ModelRole } from "../consts/models.ts";
+import { OpenClawControl } from "../consts/openclaw.ts";
+import type { ModelProvider, ModelRouting } from "../types/tools/models.ts";
 
-export type { ModelProvider, ModelRouting } from "../types/tools/models.js";
+export type { ModelProvider, ModelRouting } from "../types/tools/models.ts";
 
 export const DEFAULT_OPENCLAW_MODEL = OpenClawControl.DEFAULT_MODEL;
 export const STRONG_REASONING_AGENT_ID = OpenClawControl.STRONG_REASONING_AGENT_ID;

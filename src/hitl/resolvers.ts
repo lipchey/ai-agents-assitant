@@ -2,7 +2,7 @@
 
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { createInterface } from "node:readline/promises";
-import type { HitlResolver } from "../types/hitl/index.js";
+import type { HitlResolver } from "../types/hitl/index.ts";
 
 export const HITL_RESOLVER_CONFIG_KEY = "hitlResolver";
 
