@@ -1,5 +1,3 @@
-// Console rendering of a finished run: final answer, optional patch report, and
-// the cost/token telemetry breakdown by role.
 import type { GraphStateValue } from "../graph/types.js";
 
 export const printReport = (finalState: GraphStateValue, costBudgetUsd: number): void => {

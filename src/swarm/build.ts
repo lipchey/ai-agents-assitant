@@ -1,6 +1,4 @@
-// Swarm sub-graph assembly. A checkpointer is required for `humanGate`'s
-// `interrupt()` to pause instead of throw; each invocation builds a fresh swarm
-// with its own in-memory saver + thread id, so checkpoints never leak between runs.
+/* humanGate interrupt requires a checkpointer; each swarm run gets an isolated saver. */
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { SWARM_BLOCKED_ROUTE, SwarmNode } from "../constants.js";
 import { SwarmWorkerState } from "../state.js";

@@ -1,7 +1,4 @@
-// Deterministic high-risk escalation heuristic. When the task text matches a
-// high-stakes domain, the frontier architect/critic are forced to escalate to the
-// strong models regardless of their own confidence. Kept intentionally aligned
-// with the escalation criteria in the frontierArchitect/frontierCritic prompts.
+/* Keep these high-risk signals aligned with the architect/critic prompt criteria. */
 
 const STRONG_ESCALATION_SIGNALS = [
     /\bsecurity|authentication|authorization|authz|authn|crypto|encrypt|secret|token|permission\b/iu,

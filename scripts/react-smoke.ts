@@ -1,20 +1,8 @@
-// Smoke test for the ReAct Swarm workers' SAFETY GUARDS and step parsing.
-//
-// The worker nodes themselves call the live planner model + OpenClaw Gateway, so
-// the full loop is exercised end-to-end only with credentials. This test instead
-// pins the pure, network-free pieces that enforce the security envelope:
-//   - `parseReactDecision`: act-vs-final extraction (incl. graceful prose fallback).
-//   - `sanitizeToolArgs`: per-worker tool restriction, the shell allowlist, the
-//     workspace-only path tools, and required-arg validation.
-//
-// Run: npx tsx scripts/react-smoke.ts
-
 import assert from "node:assert/strict";
 import { WorkerKind } from "../src/enums.js";
 import { parseReactDecision, sanitizeToolArgs } from "../src/swarm.js";
 
 const run = (): void => {
-    // --- parseReactDecision ---------------------------------------------------
     const act = parseReactDecision('{"thought":"look","action":{"tool":"grep_code","args":{"pattern":"callLlm"}}}');
     assert.equal(act.kind, "act");
     assert.equal(act.kind === "act" && act.tool, "grep_code");
@@ -34,14 +22,12 @@ const run = (): void => {
     assert.match(prose.kind === "final" ? prose.final : "", /just prose/u);
     console.log("PASS: parseReactDecision handles act / fenced-final / prose-fallback");
 
-    // --- tool restriction per worker -----------------------------------------
     const webTryShell = sanitizeToolArgs(WorkerKind.WEB_RESEARCHER, "shell_exec", { command: "npm test" });
     assert.equal(webTryShell.ok, false, "web_researcher must not reach shell_exec");
     const codeTryWeb = sanitizeToolArgs(WorkerKind.CODE_EXPLORER, "web_lookup", { query: "x" });
     assert.equal(codeTryWeb.ok, false, "code_explorer must not reach web_lookup");
     console.log("PASS: per-worker tool catalog is enforced");
 
-    // --- shell allowlist ------------------------------------------------------
     const allowed = sanitizeToolArgs(WorkerKind.INFRA_OPS, "shell_exec", { command: "npm run typecheck" });
     assert.equal(allowed.ok, true, "allowlisted command must pass");
     assert.equal(allowed.ok && allowed.args.command, "npm run typecheck");
@@ -50,7 +36,6 @@ const run = (): void => {
     assert.match(denied.ok ? "" : denied.error, /not allowlisted/u);
     console.log("PASS: shell allowlist refuses non-allowlisted commands");
 
-    // --- required args + safe defaults ---------------------------------------
     const noPattern = sanitizeToolArgs(WorkerKind.CODE_EXPLORER, "grep_code", {});
     assert.equal(noPattern.ok, false, "grep_code without a pattern must be rejected");
     const noPath = sanitizeToolArgs(WorkerKind.CODE_EXPLORER, "ast_read", {});

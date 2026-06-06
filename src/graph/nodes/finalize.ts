@@ -1,6 +1,4 @@
-// Terminal node. Picks the best available answer and reconciles guarded patches:
-// keep them when verification passed, roll back to the pristine tree when it
-// ultimately failed, so a guarded run never leaves broken files behind.
+/* Failed guarded patch runs roll back here so the workspace is not left broken. */
 import { rollbackPatches } from "../../patch.js";
 import type { GraphStateValue } from "../types.js";
 

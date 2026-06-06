@@ -1,13 +1,4 @@
-// Centralized scalar constants for the whole framework.
-//
-// Every tool name, model reference, model role, graph node name, telemetry key,
-// tool status, and env-var name lives here exactly once. Inline string/number
-// literals for these are forbidden (a typo'd node name or usageStats key fails
-// silently at runtime instead of at compile time). Each `as const` object is
-// paired with a same-named union type so a value can be used both as a constant
-// and as a precise type.
-
-// --- Pseudo-tool / gateway-tool names ---------------------------------------
+/* Centralized scalar identifiers turn typo-prone runtime strings into checked unions. */
 export const ToolName = {
     FIND_FILES: "find_files",
     GREP_CODE: "grep_code",
@@ -20,7 +11,7 @@ export const ToolName = {
 } as const;
 export type ToolName = (typeof ToolName)[keyof typeof ToolName];
 
-// --- Model references (MUST stay byte-equal to the keys in pricing.json) -----
+/* ModelRef values must stay byte-equal to pricing.json keys. */
 export const ModelRef = {
     CLAUDE_OPUS: "anthropic/claude-opus-4-8",
     CLAUDE_SONNET: "anthropic/claude-sonnet-4-6",
@@ -30,7 +21,6 @@ export const ModelRef = {
 } as const;
 export type ModelRef = (typeof ModelRef)[keyof typeof ModelRef];
 
-// --- Model roles (the cost cascade). `callLlm` is typed by this union. -------
 export const ModelRole = {
     ROUTER: "router",
     FRONTIER: "frontier",
@@ -43,10 +33,7 @@ export const ModelRole = {
 } as const;
 export type ModelRole = (typeof ModelRole)[keyof typeof ModelRole];
 
-// --- OpenClaw control identifiers -------------------------------------------
-// Gateway endpoints, agent/session ids, and transport model ids are just as
-// typo-sensitive as node/tool names: a misspelling silently routes to the wrong
-// Gateway behavior or endpoint.
+/* Gateway endpoints and agent ids are typo-sensitive runtime controls too. */
 export const OpenClawControl = {
     DEFAULT_MODEL: "openclaw/default",
     STRONG_REASONING_AGENT_ID: "strong-reasoning",
@@ -59,7 +46,6 @@ export const OpenClawControl = {
 } as const;
 export type OpenClawControl = (typeof OpenClawControl)[keyof typeof OpenClawControl];
 
-// --- Main reasoning-graph node names -----------------------------------------
 export const MainNode = {
     COMPLEXITY_ROUTER: "complexityRouter",
     DIRECT_RESPONDER: "directResponder",
@@ -77,7 +63,6 @@ export const MainNode = {
 } as const;
 export type MainNode = (typeof MainNode)[keyof typeof MainNode];
 
-// --- Swarm sub-graph node names ----------------------------------------------
 export const SwarmNode = {
     LEAD_DELEGATOR: "leadDelegator",
     CODE_EXPLORER: "codeExplorer",
@@ -90,11 +75,9 @@ export const SwarmNode = {
 } as const;
 export type SwarmNode = (typeof SwarmNode)[keyof typeof SwarmNode];
 
-// Internal route token used by swarm conditional edges to reach the `blocked`
-// terminal node; intentionally distinct from the node name itself.
+/* Route token, not a node name, so conditional edges can target blocked explicitly. */
 export const SWARM_BLOCKED_ROUTE = "__blocked__";
 
-// --- usageStats telemetry keys -----------------------------------------------
 export const UsageKey = {
     ROUTER: "router",
     DIRECT: "direct",
@@ -113,7 +96,6 @@ export const UsageKey = {
 } as const;
 export type UsageKey = (typeof UsageKey)[keyof typeof UsageKey];
 
-// --- Local-process tool statuses (returned by runLocalProcess) ---------------
 export const ToolStatus = {
     COMPLETED: "completed",
     FAILED: "failed",
@@ -121,7 +103,6 @@ export const ToolStatus = {
 } as const;
 export type ToolStatus = (typeof ToolStatus)[keyof typeof ToolStatus];
 
-// --- Environment variable names ----------------------------------------------
 export const EnvVar = {
     COST_BUDGET_USD: "AGENT_COST_BUDGET_USD",
     HITL: "AGENT_HITL",
@@ -134,28 +115,20 @@ export const EnvVar = {
 } as const;
 export type EnvVar = (typeof EnvVar)[keyof typeof EnvVar];
 
-// --- LLM request shape -------------------------------------------------------
 export const RESPONSE_FORMAT_JSON = "json_object" as const;
 
-// --- Shared tuning thresholds ------------------------------------------------
-// Confidence at/above which a frontier role is trusted without strong-model
-// escalation. Mirrored in the frontierArchitect/frontierCritic prompt copy.
+/* Keep aligned with frontierArchitect/frontierCritic escalation prompt copy. */
 export const CONFIDENCE_ESCALATION_THRESHOLD = 0.72;
 
-// Default per-run USD budget when none is supplied via env / graph input.
 export const DEFAULT_COST_BUDGET_USD = 1;
 
-// Objective verification command (also the default for the run_tests pseudo-tool).
-// Must be a member of SAFE_DIRECT_EXEC_COMMANDS in tools/local-tools.ts.
+/* Must stay allowlisted in SAFE_DIRECT_EXEC_COMMANDS. */
 export const VERIFY_TYPECHECK_COMMAND = "npm run typecheck";
 
-// --- Web search failover (Tavily primary, DuckDuckGo fallback) ---------------
-// Label used when the generic web_search result does not report its own provider
-// id; keep aligned with tools.web.search.provider in openclaw.config.json5.
+/* Fallback label mirrors tools.web.search.provider in openclaw.config.json5. */
 export const FALLBACK_PROVIDER_LABEL = "duckduckgo";
 export const WEB_SEARCH_MAX_RESULTS = 8;
 
-// Matches the values treated as an enabled boolean flag in env vars.
 const TRUTHY_ENV_PATTERN = /^(1|true|yes|on)$/iu;
 
 export const isTruthyEnv = (value: string | undefined): boolean =>

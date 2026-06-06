@@ -1,6 +1,4 @@
-// Lossless artifact store. Raw tool outputs are written to .openclaw_artifacts and
-// referenced by an `artifact://` handle so the reasoning layer can stay compact
-// while the full bytes remain recoverable.
+/* Store full tool output out-of-band so reasoning prompts can stay compact. */
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";

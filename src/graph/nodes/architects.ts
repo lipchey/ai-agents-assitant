@@ -1,6 +1,3 @@
-// Architecture lead nodes. The low-cost frontier architect drafts the spec and
-// acts as the primary strong-model escalation gate; the strong Claude architect
-// runs only on escalated (high-risk / low-confidence) paths.
 import { CONFIDENCE_ESCALATION_THRESHOLD, ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../../constants.js";
 import { SystemPrompts } from "../../prompts.js";
 import { usageFromLlm } from "../../shared/usage.js";

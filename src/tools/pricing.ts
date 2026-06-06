@@ -1,6 +1,4 @@
-// Cost telemetry: load per-model pricing and turn a provider usage report into
-// token counts + USD cost. Handles the three providers' differing cache-usage
-// fields (DeepSeek hit/miss, OpenAI cached_tokens, Anthropic cache read/write).
+/* Provider cache-usage fields differ, so cost accounting normalizes them here. */
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { LlmUsage } from "../shared/usage.js";
@@ -15,7 +13,6 @@ export type ModelPricing = {
     inputCacheWrite1hPer1M?: number;
 };
 
-// Raw `usage` block shapes across providers; all fields optional.
 export type ProviderUsage = {
     prompt_tokens?: number;
     completion_tokens?: number;
@@ -37,7 +34,6 @@ export type ProviderUsage = {
 
 let pricingCache: Promise<Record<string, ModelPricing>> | undefined;
 
-// Read pricing.json once per process (module-level cache).
 export const loadPricing = (): Promise<Record<string, ModelPricing>> => {
     pricingCache ??= fs.readFile(path.join(process.cwd(), "src", "pricing.json"), "utf8")
         .then((pricingFile) => JSON.parse(pricingFile) as Record<string, ModelPricing>)

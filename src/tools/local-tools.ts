@@ -1,8 +1,4 @@
-// Deterministic local adapters for the repository pseudo-tools (run_tests,
-// shell_exec, ast_read, find_files, grep_code). These never touch the Gateway:
-// they enforce workspace path bounds, an exact command allowlist, no shell
-// interpolation, timeouts, and output limits, then return a JsonObject the worker
-// can read. This is the authoritative safety guard for local execution.
+/* Local pseudo-tools are the authoritative guard for path bounds and shell allowlists. */
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../constants.js";
@@ -15,10 +11,7 @@ import { resolveWorkspacePath } from "./workspace.js";
 const MAX_PROCESS_OUTPUT_CHARS = 200_000;
 const KILL_GRACE_MS = 5_000;
 
-// Single source of truth for the shell allowlist. Exported so the Swarm's ReAct
-// workers can advertise the allowed commands to the planner and pre-validate a
-// command before paying for a round-trip; the exec adapter re-checks against this
-// set, so it stays authoritative regardless of caller behavior.
+/* Re-check this allowlist in the exec adapter even when callers pre-validate. */
 export const SAFE_DIRECT_EXEC_COMMANDS = new Set([
     "git status --short",
     "npm run build",
@@ -45,8 +38,7 @@ const assertSafeDirectExecCommand = (tool: string, command: string): void => {
 
 const limitLines = (value: string, limit: number): string => value.split(/\r?\n/u).slice(0, limit).join("\n");
 
-// Spawn a child process with no shell, bounded output, and SIGTERM→SIGKILL on
-// timeout. Always resolves (never rejects) with a status JsonObject.
+/* No shell, bounded output, and SIGTERM-to-SIGKILL on timeout. */
 const runLocalProcess = async (
     label: string,
     command: string,
@@ -172,8 +164,6 @@ const runLocalRead = async (args: OpenClawRpcArgs): Promise<JsonObject> => {
     };
 };
 
-// Route a repository pseudo-tool to its local adapter. Returns null for tools
-// that are not handled locally (they fall through to the Gateway).
 export const runLocalPseudoTool = async (
     tool: string,
     args: OpenClawRpcArgs,

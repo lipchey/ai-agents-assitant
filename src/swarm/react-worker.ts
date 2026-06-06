@@ -1,7 +1,4 @@
-// Generic bounded ReAct executor backing every Swarm worker. The planner picks
-// ONE tool per step, reads the real observation, and decides the next step, up to
-// a hard step/failure budget. Recoverable (reasoning) errors are fed back in-loop;
-// environment failures break out to the human gate.
+/* Recoverable reasoning errors stay in-loop; environment failures route to HITL. */
 import { ModelRole, RESPONSE_FORMAT_JSON, ToolName } from "../constants.js";
 import { FailureType, WorkerKind, WorkerStatus } from "../enums.js";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate } from "../shared/text.js";
@@ -15,7 +12,7 @@ type WorkerState = typeof SwarmWorkerState.State;
 
 const MAX_REACT_STEPS = 6;
 const MAX_REACT_TOOL_FAILURES = 3;
-// Caps on the text fed BACK to the planner (full output still goes to artifacts).
+/* Planner context is capped; full tool output still goes to artifacts. */
 const MAX_OBSERVATION_CHARS = 1_600;
 const MAX_PRIOR_TRANSCRIPT_CHARS = 8_000;
 const MAX_ACTION_SUMMARY_CHARS = 200;
@@ -97,8 +94,7 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
                 thinking: "disabled",
             });
         } catch (error) {
-            // A planner-call failure (gateway/timeout/etc.) is an environment problem:
-            // escalate gracefully through the human gate rather than crashing the run.
+            /* Planner gateway/timeout failures are environment issues, not graph crashes. */
             const message = errorMessage(error);
             return escalate(classifyFailure(message), `Worker planner call failed: ${message}`);
         }
@@ -113,8 +109,7 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
         const actionSummary = truncate(`${decision.tool} ${safeJson(decision.args)}`, MAX_ACTION_SUMMARY_CHARS);
         const sanitized = sanitizeToolArgs(kind, decision.tool, decision.args);
         if (!sanitized.ok) {
-            // Recoverable: hand the validation error back so the planner can fix the
-            // call. Counts toward the failure budget so it cannot spin.
+            /* Validation errors feed back to the planner but still count against the cap. */
             toolFailures += 1;
             steps.push({ thought: decision.thought, summary: actionSummary, observation: sanitized.error, ok: false });
             toolCalls.push({ tool: decision.tool, ok: false, error: sanitized.error });
@@ -138,8 +133,7 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
             toolCalls.push({ tool: decision.tool, ok: true, artifact });
             successfulToolCalls += 1;
 
-            // A non-zero shell exit (e.g. a failing typecheck) is a legitimate finding
-            // to report, not a worker failure — surface it as an observation.
+            /* Non-zero shell exit is evidence to report, not a worker failure. */
             const exitCode = readExitCode(result);
             const observationNote = decision.tool === ToolName.SHELL_EXEC && exitCode !== undefined && exitCode !== 0
                 ? `[non-zero exit ${exitCode}]\n`
@@ -153,12 +147,10 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
         } catch (error) {
             const message = errorMessage(error);
             if (classifyFailure(message) === FailureType.ENVIRONMENT) {
-                // Out-of-band issue (missing binary, gateway, permission): stop and route
-                // to the human gate, preserving the SOS escalation protocol.
+                /* Out-of-band issues preserve SOS escalation through humanGate. */
                 toolCalls.push({ tool: decision.tool, ok: false, error: message });
                 return escalate(FailureType.ENVIRONMENT, message);
             }
-            // Recoverable reasoning error: feed it back and let the worker adapt.
             toolFailures += 1;
             steps.push({ thought: decision.thought, summary: actionSummary, observation: truncate(message, MAX_OBSERVATION_CHARS), ok: false });
             toolCalls.push({ tool: decision.tool, ok: false, error: message });
@@ -168,8 +160,7 @@ export const runReactWorker = async (state: WorkerState, kind: WorkerKind) => {
         }
     }
 
-    // Neither a final summary nor any successful tool call: ask the SME oracle for
-    // reasoning help rather than returning an empty DONE.
+    /* Empty work escalates to SME instead of returning a false DONE. */
     if (!finalSummary && successfulToolCalls === 0) {
         return escalate(
             FailureType.REASONING,

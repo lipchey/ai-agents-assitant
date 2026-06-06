@@ -1,7 +1,4 @@
-// Decision parsers for every JSON-returning reasoning node. Each tolerantly
-// extracts the model's structured decision and falls back to a heuristic/text
-// signal when the JSON is malformed, so a bad model reply degrades gracefully
-// instead of crashing the graph.
+/* Malformed model JSON degrades to heuristics instead of crashing the graph. */
 import { CONFIDENCE_ESCALATION_THRESHOLD } from "../constants.js";
 import { asRecord, extractJsonObject } from "../shared/json.js";
 import { clamp01 } from "../shared/text.js";
@@ -100,8 +97,6 @@ export const parseFrontierCriticDecision = (content: string): FrontierCriticDeci
     return { ...baseDecision, confidence, requiresStrongCritic, escalationReason };
 };
 
-// Read the tool status + optional exit code from a run_tests report, preferring
-// the nested `details` shape and falling back to top-level fields.
 export const extractToolStatus = (report: Record<string, unknown>): { status: string; exitCode?: number } => {
     const details = asRecord(report.details);
     const status = typeof details?.status === "string"

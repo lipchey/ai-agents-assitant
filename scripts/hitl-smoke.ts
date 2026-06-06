@@ -1,13 +1,3 @@
-// Smoke test for the human-in-the-loop (HITL) channel.
-//
-// Exercises the REAL pieces — `driveSwarmWithHitl`, the real `humanGate` node,
-// and LangGraph `interrupt()`/`Command`/`MemorySaver` on the installed version —
-// without needing the OpenClaw Gateway. A tiny SwarmWorkerState graph stands in
-// for the swarm: a fake worker raises one environment failure, routes to the
-// real `humanGate`, and (on a "retry" resolution) recovers.
-//
-// Run: npx tsx scripts/hitl-smoke.ts
-
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import assert from "node:assert/strict";
 import { FailureType, WorkerKind, WorkerStatus } from "../src/enums.js";
@@ -23,8 +13,7 @@ import { humanGate } from "../src/swarm.js";
 
 type WorkerState = typeof SwarmWorkerState.State;
 
-// Fails once with an environment error; on retry (escalationResponse populated by
-// the human) it recovers. Mirrors a missing-binary failure the model cannot fix.
+/* Mirrors a missing-binary failure the model cannot fix without HITL guidance. */
 const fakeWorker = (state: WorkerState) => {
     if (state.escalationResponse) {
         return {
@@ -67,7 +56,6 @@ const asDrivable = (graph: ReturnType<typeof buildTestGraph>) =>
     graph as HitlDrivableGraph<typeof initialInput, WorkerState>;
 
 const run = async (): Promise<void> => {
-    // Scenario A: no human available → auto-abort → graceful BLOCK (old behavior).
     const abortState = await driveSwarmWithHitl(
         asDrivable(buildTestGraph()),
         initialInput,
@@ -78,7 +66,6 @@ const run = async (): Promise<void> => {
     assert.match(abortState.escalationResponse ?? "", /command not found/u, "block must surface the failure detail");
     console.log("PASS: auto-abort → BLOCKED with failure detail propagated");
 
-    // Scenario B: human resolves out-of-band and retries → worker recovers.
     let captured: HitlInterruptPayload | undefined;
     const retryResolver: HitlResolver = async (request) => {
         captured = request;

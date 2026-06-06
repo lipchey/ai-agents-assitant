@@ -1,5 +1,3 @@
-// Entry node: a cheap LLM pre-filter classifies the task complexity, which sets
-// the entire downstream route (direct answer vs pure reasoning vs full swarm).
 import { DEFAULT_COST_BUDGET_USD, ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../../constants.js";
 import { SystemPrompts } from "../../prompts.js";
 import { usageFromLlm } from "../../shared/usage.js";

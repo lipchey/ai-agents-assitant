@@ -1,5 +1,3 @@
-// Critic nodes controlling the debate loop. The frontier critic reviews first and
-// gates strong-critic escalation; the GPT critic runs only when escalated.
 import { CONFIDENCE_ESCALATION_THRESHOLD, ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../../constants.js";
 import { SystemPrompts } from "../../prompts.js";
 import { usageFromLlm } from "../../shared/usage.js";
@@ -59,8 +57,7 @@ export const openaiCritic = async (state: GraphStateValue) => {
         { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON },
     );
     const decision = parseCriticDecision(result.content);
-    // The frontier critic already counted this debate round when it escalated, so
-    // don't double-count it here.
+    /* Frontier critic already counted this escalated round. */
     const frontierAlreadyCounted = state.strongCriticRequired;
     const debateRound = frontierAlreadyCounted ? Math.max(0, state.debateIterations - 1) : state.debateIterations;
 

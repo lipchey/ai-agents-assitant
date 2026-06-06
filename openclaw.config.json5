@@ -42,21 +42,17 @@
   },
   plugins: {
     entries: {
-      // Primary web search provider. Drives the dedicated `tavily_search` tool
-      // (rich mode) used as the primary path in src/tools/openclaw.ts.
+      /* Tavily is the primary path through the dedicated tavily_search tool. */
       tavily: {
         enabled: true,
         config: {
           webSearch: {
-            // apiKey resolves from TAVILY_API_KEY in the Gateway env if omitted.
+            /* apiKey resolves from TAVILY_API_KEY in the Gateway env if omitted. */
             baseUrl: "https://api.tavily.com",
           },
         },
       },
-      // NOTE: the fallback provider is DuckDuckGo (key-free, no account, no
-      // geo-restriction — Brave's API dashboard is geo-blocked in some regions).
-      // It is a bundled provider that needs no plugin entry or API key; it is
-      // selected via tools.web.search.provider below.
+      /* DuckDuckGo is the bundled key-free fallback; Brave API is geo-blocked in some regions. */
     },
   },
   tools: {
@@ -68,9 +64,7 @@
     web: {
       search: {
         enabled: true,
-        // Pin the generic web_search tool to DuckDuckGo: it is the FALLBACK tier.
-        // The Tavily primary is invoked separately via the `tavily_search` tool
-        // (see runWebLookupWithFallback in src/tools/openclaw.ts).
+        /* Generic web_search is only the DuckDuckGo fallback tier. */
         provider: "duckduckgo",
         maxResults: 8,
         timeoutSeconds: 30,

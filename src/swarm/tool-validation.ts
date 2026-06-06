@@ -1,6 +1,4 @@
-// ReAct step parsing + tool-argument validation: the network-free safety guards
-// that decide whether a planner-proposed action is allowed and well-formed before
-// any tool runs. Pinned by scripts/react-smoke.ts.
+/* Network-free guard layer before any planner-proposed tool call runs. */
 import { ToolName } from "../constants.js";
 import { FailureType, WorkerKind } from "../enums.js";
 import { asRecord, extractJsonObject } from "../shared/json.js";
@@ -27,8 +25,7 @@ export const parseReactDecision = (content: string): ReactDecision => {
     if (final) {
         return { kind: "final", thought, final };
     }
-    // No structured action and no `final`: treat the whole reply as the final
-    // summary so a stray prose response converges instead of looping the budget.
+    /* Prose fallback converges instead of spending more planner steps. */
     return { kind: "final", thought, final: content.trim() };
 };
 
@@ -96,9 +93,7 @@ export const sanitizeToolArgs = (
     }
 };
 
-// Classify a tool/planner error: environment problems (missing binary, perms,
-// gateway/timeout) need human resolution; everything else is a recoverable
-// reasoning error the worker can retry.
+/* Environment failures need HITL; reasoning errors go back to the worker. */
 export const classifyFailure = (errorMessage: string): FailureType => {
     const normalized = errorMessage.toLowerCase();
     if (

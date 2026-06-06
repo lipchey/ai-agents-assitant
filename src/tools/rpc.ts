@@ -1,6 +1,3 @@
-// Tool dispatch entrypoint. Routes a tool call to the right handler: local
-// pseudo-tool adapters first, then the web-search failover, then the generic
-// Gateway tool invocation.
 import { ToolName } from "../constants.js";
 import { OpenClawError } from "./errors.js";
 import { invokeGatewayTool } from "./http.js";
@@ -8,7 +5,7 @@ import { runLocalPseudoTool } from "./local-tools.js";
 import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "./types.js";
 import { runWebLookupWithFallback } from "./web-search.js";
 
-// Strip caller-side control args that must not reach the Gateway tool schema.
+/* Caller-side control args are not part of Gateway tool schemas. */
 const omitControlArgs = (args: OpenClawRpcArgs): JsonObject => {
     const { requireConfirmation, subtask, ...rest } = args;
     void requireConfirmation;

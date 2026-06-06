@@ -1,12 +1,4 @@
-// Web search failover: Tavily primary, DuckDuckGo fallback.
-//
-// OpenClaw's managed `web_search` resolves to a SINGLE provider with no per-call
-// override and no runtime failover (its native fallback only covers a missing API
-// key, in a fixed order). To get real "Tavily first, fallback on any failure" we
-// drive the failover here:
-//   1. Primary  -> Tavily's `tavily_search` tool in rich mode (advanced depth + AI answer).
-//   2. Fallback -> the generic `web_search` tool (pinned to DuckDuckGo in config:
-//      key-free, no geo-restriction) on ANY Tavily error/timeout OR empty result.
+/* OpenClaw web_search lacks provider override/runtime failover, so Tavily -> DuckDuckGo is explicit. */
 import { FALLBACK_PROVIDER_LABEL, ToolName, WEB_SEARCH_MAX_RESULTS } from "../constants.js";
 import { errorMessage, readString } from "../shared/text.js";
 import { OpenClawError } from "./errors.js";
@@ -19,12 +11,10 @@ const readJsonObject = (value: unknown): JsonObject | undefined => {
     return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : undefined;
 };
 
-// OpenClaw plugin tools return { content: [...human text...], details: payload }.
-// `content` is non-empty even with zero hits, so emptiness must prefer `details`.
+/* content can be non-empty with zero hits, so emptiness must prefer details. */
 const webSearchPayload = (result: JsonObject): JsonObject => readJsonObject(result.details) ?? result;
 
-// Usable when the payload carries an AI answer/summary or at least one result row.
-// Providers differ in shape, so probe top-level arrays plus one nested level.
+/* Provider payload shapes differ; probe top-level arrays plus one nested level. */
 const webSearchResultIsEmpty = (result: JsonObject): boolean => {
     const payload = webSearchPayload(result);
     if (readString(payload.answer) || readString(payload.summary)) {

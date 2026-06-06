@@ -5,10 +5,7 @@ import { HITL_RESOLVER_CONFIG_KEY } from "./hitl.js";
 import { buildMainGraph } from "./main.js";
 import { startOpenClawGateway, stopOpenClawGateway } from "./tools/openclaw.js";
 
-// Headroom above the worst-case bounded flow (~22 super-steps with the
-// context-fetch, debate, and verify caps) so a legitimate multi-cycle run never
-// trips LangGraph's default recursion limit of 25 and throws away telemetry. The
-// per-cycle caps are the real termination guard.
+/* Recursion headroom protects bounded loops; per-cycle caps remain the real guard. */
 const RECURSION_LIMIT = 50;
 
 const run = async (): Promise<void> => {
@@ -36,8 +33,7 @@ const run = async (): Promise<void> => {
         }
         const finalState = await graph.invoke(
             { originalTask: task, costBudgetUsd, patchApplicationEnabled },
-            // `hitlResolver` reaches the swarmNode via config (not graph state) so the
-            // non-serializable resolver function never enters a checkpoint.
+            /* Keep the non-serializable HITL resolver out of checkpointed graph state. */
             { recursionLimit: RECURSION_LIMIT, configurable: { [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver() } },
         );
 

@@ -1,5 +1,3 @@
-// Trivial-path node: a single cheap answer, no tools, no debate. Output goes
-// straight to finalize.
 import { ModelRole, UsageKey } from "../../constants.js";
 import { SystemPrompts } from "../../prompts.js";
 import { usageFromLlm } from "../../shared/usage.js";

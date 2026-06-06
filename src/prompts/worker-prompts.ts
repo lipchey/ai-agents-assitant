@@ -1,4 +1,3 @@
-// Swarm execution-worker role prompts (ReAct agents that call tools).
 import { worker } from "./core.js";
 
 export const workerPrompts = {

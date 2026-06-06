@@ -1,6 +1,3 @@
-// Conditional-edge routers for the main graph. These enforce the hard loop caps
-// (context refetch, debate, verify, patch-format) that bound the reentrant cycles
-// independently of the soft USD budget guard in budget.ts.
 import { MainNode } from "../constants.js";
 import {
     PROJECTED_CODER_REVIEW_CYCLE_USD,
@@ -14,14 +11,10 @@ import {
 import type { GraphStateValue } from "./types.js";
 
 const MAX_DEBATE_ITERATIONS = 4;
-// The swarm runs once on the primary route, so 2 total fetches permit exactly one
-// debate-driven refetch before we stop paying for another swarm + Opus architect
-// pass each loop.
+/* Two total fetches means the primary swarm pass plus one targeted refetch. */
 const MAX_CONTEXT_FETCHES = 2;
 const MAX_VERIFY_ATTEMPTS = 2;
-// Bounds pure patch-format retries independently of MAX_VERIFY_ATTEMPTS: a reminder
-// to emit <<<PATCH>>> blocks lands on the first retry; beyond this the coder cannot
-// produce applicable blocks, so finalize instead of paying for more coder passes.
+/* Patch-format retries are cheaper than verification retries and capped separately. */
 const MAX_PATCH_FORMAT_RETRIES = 2;
 
 export const routeByComplexity = (state: GraphStateValue): string => {
@@ -53,14 +46,11 @@ export const routeAfterClaudeArchitect = (state: GraphStateValue): string =>
     state.complexity === "pure_reasoning" ? MainNode.FINALIZE : MainNode.CLAUDE_CODER;
 
 export const routeDebate = (state: GraphStateValue): string => {
-    // Budget exhausted, or the critic approved: stop debating and apply patches.
-    // Consensus wins over a late "needs more context" so we don't re-enter the swarm
-    // after the draft is already approved.
+    /* Consensus wins over a late needsMoreContext so an approved draft does not refetch. */
     if (isCostBudgetNear(state) || state.consensusReached) {
         return MainNode.APPLY_PATCHES;
     }
-    // Refetch context only under the hard cap; otherwise a critic that keeps asking
-    // for context loops swarm → firewall → architect → coder → critic indefinitely.
+    /* Hard cap stops a critic from creating an unbounded context-refetch loop. */
     if (
         state.needsMoreContext
         && (state.contextFetches ?? 0) < MAX_CONTEXT_FETCHES
@@ -92,14 +82,12 @@ export const routeAfterApplyPatches = (state: GraphStateValue): string => {
 };
 
 export const routeAfterCoder = (state: GraphStateValue): string => {
-    // A pure patch-format retry does not change the logic the critics approved, so
-    // re-emit straight into applyPatches instead of paying for another critic pass.
+    /* Patch-format retries reuse approved logic instead of paying for another critique. */
     return state.awaitingPatchReformat ? MainNode.APPLY_PATCHES : MainNode.FRONTIER_CRITIC;
 };
 
 export const routeAfterVerify = (state: GraphStateValue): string => {
-    // Stop the verify/fix cycle once verified, over budget, or at the attempt cap,
-    // so a failing typecheck or malformed patch cannot spin indefinitely.
+    /* Verified, over budget, or capped attempts all terminate the verify/fix loop. */
     if (
         state.verificationPassed
         || isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD)

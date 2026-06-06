@@ -1,6 +1,4 @@
-// JSON-from-LLM-text helpers shared by every node that parses a model's JSON
-// reply. Models wrap JSON in prose or ```json fences, so extract the first
-// parseable balanced object before parsing.
+/* LLM replies may wrap JSON in prose/fences; parse the first balanced object. */
 
 const parseBalancedJsonObjectAt = (text: string, start: number): unknown => {
     let depth = 0;
@@ -59,8 +57,6 @@ const extractFromCandidate = (candidate: string): unknown => {
     return null;
 };
 
-// Pull a JSON object out of free-form model text (preferring a fenced block) and
-// parse it. Returns null when no parseable object is present.
 export const extractJsonObject = (text: string): unknown => {
     const fenced = /```(?:json)?\s*([\s\S]*?)```/u.exec(text);
     if (fenced?.[1]) {
@@ -73,7 +69,6 @@ export const extractJsonObject = (text: string): unknown => {
     return extractFromCandidate(text);
 };
 
-// Narrow an unknown to a plain (non-array) object, or null.
 export const asRecord = (value: unknown): Record<string, unknown> | null => {
     return value && typeof value === "object" && !Array.isArray(value)
         ? value as Record<string, unknown>

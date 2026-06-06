@@ -1,6 +1,3 @@
-// Swarm node implementations: the three ReAct worker entrypoints, the LLM lead
-// delegator, the SME recovery oracle, the HITL human gate, the output compressor,
-// and the terminal blocked node.
 import { interrupt } from "@langchain/langgraph";
 import { ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../constants.js";
 import { FailureType, WorkerKind, WorkerStatus } from "../enums.js";
@@ -15,9 +12,7 @@ import { runReactWorker } from "./react-worker.js";
 
 type WorkerState = typeof SwarmWorkerState.State;
 
-// Cap on the raw-transcript fallback used when a blocked worker has no escalation
-// query/response to summarize, so the full glued transcript never flows through
-// the firewall into the architect prompt.
+/* Blocked-worker fallbacks must not leak a full raw transcript into reasoning prompts. */
 const MAX_BLOCKED_FALLBACK_CHARS = 600;
 
 export const codeExplorer = (state: WorkerState) => runReactWorker(state, WorkerKind.CODE_EXPLORER);
@@ -39,9 +34,6 @@ const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
     }
 };
 
-// LLM classifier that routes a subtask to one worker, seeded by (and falling back
-// to) the upstream heuristic. Runs once per swarm invocation; escalation routes go
-// back to the worker, not here.
 export const leadDelegator = async (state: WorkerState) => {
     const seededKind = state.workerKind ?? WorkerKind.CODE_EXPLORER;
     let selectedKind = seededKind;
@@ -61,8 +53,7 @@ export const leadDelegator = async (state: WorkerState) => {
         selectedKind = parseWorkerKind(result.content, seededKind);
         usage = usageFromLlm(result);
     } catch {
-        // The heuristic is a deterministic fallback, so a transient model failure
-        // should not abort an inspection the selected worker can still perform.
+        /* A transient delegator failure should not abort deterministic worker fallback. */
     }
 
     return {
@@ -93,11 +84,7 @@ export const smeOracle = async (state: WorkerState) => {
     };
 };
 
-// Environment failures need out-of-band human resolution. The swarm is compiled
-// with a checkpointer and the caller runs a resume loop, so `interrupt()` pauses
-// here and resumes with the human's decision; `abort` reproduces the prior
-// graceful-block behavior. Nothing runs before the interrupt, so re-executing this
-// node on resume is safe.
+/* Nothing runs before interrupt(), so resume re-execution is safe. */
 export const humanGate = (state: WorkerState) => {
     const failure = state.failureType ?? FailureType.UNKNOWN;
     const reason = state.escalationQuery ?? "unknown environment error";
@@ -119,8 +106,7 @@ export const humanGate = (state: WorkerState) => {
         };
     }
 
-    // Human resolved the environment issue out-of-band: hand their guidance to the
-    // worker as escalation context and route back for a bounded retry.
+    /* Guidance becomes escalation context for the bounded retry. */
     return {
         status: WorkerStatus.WORKING,
         failureType: FailureType.NONE,

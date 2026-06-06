@@ -1,9 +1,3 @@
-// Smoke test for guarded patch application.
-//
-// Exercises the pure filesystem guard layer without OpenClaw/model calls:
-// parse structured blocks, apply only workspace-safe targets, skip protected or
-// unreadable targets, and roll back to the pristine state.
-
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";

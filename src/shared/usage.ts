@@ -1,11 +1,5 @@
-// Token/cost usage accounting shared by graph state, swarm state, the LLM client,
-// and node code. One definition of the usage shape and its merge logic, instead
-// of the field list being re-typed in state.ts, swarm.ts, pricing.ts, and two
-// usageFromLlm copies. It imports only the leaf constants module so both `state`
-// and `tools` can use it without creating a subsystem cycle.
 import type { UsageKey } from "../constants.js";
 
-// The fully-populated usage numbers returned by an LLM call / cost calculation.
 export type LlmUsage = {
     tokens: number;
     cost: number;
@@ -16,8 +10,6 @@ export type LlmUsage = {
     cacheWriteInputTokens: number;
 };
 
-// The per-role usage record stored in state (numeric fields optional so partial
-// updates merge cleanly).
 export type UsageBreakdown = {
     cost: number;
     tokens: number;
@@ -28,9 +20,6 @@ export type UsageBreakdown = {
     cacheWriteInputTokens?: number;
 };
 
-// Per-role usage totals. Keys are UsageKey values so telemetry typos are caught
-// where entries are constructed, while Partial keeps reducers ergonomic for
-// sparse per-node updates.
 export type UsageStats = Partial<Record<UsageKey, UsageBreakdown>>;
 
 export const emptyUsage = (): UsageBreakdown => ({
@@ -53,7 +42,6 @@ export const mergeUsage = (left: UsageBreakdown, right: UsageBreakdown): UsageBr
     cacheWriteInputTokens: (left.cacheWriteInputTokens ?? 0) + (right.cacheWriteInputTokens ?? 0),
 });
 
-// Project an LLM usage result onto the stored usage shape.
 export const usageFromLlm = (result: LlmUsage): UsageBreakdown => ({
     cost: result.cost,
     tokens: result.tokens,
@@ -64,7 +52,6 @@ export const usageFromLlm = (result: LlmUsage): UsageBreakdown => ({
     cacheWriteInputTokens: result.cacheWriteInputTokens,
 });
 
-// Reducer for the `usageStats` state field: sum per-role usage across updates.
 export const mergeUsageStats = (
     left: UsageStats | undefined,
     right: UsageStats | undefined,

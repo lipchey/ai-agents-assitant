@@ -1,13 +1,9 @@
-// Swarm subtask construction. On the first pass the swarm gets the raw task; when
-// a critic sets needsMoreContext, it gets a TARGETED inspection request built from
-// the debate summary + latest critique, with focus terms mined from that text so a
-// refetch resolves the missing fact instead of repeating a broad inventory.
+/* Refetches are targeted from critique terms to avoid paying for repeated inventory. */
 import { WorkerKind } from "../enums.js";
 import type { GraphStateValue } from "./types.js";
 
 const MAX_CONTEXT_SEARCH_TERMS = 10;
 
-// Generic debate/process vocabulary that would dilute a targeted repo search.
 const CONTEXT_TERM_STOP_WORDS = new Set([
     "about", "after", "agent", "because", "before", "check", "code", "context",
     "critique", "current", "draft", "evidence", "fetch", "find", "frontier",
@@ -16,8 +12,6 @@ const CONTEXT_TERM_STOP_WORDS = new Set([
     "summary", "targeted", "task", "that", "this", "true", "what", "where",
 ]);
 
-// Rank decision-relevant terms (backticked spans + identifier-like tokens) from
-// the critique text, favoring symbol-shaped and longer tokens.
 const extractContextSearchTerms = (text: string): string[] => {
     const terms = new Map<string, number>();
     const matches = text.matchAll(/`([^`]{2,80})`|\b[A-Za-z][A-Za-z0-9_./-]{2,}\b/gu);
@@ -58,7 +52,6 @@ export const buildSwarmSubtask = (state: GraphStateValue): string => {
     return state.originalTask;
 };
 
-// Cheap heuristic seed for the lead delegator: which worker likely fits the task.
 export const selectWorkerKind = (task: string): WorkerKind => {
     const normalized = task.toLowerCase();
     if (/\b(latest|docs|documentation|web|internet|search|browse|research)\b/u.test(normalized)) {

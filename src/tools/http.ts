@@ -1,5 +1,3 @@
-// HTTP transport to the OpenClaw Gateway: the raw JSON POST and the retrying
-// `/tools/invoke` wrapper used by every gateway-side tool call.
 import { OpenClawControl } from "../constants.js";
 import { stringifyError } from "../shared/text.js";
 import { OpenClawError } from "./errors.js";
@@ -39,9 +37,7 @@ export const jsonPost = async <T>(
     return payload as T;
 };
 
-// Invoke a Gateway-side tool via /tools/invoke with bounded exponential-backoff
-// retries. Non-object results are wrapped as { value } so callers always get a
-// JsonObject back.
+/* Gateway tool retries are bounded; non-object results are wrapped for callers. */
 export const invokeGatewayTool = async (
     tool: string,
     args: JsonObject,

@@ -1,6 +1,4 @@
-// Objective verification gate. Consensus != correctness, so the finalized code is
-// tested with `npm run typecheck`. Pure-reasoning output has nothing to compile,
-// so it short-circuits to accept the consensus draft.
+/* Consensus is not correctness; code paths still need an objective typecheck. */
 import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../../constants.js";
 import { errorMessage } from "../../shared/text.js";
 import { openclawRpc } from "../../tools/openclaw.js";

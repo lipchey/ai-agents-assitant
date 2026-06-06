@@ -1,6 +1,3 @@
-// Main reasoning-graph assembly: routing → swarm/firewall → debate chamber →
-// guarded patch application → objective verification → finalize. Builder chaining
-// preserves LangGraph's strict node-name typing.
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { MainNode } from "../constants.js";
 import { GraphState } from "../state.js";

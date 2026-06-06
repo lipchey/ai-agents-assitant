@@ -312,3 +312,31 @@ unions, and balanced JSON extraction via `src/shared/json.ts`.
 **Validated locally:** `npm run typecheck` passes; `smoke:react`, `smoke:patch`,
 `smoke:hitl`, and `smoke:websearch` pass when run outside the restricted Codex
 sandbox (the sandbox still blocks `tsx` IPC pipes with `listen EPERM`).
+
+---
+
+## 17. Audit Log (2026-06-06) — comment audit and comment rules
+
+Behavior-preserving documentation cleanup. Audited code comments across `src/`,
+`scripts/`, and `openclaw.config.json5`; removed comments that restated file
+names, function names, obvious control flow, smoke-test sections, or decorative
+headers. Remaining comments are limited to non-obvious contracts: rollback
+snapshots, loop/budget guards, HITL checkpoint behavior, provider payload quirks,
+OpenClaw/web-search failover, prompt-cache/parser contracts, and local execution
+safety guards.
+
+**CHANGED — code comments use block style only.** All retained code/config
+comments now use `/* ... */`; dashed section dividers such as `// --- ... ---`
+were removed. Grep confirms no `//` comments remain in `src/`, `scripts/`, or
+`openclaw.config.json5` (only URL/glob/protocol string literals still contain
+slash characters).
+
+**GUIDELINES UPDATED.** `.agent/code-guidelines.md` now says comments must explain
+non-obvious invariants, cost/safety rationale, provider quirks, or risky ordering;
+prefer clearer code over comments; delete decorative/self-evident comments; use
+block comments only; and do not add dashed dividers or banners.
+
+**Validated locally:** `npm run typecheck` passes. The four smoke tests
+(`smoke:react`, `smoke:patch`, `smoke:hitl`, `smoke:websearch`) pass when run
+outside the restricted Codex sandbox after the sandbox blocks `tsx` IPC pipes with
+`listen EPERM`.

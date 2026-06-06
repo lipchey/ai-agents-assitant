@@ -1,5 +1,3 @@
-// Implementation node: turns the approved spec + open critiques into the smallest
-// concrete change, emitting structured <<<PATCH>>> blocks for guarded application.
 import { ModelRole, UsageKey } from "../../constants.js";
 import { SystemPrompts } from "../../prompts.js";
 import { usageFromLlm } from "../../shared/usage.js";

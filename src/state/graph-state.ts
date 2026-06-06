@@ -1,5 +1,3 @@
-// Main reasoning-graph state: the full lifecycle of a task from routing through
-// swarm context, the debate chamber, guarded patch application, and verification.
 import { Annotation } from "@langchain/langgraph";
 import { DEFAULT_COST_BUDGET_USD } from "../constants.js";
 import { WorkerStatus } from "../enums.js";
@@ -49,10 +47,7 @@ export const GraphState = Annotation.Root({
     verificationPassed: Annotation<boolean>,
     verificationReport: Annotation<string>,
 
-    // Guarded patch-application stage. OFF by default; when enabled, `applyPatches`
-    // writes the coder's structured patch blocks to disk so `verify` tests the real
-    // mutated tree. `patchBackups`/`patchCreatedFiles` capture pristine state for
-    // rollback if verification ultimately fails.
+    /* Separate backups from created files so failed guarded runs roll back cleanly. */
     patchApplicationEnabled: Annotation<boolean>({
         reducer: lastWriteWins,
         default: () => false,
@@ -84,10 +79,7 @@ export const GraphState = Annotation.Root({
     }),
     finalAnswer: Annotation<string>,
 
-    // Loop guards bounding the two reentrant cycles (context refetch, verify/fix)
-    // independently of the USD budget so a misbehaving critic/verifier cannot burn
-    // spend or trip the recursion limit. Last-write-wins with a 0 default so they
-    // are safe to read in routers before any node sets them.
+    /* Hard loop counters are independent of the soft USD budget. */
     contextFetches: Annotation<number>({
         reducer: lastWriteWins,
         default: () => 0,
@@ -96,15 +88,12 @@ export const GraphState = Annotation.Root({
         reducer: lastWriteWins,
         default: () => 0,
     }),
-    // Pure patch-format retries (the coder produced a draft with no applicable
-    // <<<PATCH>>> blocks). Separate from `verifyAttempts` so a formatting slip —
-    // which does not change approved logic — never burns a real verify attempt.
+    /* Patch-format retries do not burn verifyAttempts because the tree did not change. */
     patchFormatRetries: Annotation<number>({
         reducer: lastWriteWins,
         default: () => 0,
     }),
-    // Set when `applyPatches` bounced a draft back to the coder solely to fix patch
-    // formatting; the post-coder router reads it to skip the full critic cycle.
+    /* Skips critique after a retry that only fixes patch delimiters. */
     awaitingPatchReformat: Annotation<boolean>({
         reducer: lastWriteWins,
         default: () => false,

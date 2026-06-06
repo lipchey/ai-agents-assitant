@@ -1,5 +1,3 @@
-// LLM client: builds the provider-aware OpenClaw chat-completion payload for a
-// cost-cascade role, calls the Gateway, and returns content + cost telemetry.
 import { ModelRole, OpenClawControl } from "../constants.js";
 import type { LlmUsage } from "../shared/usage.js";
 import { OpenClawError } from "./errors.js";
@@ -22,7 +20,6 @@ export type LlmCallOptions = {
     thinking?: "adaptive" | "enabled" | "disabled";
 };
 
-// Flatten a chat message content (string or content-part array) to plain text.
 const contentToString = (content: unknown): string => {
     if (typeof content === "string") {
         return content;
@@ -51,8 +48,7 @@ export const callLlm = async (
     options: LlmCallOptions = {},
 ): Promise<LlmCallResult> => {
     const { modelRef, provider, temperature } = modelForRole(role);
-    // Anthropic adaptive thinking must route through the strong-reasoning agent so
-    // OpenClaw's adaptive-thinking default reaches the provider runtime.
+    /* Adaptive Anthropic thinking requires the strong-reasoning OpenClaw agent. */
     const agentId = provider === "anthropic" && options.thinking === "adaptive"
         ? STRONG_REASONING_AGENT_ID
         : undefined;
@@ -77,8 +73,7 @@ export const callLlm = async (
     }
 
     if (provider === "anthropic") {
-        // Anthropic uses `thinking` + `output_config.effort`, not OpenAI's
-        // `reasoning_effort`. Effort only applies when thinking is on.
+        /* Anthropic uses thinking + output_config.effort, not reasoning_effort. */
         if (options.thinking !== undefined) {
             body.thinking = { type: options.thinking };
         }

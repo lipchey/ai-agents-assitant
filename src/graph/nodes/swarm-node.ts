@@ -1,7 +1,4 @@
-// Main-graph bridge into the Swarm execution sub-graph. Builds a fresh swarm and
-// drives it through the HITL resume loop so an environment failure can interrupt
-// for operator input (or auto-abort headless). Increments the context-fetch
-// counter that bounds debate-driven refetches.
+/* Fresh swarm runs keep HITL checkpoints isolated between debate refetches. */
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { WorkerStatus } from "../../enums.js";
 import { driveSwarmWithHitl, readHitlResolver, type HitlDrivableGraph } from "../../hitl.js";

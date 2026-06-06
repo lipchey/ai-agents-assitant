@@ -1,8 +1,4 @@
-// Guarded autonomous file mutation, between the debate/tiebreaker and `verify`,
-// so verification tests the real mutated tree. No-op unless explicitly enabled;
-// only structured patch blocks are written; pristine contents are recorded for
-// rollback in finalize. When enabled but the draft has no applicable blocks, it
-// bounces back to the coder (bounded) rather than verifying an unchanged tree.
+/* No applicable patch blocks bounce to coder instead of verifying an unchanged tree. */
 import { applyPatchBlocks, parsePatchBlocks } from "../../patch.js";
 import type { GraphStateValue } from "../types.js";
 
@@ -24,8 +20,7 @@ export const applyPatches = async (state: GraphStateValue) => {
         };
     }
 
-    // Files whose pristine state was captured on an earlier pass (the verify/fix
-    // loop can re-enter this node), so a true pristine backup is never overwritten.
+    /* Re-entries must not overwrite the first pristine backup. */
     const alreadyHandled = new Set<string>([
         ...Object.keys(state.patchBackups ?? {}),
         ...(state.patchCreatedFiles ?? []),

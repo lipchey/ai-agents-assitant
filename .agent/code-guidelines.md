@@ -81,11 +81,16 @@ re-list those fields inline.
 
 ## 5. Comments — why, not what
 
-- Explain the **why**: invariants, cost/safety rationale, non-obvious ordering.
-  Preserve every such note; compress its prose.
-- Delete comments that restate the code or are decorative. No "for the sake of it"
-  comments.
-- One concise header per module stating its single responsibility.
+- Prefer clearer names, smaller functions, or extracted constants over a comment.
+- Add comments only for non-obvious invariants, cost/safety rationale, provider
+  quirks, or ordering that would be risky to infer from the code alone.
+- Delete comments that restate identifiers, types, control flow, or test cases.
+  Module headers are not required unless they explain a boundary the filename
+  cannot.
+- Use block comments only: `/* concise rationale */`. Multi-line block comments
+  are fine when the rationale is genuinely multi-part.
+- Do not use `//` comments, decorative section dividers, dashed rule lines, or
+  banner comments.
 
 ## 6. Prompts are prompt-cache anchors
 

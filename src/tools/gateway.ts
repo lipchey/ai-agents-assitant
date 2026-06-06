@@ -1,9 +1,3 @@
-// OpenClaw Gateway lifecycle + connection settings.
-//
-// Owns the managed Gateway child process (start/probe/stop), the loopback URL +
-// token derived from env, and the shared network timeout defaults. The LLM and
-// tool-invocation modules read the connection settings from here; nothing here
-// depends on them, so this stays a leaf of the tool layer.
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -63,7 +57,7 @@ const probeGateway = async (timeoutMs = 2_000): Promise<boolean> => {
                 return true;
             }
         } catch {
-            // Try the next probe endpoint before declaring the gateway unavailable.
+            /* Try every probe endpoint before declaring the gateway unavailable. */
         }
     }
 

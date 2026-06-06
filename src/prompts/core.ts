@@ -1,12 +1,4 @@
-// Shared prompt scaffolding and the two-tier composition helpers.
-//
-// `CORE` (identity + universal rules) is prepended to every reasoning/utility
-// role. `REASONING_CONTEXT` (mission + data flow) is added only to roles whose
-// decisions depend on systemic awareness, so a long preamble does not dilute the
-// cheap utility roles. `WORKER_CORE` is the execution-layer base — UNLIKE CORE it
-// must NOT carry the "you cannot call tools" rule. Every composed `system` string
-// is a constant; task/state-specific content stays in the user message so the
-// stable prefix is prompt-cacheable across repeated same-role calls.
+/* Stable prompt prefixes are cache anchors; WORKER_CORE intentionally permits tools. */
 
 const CORE = [
     'You are one specialized node inside "ai-agents-assitant", an autonomous',
@@ -37,9 +29,6 @@ const REASONING_CONTEXT = [
     "→ (smeTiebreaker, only on deadlock) → verify (objective typecheck) → finalize.",
 ].join("\n");
 
-// Execution-layer base for Swarm workers that DO call tools in a ReAct loop. It
-// encodes the loop protocol and safety envelope (workspace bounds, command
-// allowlist, no fabrication, hard step budget) once.
 const WORKER_CORE = [
     'You are one execution worker inside "ai-agents-assitant", an autonomous',
     "software-engineering agent built as a dual-graph LangGraph pipeline. You run in",
@@ -51,7 +40,7 @@ const WORKER_CORE = [
     "decision-relevant evidence, not bulk dumps.",
     "",
     "ReAct loop — every step return exactly ONE JSON object and nothing else:",
-    '- To act:    {"thought":"one line","action":{"tool":"<name>","args":{...}}}',
+    '- To act: {"thought":"one line","action":{"tool":"<name>","args":{...}}}',
     '- To finish: {"thought":"one line","final":"concise findings + the evidence"}',
     "Rules that always apply:",
     "- Call ONLY the tools listed for your role, using the documented args. Any other",

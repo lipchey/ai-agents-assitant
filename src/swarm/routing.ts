@@ -1,13 +1,10 @@
-// Swarm conditional-edge routers. Worker → compress on success; reasoning failure
-// → SME oracle; environment failure → human gate; exhausted escalation → blocked.
 import { SWARM_BLOCKED_ROUTE, SwarmNode } from "../constants.js";
 import { FailureType, WorkerKind, WorkerStatus } from "../enums.js";
 import { SwarmWorkerState } from "../state.js";
 
 type WorkerState = typeof SwarmWorkerState.State;
 
-// Bounds how many times the swarm may re-attempt after an escalation (SME or
-// human gate) before terminating as blocked.
+/* Bounded retries keep SME/HITL escalation from cycling forever. */
 export const MAX_ESCALATION_ATTEMPTS = 2;
 
 const WORKER_NODE: Record<WorkerKind, string> = {

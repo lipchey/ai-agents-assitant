@@ -1,5 +1,4 @@
-// Reasoning-layer + cheap-utility role prompts. JSON output contracts here must
-// stay byte-compatible with the parsers in graph/parsers.ts and swarm parsing.
+/* Keep JSON output contracts byte-compatible with their parsers. */
 import { reasoning, utility } from "./core.js";
 
 export const reasoningPrompts = {

@@ -1,5 +1,4 @@
-// Workspace path guard. Every local tool that touches the filesystem (and the
-// patch applier) resolves through this so a path can never escape the repo root.
+/* All filesystem-touching tools resolve here to prevent workspace escapes. */
 import path from "node:path";
 import { OpenClawError } from "./errors.js";
 

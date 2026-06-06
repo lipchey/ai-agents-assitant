@@ -29,6 +29,7 @@ theme below; remaining ideas are in the Backlog.
 ### Code quality & maintainability
 - [x] Structural refactor (audit §15): centralize all scalars in `src/constants.ts`, dedupe helpers into `src/shared/*`, decompose the three monoliths (`tools/openclaw.ts`, `main.ts`, `swarm.ts`) into single-responsibility modules behind stable barrels, tighten typing (`callLlm(role: ModelRole)`, typed usage keys), and compact comments. Captured the rules in `.agent/code-guidelines.md`. Behavior-preserving: prompts byte-identical, all smoke tests + typecheck green.
 - [x] Strict post-refactor review hardening (audit §16): balanced JSON extraction for LLM replies with trailing braces/prose, exhaustive `ModelRole` routing, `UsageKey`-typed telemetry stats, and centralized OpenClaw control identifiers.
+- [x] Comment audit (audit §17): remove self-evident/decorative code comments, convert retained comments to `/* ... */`, remove dashed dividers, and record comment rules in `.agent/code-guidelines.md`.
 
 ### Autonomy, HITL & prompts
 - [x] Guarded, opt-in patch application (`applyPatches` + `src/patch.ts`).

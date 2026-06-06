@@ -1,7 +1,4 @@
-// Per-worker tool catalog, prompt, and telemetry key. The local OpenClaw adapters
-// enforce path bounds + the command allowlist regardless, but restricting the
-// catalog per worker keeps the planner focused and lets an out-of-scope tool be
-// rejected with a clean, recoverable observation instead of a hard failure.
+/* Per-worker catalogs turn out-of-scope tools into recoverable planner feedback. */
 import { ToolName, UsageKey } from "../constants.js";
 import { WorkerKind } from "../enums.js";
 import { SystemPrompts } from "../prompts.js";
@@ -18,7 +15,6 @@ export const WORKER_PROMPTS: Record<WorkerKind, string> = {
     [WorkerKind.WEB_RESEARCHER]: SystemPrompts.webResearcher,
 };
 
-// usageStats key for each worker's planner LLM spend.
 export const WORKER_USAGE_KEY: Record<WorkerKind, UsageKey> = {
     [WorkerKind.CODE_EXPLORER]: UsageKey.CODE_EXPLORER,
     [WorkerKind.INFRA_OPS]: UsageKey.INFRA_OPS,

@@ -1,5 +1,3 @@
-// Deadlock breaker: invoked only when the debate hits its iteration cap without
-// consensus. Produces the single best corrected draft and ends the debate.
 import { ModelRole, UsageKey } from "../../constants.js";
 import { SystemPrompts } from "../../prompts.js";
 import { usageFromLlm } from "../../shared/usage.js";

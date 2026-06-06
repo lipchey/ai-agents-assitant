@@ -1,7 +1,3 @@
-// Shared structural types for the OpenClaw tool layer. Kept dependency-free so
-// every tool module (http, local-tools, web-search, rpc) can import them without
-// risking an import cycle.
-
 export type JsonObject = Record<string, unknown>;
 
 export type OpenClawRpcArgs = JsonObject & {
