@@ -1,5 +1,5 @@
 /* Soft USD guard is separate from the hard loop caps in routing.ts. */
-import type { GraphStateValue } from "../types/graph/state.ts";
+import type { GraphStateValue } from "../types/graph";
 
 const COST_BUDGET_SOFT_CEILING_RATIO = 0.95;
 const COST_BUDGET_MIN_REMAINING_USD = 0.005;

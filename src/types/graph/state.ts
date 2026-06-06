@@ -1,3 +1,3 @@
-import { GraphState } from "../../state/graph-state.ts";
+import { GraphState } from "../../state";
 
 export type GraphStateValue = typeof GraphState.State;

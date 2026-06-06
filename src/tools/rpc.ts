@@ -1,5 +1,5 @@
-import { ToolName } from "../consts/tools.ts";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+import { ToolName } from "../consts";
+import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { invokeGatewayTool } from "./http.ts";
 import { runLocalPseudoTool } from "./local-tools.ts";

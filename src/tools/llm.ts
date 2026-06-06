@@ -1,13 +1,13 @@
-import { OpenClawControl } from "../consts/openclaw.ts";
+import { OpenClawControl } from "../consts";
 import { OpenClawError } from "./errors.ts";
 import { jsonPost } from "./http.ts";
 import { DEFAULT_OPENCLAW_MODEL, STRONG_REASONING_AGENT_ID, modelForRole } from "./models.ts";
 import { calculateUsage, loadPricing } from "./pricing.ts";
-import type { ModelRole } from "../consts/models.ts";
-import type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "../types/tools/llm.ts";
-import type { JsonObject } from "../types/tools/rpc.ts";
+import type { ModelRole } from "../consts";
+import type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "../types/tools";
+import type { JsonObject } from "../types/tools";
 
-export type { LlmCallOptions, LlmCallResult } from "../types/tools/llm.ts";
+export type { LlmCallOptions, LlmCallResult } from "../types/tools";
 
 const contentToString = (content: unknown): string => {
     if (typeof content === "string") {

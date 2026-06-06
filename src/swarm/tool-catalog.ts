@@ -1,7 +1,5 @@
 /* Per-worker catalogs turn out-of-scope tools into recoverable planner feedback. */
-import { ToolName } from "../consts/tools.ts";
-import { UsageKey } from "../consts/usage.ts";
-import { WorkerKind } from "../consts/worker.ts";
+import { ToolName, UsageKey, WorkerKind } from "../consts";
 import { SystemPrompts } from "../prompts";
 
 export const WORKER_TOOLS: Record<WorkerKind, readonly string[]> = {

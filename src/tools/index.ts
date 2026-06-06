@@ -24,4 +24,4 @@ export { runWebLookupWithFallback } from "./web-search.ts";
 export { resolveWorkspacePath } from "./workspace.ts";
 export type { LlmCallOptions, LlmCallResult } from "./llm.ts";
 export type { ModelProvider, ModelRouting } from "./models.ts";
-export type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+export type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";

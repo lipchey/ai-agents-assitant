@@ -1,7 +1,7 @@
-import type { UsageKey } from "../consts/usage.ts";
-import type { LlmUsage, UsageBreakdown, UsageStats } from "../types/usage.ts";
+import type { UsageKey } from "../consts";
+import type { LlmUsage, UsageBreakdown, UsageStats } from "../types";
 
-export type { LlmUsage, UsageBreakdown, UsageStats } from "../types/usage.ts";
+export type { LlmUsage, UsageBreakdown, UsageStats } from "../types";
 
 export const emptyUsage = (): UsageBreakdown => ({
     cost: 0,

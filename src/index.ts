@@ -1,4 +1,4 @@
-export { buildMainGraph } from "./graph/build.ts";
+export { buildMainGraph } from "./graph";
 
 export {
     autoAbortResolver,
@@ -21,12 +21,12 @@ export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./types
 export { SystemPrompts } from "./prompts";
 export type { SystemPromptKey } from "./prompts";
 
-export { GraphState } from "./state/graph-state.ts";
-export { SwarmWorkerState } from "./state/swarm-state.ts";
-export type { DebateEntry } from "./types/state/graph.ts";
-export type { ToolCallRecord } from "./types/state/swarm.ts";
-export type { UsageBreakdown, UsageStats } from "./types/usage.ts";
+export { GraphState } from "./state";
+export { SwarmWorkerState } from "./state";
+export type { DebateEntry } from "./types/state";
+export type { ToolCallRecord } from "./types/state";
+export type { UsageBreakdown, UsageStats } from "./types";
 
-export { buildSwarm } from "./swarm/build.ts";
-export { humanGate } from "./swarm/nodes.ts";
-export { parseReactDecision, sanitizeToolArgs } from "./swarm/tool-validation.ts";
+export { buildSwarm } from "./swarm";
+export { humanGate } from "./swarm";
+export { parseReactDecision, sanitizeToolArgs } from "./swarm";

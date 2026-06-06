@@ -1,15 +1,13 @@
 /* Network-free guard layer before any planner-proposed tool call runs. */
-import { ToolName } from "../consts/tools.ts";
-import { FailureType, WorkerKind } from "../consts/worker.ts";
-import { asRecord, extractJsonObject } from "../shared/json.ts";
-import { clampInt, readString } from "../shared/text.ts";
-import { SAFE_DIRECT_EXEC_COMMANDS, type OpenClawRpcArgs } from "../tools/openclaw.ts";
-import type { ReactDecision, SanitizedAction } from "../types/swarm/react.ts";
+import { ToolName, FailureType, WorkerKind } from "../consts";
+import { asRecord, extractJsonObject, clampInt, readString } from "../shared";
+import { SAFE_DIRECT_EXEC_COMMANDS, type OpenClawRpcArgs } from "../tools";
+import type { ReactDecision, SanitizedAction } from "../types/swarm";
 import { WORKER_TOOLS } from "./tool-catalog.ts";
 
 const SHELL_EXEC_TIMEOUT_S = 120;
 
-export type { ReactDecision, SanitizedAction } from "../types/swarm/react.ts";
+export type { ReactDecision, SanitizedAction } from "../types/swarm";
 
 export const parseReactDecision = (content: string): ReactDecision => {
     const parsed = asRecord(extractJsonObject(content));

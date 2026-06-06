@@ -1,8 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { EnvVar } from "../consts/env.ts";
-import { OpenClawControl } from "../consts/openclaw.ts";
+import { EnvVar, OpenClawControl } from "../consts";
 import { OpenClawError } from "./errors.ts";
 
 const DEFAULT_GATEWAY_URL = "http://127.0.0.1:18789";

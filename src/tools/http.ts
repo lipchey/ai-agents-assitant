@@ -1,6 +1,6 @@
-import { OpenClawControl } from "../consts/openclaw.ts";
-import { stringifyError } from "../shared/text.ts";
-import type { JsonObject, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+import { OpenClawControl } from "../consts";
+import { stringifyError } from "../shared";
+import type { JsonObject, OpenClawRpcOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { DEFAULT_TIMEOUT_S, authHeaders, getGatewayBaseUrl, sleep } from "./gateway.ts";
 

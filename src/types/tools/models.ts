@@ -1,4 +1,4 @@
-import type { ModelRef } from "../../consts/models.ts";
+import type { ModelRef } from "../../consts";
 
 export type ModelProvider = "anthropic" | "deepseek" | "openai" | "unknown";
 

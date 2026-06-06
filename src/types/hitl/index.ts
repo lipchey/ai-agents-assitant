@@ -1,5 +1,5 @@
 import type { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
-import type { FailureType, WorkerKind } from "../../consts/worker.ts";
+import type { FailureType, WorkerKind } from "../../consts";
 
 export type HitlInterruptPayload = {
     kind: "environment_failure";

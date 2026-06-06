@@ -1,13 +1,12 @@
 /* Malformed model JSON degrades to heuristics instead of crashing the graph. */
-import { CONFIDENCE_ESCALATION_THRESHOLD } from "../consts/tuning.ts";
-import { asRecord, extractJsonObject } from "../shared/json.ts";
-import { clamp01 } from "../shared/text.ts";
+import { CONFIDENCE_ESCALATION_THRESHOLD } from "../consts";
+import { asRecord, extractJsonObject, clamp01 } from "../shared";
 import type {
     CriticDecision,
     FrontierArchitectureDecision,
     FrontierCriticDecision,
     RouterDecision,
-} from "../types/graph/parsers.ts";
+} from "../types/graph";
 
 const heuristicComplexity = (task: string): RouterDecision => {
     const normalized = task.toLowerCase();

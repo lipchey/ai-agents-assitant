@@ -1,8 +1,7 @@
 /* OpenClaw web_search lacks provider override/runtime failover, so Tavily -> DuckDuckGo is explicit. */
-import { ToolName } from "../consts/tools.ts";
-import { FALLBACK_PROVIDER_LABEL, WEB_SEARCH_MAX_RESULTS } from "../consts/web.ts";
-import { errorMessage, readString } from "../shared/text.ts";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+import { ToolName, FALLBACK_PROVIDER_LABEL, WEB_SEARCH_MAX_RESULTS } from "../consts";
+import { errorMessage, readString } from "../shared";
+import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { invokeGatewayTool } from "./http.ts";
 

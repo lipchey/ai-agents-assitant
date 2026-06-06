@@ -1,9 +1,9 @@
 /* Local pseudo-tools are the authoritative guard for path bounds and shell allowlists. */
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
-import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../consts/tools.ts";
-import { clampInt, readNumber, readString, truncate } from "../shared/text.ts";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools/rpc.ts";
+import { ToolName, ToolStatus, VERIFY_TYPECHECK_COMMAND } from "../consts";
+import { clampInt, readNumber, readString, truncate } from "../shared";
+import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { DEFAULT_TIMEOUT_S } from "./gateway.ts";
 import { resolveWorkspacePath } from "./workspace.ts";

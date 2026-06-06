@@ -1,6 +1,6 @@
 /* No applicable patch blocks bounce to coder instead of verifying an unchanged tree. */
-import { applyPatchBlocks, parsePatchBlocks } from "../../patching/patch-blocks.ts";
-import type { GraphStateValue } from "../../types/graph/state.ts";
+import { applyPatchBlocks, parsePatchBlocks } from "../../patching";
+import type { GraphStateValue } from "../../types/graph";
 
 export const applyPatches = async (state: GraphStateValue) => {
     if (!state.patchApplicationEnabled || state.complexity === "pure_reasoning") {

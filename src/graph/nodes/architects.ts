@@ -1,12 +1,10 @@
-import { ModelRole, RESPONSE_FORMAT_JSON } from "../../consts/models.ts";
-import { CONFIDENCE_ESCALATION_THRESHOLD } from "../../consts/tuning.ts";
-import { UsageKey } from "../../consts/usage.ts";
+import { ModelRole, RESPONSE_FORMAT_JSON, CONFIDENCE_ESCALATION_THRESHOLD, UsageKey } from "../../consts";
 import { SystemPrompts } from "../../prompts";
-import { usageFromLlm } from "../../shared/usage.ts";
-import { callLlm } from "../../tools/openclaw.ts";
+import { usageFromLlm } from "../../shared";
+import { callLlm } from "../../tools";
 import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseFrontierArchitectureDecision } from "../parsers.ts";
-import type { GraphStateValue } from "../../types/graph/state.ts";
+import type { GraphStateValue } from "../../types/graph";
 
 export const frontierArchitect = async (state: GraphStateValue) => {
     const result = await callLlm(
