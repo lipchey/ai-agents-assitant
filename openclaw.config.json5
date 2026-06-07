@@ -33,8 +33,10 @@
         default: true,
       },
       {
+        /* No agentDir override: OpenClaw auto-derives a unique dir per agent.
+           Sharing main's agentDir collides on auth/session state and is rejected
+           by the gateway. Credentials come from env API keys, not a shared dir. */
         id: "strong-reasoning",
-        agentDir: ".openclaw_state/agents/main/agent",
         thinkingDefault: "adaptive",
         reasoningDefault: "off",
       },

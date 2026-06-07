@@ -14,6 +14,10 @@ None.
 
 ## Backlog
 
+- [ ] Pluggable tool providers: implement the port/registry design in
+  [tooling-architecture.md](tooling-architecture.md) so tool modules become
+  replaceable and can run in parallel behind one `ToolRegistry` seam. Design
+  approved; implementation deferred. Start at Tier 1, target Tier 2.
 - [ ] Main-graph HITL: wire `interrupt()`-based approval/escalation for the
   reasoning layer. Current HITL is swarm-only.
 - [ ] Structured logging: emit warnings for empty DuckDuckGo fallback results so

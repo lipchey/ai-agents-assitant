@@ -197,6 +197,11 @@ Current status as of 2026-06-06:
   reachable OpenClaw Gateway/runtime.
 
 Open backlog:
+- Finalize pluggable tool-provider architecture. The proposed design in
+  `.agent/tooling-architecture.md` now includes a Codex critical review that
+  recommends explicit logical aliases, Brain-owned tool access policy,
+  structured tool results/errors, and a shared OpenClaw runtime boundary before
+  package-level extraction.
 - Wire main-graph HITL approval/interrupt flows; current HITL is swarm-only.
 - Add structured logging, including warnings for empty DuckDuckGo fallback
   results.
