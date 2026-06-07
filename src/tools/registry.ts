@@ -75,18 +75,35 @@ class DefaultToolRegistry implements ToolRegistry {
         }
 
         for (const [alias, id] of Object.entries(this.bindings) as Array<[ToolAlias, QualifiedToolId]>) {
-            if (!this.descriptors.has(id)) {
+            const registered = this.descriptors.get(id);
+            if (!registered) {
                 throw new ToolError(
                     ToolErrorKind.VALIDATION,
                     `Tool alias "${alias}" is bound to missing descriptor "${id}".`,
                     { toolId: id },
                 );
             }
+            if (!registered.descriptor.aliases.includes(alias)) {
+                throw new ToolError(
+                    ToolErrorKind.VALIDATION,
+                    `Tool alias "${alias}" is bound to descriptor "${id}", but that descriptor does not advertise the alias.`,
+                    { provider: registered.provider.name, toolId: id },
+                );
+            }
         }
     }
 
-    private catalog(): readonly ToolDescriptor[] {
-        return [...this.descriptors.values()].map(({ descriptor }) => descriptor);
+    /* Policy sees active bindings only, so prompt catalogs match the descriptor invoke() will route to. */
+    private policyCatalog(): readonly ToolDescriptor[] {
+        return (Object.entries(this.bindings) as Array<[ToolAlias, QualifiedToolId]>).map(([alias, id]) => {
+            const registered = this.descriptors.get(id);
+            if (!registered) {
+                throw new ToolError(ToolErrorKind.VALIDATION, `Tool alias "${alias}" is bound to missing descriptor "${id}".`, {
+                    toolId: id,
+                });
+            }
+            return { ...registered.descriptor, aliases: [alias] };
+        });
     }
 
     private resolve(alias: ToolAlias): RegisteredDescriptor {
@@ -135,11 +152,11 @@ class DefaultToolRegistry implements ToolRegistry {
     }
 
     allowedAliases(kind: WorkerKind): readonly ToolAlias[] {
-        return this.policy.allowedAliases(kind, this.catalog());
+        return this.policy.allowedAliases(kind, this.policyCatalog());
     }
 
     renderCatalog(kind: WorkerKind): string {
-        return this.policy.renderCatalog(kind, this.catalog());
+        return this.policy.renderCatalog(kind, this.policyCatalog());
     }
 
     async start(): Promise<void> {

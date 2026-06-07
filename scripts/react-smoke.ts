@@ -12,6 +12,9 @@ import {
     WorkerKind,
 } from "../src/consts";
 import { createDefaultToolRegistry, createToolRegistry, parseReactDecision, sanitizeToolArgs, ToolError, type ToolProvider } from "../src";
+import { DEFAULT_TOOL_BINDINGS } from "../src/tools/bindings.ts";
+import { createLocalProvider } from "../src/tools/providers";
+import type { QualifiedToolId } from "../src";
 
 const run = (): void => {
     const act = parseReactDecision(JSON.stringify({
@@ -71,6 +74,36 @@ const run = (): void => {
         "default registry must expose the code explorer aliases through policy",
     );
     assert.match(registry.renderCatalog(WorkerKind.INFRA_OPS), /shell_exec/u, "rendered catalog must include policy-allowed tools");
+
+    const webProvider = (name: string, id: QualifiedToolId, description: string): ToolProvider => ({
+        name,
+        catalog: [{
+            id,
+            aliases: [ToolName.WEB_LOOKUP],
+            capabilities: [ToolCapability.EXTERNAL_NETWORK],
+            description,
+            validate: () => ({ ok: true, alias: ToolName.WEB_LOOKUP, args: { query: name } }),
+            invoke: async () => ({
+                status: ToolStatus.COMPLETED,
+                provider: name,
+                toolId: id,
+                alias: ToolName.WEB_LOOKUP,
+                raw: { provider: name },
+            }),
+        }],
+    });
+    const replacementId: QualifiedToolId = "mock:web_lookup";
+    const reboundRegistry = createToolRegistry({
+        providers: [
+            createLocalProvider(),
+            webProvider("replacement-web", replacementId, '{"query":"replacement"}: rebound search backend.'),
+            webProvider("stray-web", "stray:web_lookup", '{"query":"stray"}: unbound search backend.'),
+        ],
+        bindings: { ...DEFAULT_TOOL_BINDINGS, [ToolName.WEB_LOOKUP]: replacementId },
+    });
+    const reboundCatalog = reboundRegistry.renderCatalog(WorkerKind.WEB_RESEARCHER);
+    assert.match(reboundCatalog, /rebound search backend/u, "catalog must describe the actively bound provider");
+    assert.doesNotMatch(reboundCatalog, /unbound search backend/u, "catalog must not describe unbound providers sharing the alias");
 
     const duplicateProvider = (name: string): ToolProvider => ({
         name,

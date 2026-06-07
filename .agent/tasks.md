@@ -20,7 +20,8 @@ None.
   landed with default local/web providers and registry DI.
 - [ ] Tool-provider hardening: extract `transport/`, `workspace/`, and
   `artifacts/` to their proposed subsystem roots; add fake-provider coverage for
-  `verify` + ReAct; add an alias-rebinding test with a non-default web provider.
+  `verify` + ReAct; broaden replacement coverage beyond the current
+  catalog-level alias-rebinding smoke test if needed.
 - [ ] Main-graph HITL: wire `interrupt()`-based approval/escalation for the
   reasoning layer. Current HITL is swarm-only.
 - [ ] Structured logging: emit warnings for empty DuckDuckGo fallback results so

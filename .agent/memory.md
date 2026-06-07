@@ -143,7 +143,8 @@ OpenClaw details:
   registers a local provider (`local:*` ids for `find_files`, `grep_code`,
   `ast_read`, `shell_exec`, `run_tests`) and a web provider (`web:lookup` bound
   to the Brain alias `web_lookup`). Duplicate qualified ids fail at registry
-  construction.
+  construction; policy catalogs are derived from active alias bindings so
+  worker prompts describe the descriptor that invocation will actually route to.
 - `ToolName` is the closed Brain-facing alias set only. Gateway backend ids
   (`tavily_search`, `web_search`) live under `WebGatewayToolName`.
 - `openclawRpc()` remains as a compatibility wrapper: Brain aliases route
@@ -211,8 +212,8 @@ Current status as of 2026-06-07:
 Open backlog:
 - Tool-provider hardening: extract `transport/`, `workspace/`, and `artifacts/`
   to their proposed subsystem roots; add a fake-provider test that drives
-  `verify` and ReAct without OpenClaw; optionally add an alternate web binding
-  test to prove replacement beyond the compatibility wrapper.
+  `verify` and ReAct without OpenClaw; broaden replacement coverage beyond the
+  current catalog-level alias-rebinding smoke test if needed.
 - Wire main-graph HITL approval/interrupt flows; current HITL is swarm-only.
 - Add structured logging, including warnings for empty DuckDuckGo fallback
   results.
