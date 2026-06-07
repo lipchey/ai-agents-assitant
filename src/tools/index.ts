@@ -1,5 +1,5 @@
 export { storeArtifact } from "./artifacts.ts";
-export { OpenClawError } from "./errors.ts";
+export { OpenClawError, ToolError } from "./errors.ts";
 export {
     authHeaders,
     getGatewayBaseUrl,
@@ -14,9 +14,27 @@ export { callLlm } from "./llm.ts";
 export { runLocalPseudoTool } from "./local-tools.ts";
 export { modelForRole, providerForModel } from "./models.ts";
 export { calculateUsage, loadPricing } from "./pricing.ts";
+export { createDefaultToolRegistry, createToolRegistry, getDefaultToolRegistry } from "./registry.ts";
+export { createDefaultToolAccessPolicy } from "./policy.ts";
+export { readToolRegistry } from "./config.ts";
 export { openclawRpc } from "./rpc.ts";
 export { runWebLookupWithFallback } from "./web-search.ts";
 export { resolveWorkspacePath } from "./workspace.ts";
 export type { LlmCallOptions, LlmCallResult } from "./llm.ts";
 export type { ModelProvider, ModelRouting } from "./models.ts";
-export type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
+export type {
+    JsonObject,
+    OpenClawRpcArgs,
+    OpenClawRpcOptions,
+    QualifiedToolId,
+    SanitizedAction,
+    ToolAccessPolicy,
+    ToolAlias,
+    ToolArgs,
+    ToolCallContext,
+    ToolCallOptions,
+    ToolDescriptor,
+    ToolProvider,
+    ToolRegistry,
+    ToolResult,
+} from "../types/tools";

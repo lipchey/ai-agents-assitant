@@ -74,13 +74,16 @@ Flow:
 - `workerCompress` turns raw output into the compressed summary consumed by
   `firewall`; raw observations are stored as artifacts and referenced by index.
 
-Worker safety envelope: `MAX_REACT_STEPS = 6`, `MAX_REACT_TOOL_FAILURES = 3`;
-per-worker tool catalogs (`WORKER_TOOLS`) in `src/consts/worker.ts`; `sanitizeToolArgs()`
-validates args and pre-checks shell commands. Local OpenClaw adapters remain the
+Worker safety envelope: `MAX_REACT_STEPS = 6`, `MAX_REACT_TOOL_FAILURES = 3`.
+Workers receive a `ToolRegistry` by closure from `buildSwarm({ tools })`; the
+registry renders the policy-filtered runtime catalog into worker user context,
+validates alias access through the Brain-owned `WORKER_TOOLS` policy, then calls
+per-descriptor validation and invocation. Local providers remain the
 authoritative guard for workspace path bounds, exact command allowlist, no shell
 interpolation, timeouts, and artifact storage. Non-zero shell exits are evidence,
-not worker failure. Reasoning failures go to `smeOracle`; environment failures
-go to `humanGate`.
+not worker failure. Structured `ToolError` kinds route environment/provider/
+timeout failures to `humanGate`; reasoning/validation failures stay in-loop or go
+to `smeOracle`.
 
 ### HITL behavior
 
@@ -111,9 +114,9 @@ When enabled:
   newly created files, and writes only after guards pass.
 - If there are no structured blocks, or every block is skipped, verification is
   skipped and the graph asks the coder to reformat until the retry cap.
-- `verify` runs `openclawRpc("run_tests", { command: "npm run typecheck" })`
-  for code paths; `pure_reasoning` skips typecheck and finalizes the reasoning
-  output.
+- `verify` reads `ToolRegistry` from `configurable[TOOL_REGISTRY_CONFIG_KEY]`
+  and invokes the `run_tests` alias with `npm run typecheck`; `pure_reasoning`
+  skips typecheck and finalizes the reasoning output.
 - `finalize` keeps applied files only when verification passed. If verification
   failed after patches were applied, it restores backed-up files and deletes
   created files.
@@ -135,8 +138,17 @@ cycle safety.
 OpenClaw details:
 - Chat calls use `/v1/chat/completions` with `x-openclaw-model`; default body
   model is `openclaw/default` unless using the `strong-reasoning` agent.
-- Local pseudo-tools deterministically handle `run_tests`, `shell_exec`,
-  `ast_read`, `find_files`, and `grep_code`.
+- Tool execution routes through `ToolRegistry`, injected through
+  `TOOL_REGISTRY_CONFIG_KEY` like the HITL resolver. The default registry
+  registers a local provider (`local:*` ids for `find_files`, `grep_code`,
+  `ast_read`, `shell_exec`, `run_tests`) and a web provider (`web:lookup` bound
+  to the Brain alias `web_lookup`). Duplicate qualified ids fail at registry
+  construction.
+- `ToolName` is the closed Brain-facing alias set only. Gateway backend ids
+  (`tavily_search`, `web_search`) live under `WebGatewayToolName`.
+- `openclawRpc()` remains as a compatibility wrapper: Brain aliases route
+  through the default registry and unwrap raw payloads; unknown raw tool ids are
+  still sent to `invokeGatewayTool`.
 - `SAFE_DIRECT_EXEC_COMMANDS` is the only shell allowlist:
   `git status --short`, `npm run build`, `npm run test`, `npm run typecheck`,
   `npm test`, `npx tsc --noEmit`.
@@ -188,20 +200,19 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
 
 ## 6. Current Status and Backlog
 
-Current status as of 2026-06-06:
+Current status as of 2026-06-07:
 - MVP is executable through `npm start -- "<task>"`.
-- `npm run typecheck` passes. Smoke scripts pass outside this restricted Codex
-  sandbox; the sandbox can block `tsx` IPC pipes with `listen EPERM`.
-- `npm test` aliases `npm run typecheck`; there is no separate unit suite yet.
+- `npm test` passes outside this restricted Codex sandbox. The sandbox can block
+  `tsx` IPC pipes with `listen EPERM`, so smoke scripts may need unsandboxed
+  execution.
 - Full live end-to-end execution still needs valid provider credentials and a
   reachable OpenClaw Gateway/runtime.
 
 Open backlog:
-- Finalize pluggable tool-provider architecture. The proposed design in
-  `.agent/tooling-architecture.md` now includes a Codex critical review that
-  recommends explicit logical aliases, Brain-owned tool access policy,
-  structured tool results/errors, and a shared OpenClaw runtime boundary before
-  package-level extraction.
+- Tool-provider hardening: extract `transport/`, `workspace/`, and `artifacts/`
+  to their proposed subsystem roots; add a fake-provider test that drives
+  `verify` and ReAct without OpenClaw; optionally add an alternate web binding
+  test to prove replacement beyond the compatibility wrapper.
 - Wire main-graph HITL approval/interrupt flows; current HITL is swarm-only.
 - Add structured logging, including warnings for empty DuckDuckGo fallback
   results.

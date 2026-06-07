@@ -3,13 +3,15 @@ import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { UNKNOWN_WORKER_STATUS_LABEL, WorkerStatus } from "../../consts";
 import { readHitlResolver, driveSwarmWithHitl } from "../../hitl";
 import { buildSwarm } from "../../swarm";
+import { readToolRegistry } from "../../tools";
 import type { SwarmWorkerStateValue } from "../../state";
 import type { GraphStateValue } from "../../types/graph";
 import type { HitlDrivableGraph } from "../../types/hitl";
 import { buildSwarmSubtask, selectWorkerKind } from "../context-terms.ts";
 
 export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
-    const swarm = buildSwarm();
+    const tools = readToolRegistry(config);
+    const swarm = buildSwarm({ tools });
     const subtask = buildSwarmSubtask(state);
     const initialInput = {
         subtask,

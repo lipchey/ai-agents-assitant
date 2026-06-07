@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import {
+    BuiltInToolId,
     NPM_TEST_COMMAND,
     ReactDecisionKind,
+    ToolCapability,
+    ToolErrorKind,
     ToolName,
+    ToolProviderName,
+    ToolStatus,
     VERIFY_TYPECHECK_COMMAND,
     WorkerKind,
 } from "../src/consts";
-import { parseReactDecision, sanitizeToolArgs } from "../src";
+import { createDefaultToolRegistry, createToolRegistry, parseReactDecision, sanitizeToolArgs, ToolError, type ToolProvider } from "../src";
 
 const run = (): void => {
     const act = parseReactDecision(JSON.stringify({
@@ -58,6 +63,39 @@ const run = (): void => {
     const grepClamp = sanitizeToolArgs(WorkerKind.CODE_EXPLORER, ToolName.GREP_CODE, { pattern: "x", limit: 99999 });
     assert.equal(grepClamp.ok && grepClamp.args.limit, 500, "grep limit is clamped to the max");
     console.log("PASS: required args enforced; limits clamped to safe bounds");
+
+    const registry = createDefaultToolRegistry();
+    assert.deepEqual(
+        registry.allowedAliases(WorkerKind.CODE_EXPLORER),
+        [ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],
+        "default registry must expose the code explorer aliases through policy",
+    );
+    assert.match(registry.renderCatalog(WorkerKind.INFRA_OPS), /shell_exec/u, "rendered catalog must include policy-allowed tools");
+
+    const duplicateProvider = (name: string): ToolProvider => ({
+        name,
+        catalog: [{
+            id: BuiltInToolId.LOCAL_FIND_FILES,
+            aliases: [ToolName.FIND_FILES],
+            capabilities: [ToolCapability.READ_WORKSPACE],
+            suggestedKinds: [WorkerKind.CODE_EXPLORER],
+            description: '{"path":"."}: fake duplicate descriptor.',
+            validate: () => ({ ok: true, alias: ToolName.FIND_FILES, args: { path: "." } }),
+            invoke: async () => ({
+                status: ToolStatus.COMPLETED,
+                provider: ToolProviderName.LOCAL,
+                toolId: BuiltInToolId.LOCAL_FIND_FILES,
+                alias: ToolName.FIND_FILES,
+                raw: {},
+            }),
+        }],
+    });
+    assert.throws(
+        () => createToolRegistry({ providers: [duplicateProvider("duplicate-a"), duplicateProvider("duplicate-b")] }),
+        (error: unknown) => error instanceof ToolError && error.kind === ToolErrorKind.VALIDATION,
+        "registry must reject duplicate qualified ids at startup",
+    );
+    console.log("PASS: default registry policy renders aliases; duplicate provider ids fail fast");
 
     console.log("\nReAct worker guard smoke test passed.");
 };

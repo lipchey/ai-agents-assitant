@@ -1,12 +1,11 @@
-import { ToolName } from "../consts";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
-import { OpenClawError } from "./errors.ts";
+import { isToolName } from "../consts";
+import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
 import { invokeGatewayTool } from "./http.ts";
-import { runLocalPseudoTool } from "./local-tools.ts";
-import { runWebLookupWithFallback } from "./web-search.ts";
+import { getDefaultToolRegistry } from "./registry.ts";
+import { unwrapToolResult } from "./results.ts";
 
 /* Caller-side control args are not part of Gateway tool schemas. */
-const omitControlArgs = (args: OpenClawRpcArgs): JsonObject => {
+const omitControlArgs = (args: ToolArgs): JsonObject => {
     const { requireConfirmation, subtask, ...rest } = args;
     void requireConfirmation;
     void subtask;
@@ -15,20 +14,11 @@ const omitControlArgs = (args: OpenClawRpcArgs): JsonObject => {
 
 export const openclawRpc = async (
     tool: string,
-    args: OpenClawRpcArgs,
-    options?: OpenClawRpcOptions,
+    args: ToolArgs,
+    options?: ToolCallOptions,
 ): Promise<JsonObject> => {
-    if (args.requireConfirmation) {
-        throw new OpenClawError(`HITL_REQUIRED: confirmation required before executing ${tool}.`);
-    }
-
-    const localResult = await runLocalPseudoTool(tool, args, options);
-    if (localResult) {
-        return localResult;
-    }
-
-    if (tool === ToolName.WEB_LOOKUP) {
-        return runWebLookupWithFallback(args, options);
+    if (isToolName(tool)) {
+        return unwrapToolResult(await getDefaultToolRegistry().invoke(tool, args, options));
     }
 
     return invokeGatewayTool(tool, omitControlArgs(args), options);

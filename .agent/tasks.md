@@ -1,6 +1,6 @@
 # Project Tasks
 
-**Status (2026-06-06):** MVP complete; no active implementation tasks.
+**Status (2026-06-07):** MVP complete; no active implementation tasks.
 
 Use this file for live work only. Current architecture and durable project
 context live in [.agent/memory.md](memory.md); engineering rules live in
@@ -14,10 +14,13 @@ None.
 
 ## Backlog
 
-- [ ] Pluggable tool providers: implement the port/registry design in
+- [x] Pluggable tool providers: implement the port/registry design in
   [tooling-architecture.md](tooling-architecture.md) so tool modules become
-  replaceable and can run in parallel behind one `ToolRegistry` seam. Design
-  approved; implementation deferred. Start at Tier 1, target Tier 2.
+  replaceable and can run in parallel behind one `ToolRegistry` seam. Phase 0-2
+  landed with default local/web providers and registry DI.
+- [ ] Tool-provider hardening: extract `transport/`, `workspace/`, and
+  `artifacts/` to their proposed subsystem roots; add fake-provider coverage for
+  `verify` + ReAct; add an alias-rebinding test with a non-default web provider.
 - [ ] Main-graph HITL: wire `interrupt()`-based approval/escalation for the
   reasoning layer. Current HITL is swarm-only.
 - [ ] Structured logging: emit warnings for empty DuckDuckGo fallback results so

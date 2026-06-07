@@ -28,5 +28,15 @@ export type {
     OpenClawRpcArgs,
     OpenClawRpcOptions,
     ProviderUsage,
+    QualifiedToolId,
+    ToolAccessPolicy,
+    ToolAlias,
+    ToolArgs,
+    ToolCallContext,
+    ToolCallOptions,
+    ToolDescriptor,
+    ToolProvider,
+    ToolRegistry,
+    ToolResult,
 } from "./tools";
 export type { LlmUsage, UsageBreakdown, UsageStats } from "./usage.ts";

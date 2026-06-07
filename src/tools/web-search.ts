@@ -1,14 +1,14 @@
 /* OpenClaw web_search lacks provider override/runtime failover, so Tavily -> DuckDuckGo is explicit. */
 import {
-    ToolName,
     FALLBACK_PROVIDER_LABEL,
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
     TAVILY_SEARCH_DEPTH,
+    WebGatewayToolName,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
     WEB_SEARCH_MAX_RESULTS,
 } from "../consts";
 import { errorMessage, readString } from "../shared";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
+import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { invokeGatewayTool } from "./http.ts";
 
@@ -43,8 +43,8 @@ const webSearchResultIsEmpty = (result: JsonObject): boolean => {
 };
 
 export const runWebLookupWithFallback = async (
-    args: OpenClawRpcArgs,
-    options?: OpenClawRpcOptions,
+    args: ToolArgs,
+    options?: ToolCallOptions,
 ): Promise<JsonObject> => {
     const query = readString(args.query) ?? readString(args.subtask);
     if (!query) {
@@ -54,7 +54,7 @@ export const runWebLookupWithFallback = async (
     let tavilyFailure: string;
     try {
         const tavily = await invokeGatewayTool(
-            ToolName.TAVILY_SEARCH,
+            WebGatewayToolName.TAVILY_SEARCH,
             { query, search_depth: TAVILY_SEARCH_DEPTH, include_answer: true, max_results: WEB_SEARCH_MAX_RESULTS },
             options,
         );
@@ -68,7 +68,7 @@ export const runWebLookupWithFallback = async (
 
     try {
         const fallback = await invokeGatewayTool(
-            ToolName.WEB_SEARCH,
+            WebGatewayToolName.WEB_SEARCH,
             { query, count: Math.min(WEB_SEARCH_MAX_RESULTS, WEB_SEARCH_FALLBACK_COUNT_CAP) },
             options,
         );

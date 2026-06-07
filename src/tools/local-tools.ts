@@ -15,7 +15,7 @@ import {
 } from "../consts";
 import type { SafeDirectExecCommand } from "../consts";
 import { clampInt, readNumber, readString, truncate } from "../shared";
-import type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "../types/tools";
+import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { resolveWorkspacePath } from "./workspace.ts";
 
@@ -83,8 +83,8 @@ const readDetails = (result: JsonObject): JsonObject => {
 const runLocalSafeCommand = async (
     tool: string,
     commandText: string,
-    args: OpenClawRpcArgs,
-    options?: OpenClawRpcOptions,
+    args: ToolArgs,
+    options?: ToolCallOptions,
 ): Promise<JsonObject> => {
     assertSafeDirectExecCommand(tool, commandText);
     const spec = SAFE_COMMAND_SPECS[commandText];
@@ -97,7 +97,7 @@ const runLocalSafeCommand = async (
     });
 };
 
-const runLocalFindFiles = async (args: OpenClawRpcArgs, options?: OpenClawRpcOptions): Promise<JsonObject> => {
+const runLocalFindFiles = async (args: ToolArgs, options?: ToolCallOptions): Promise<JsonObject> => {
     const searchPath = readString(args.path) ?? ".";
     resolveWorkspacePath(searchPath);
     const pattern = readString(args.pattern) ?? "**/*";
@@ -113,7 +113,7 @@ const runLocalFindFiles = async (args: OpenClawRpcArgs, options?: OpenClawRpcOpt
     return { ...result, details: { ...details, stdout, limit, pattern, path: searchPath } };
 };
 
-const runLocalGrepCode = async (args: OpenClawRpcArgs, options?: OpenClawRpcOptions): Promise<JsonObject> => {
+const runLocalGrepCode = async (args: ToolArgs, options?: ToolCallOptions): Promise<JsonObject> => {
     const pattern = readString(args.pattern) ?? readString(args.query) ?? readString(args.subtask);
     if (!pattern) {
         throw new OpenClawError("grep_code requires a pattern.");
@@ -139,7 +139,7 @@ const runLocalGrepCode = async (args: OpenClawRpcArgs, options?: OpenClawRpcOpti
     return { ...result, details: { ...details, stdout, limit, pattern, path: searchPath } };
 };
 
-const runLocalRead = async (args: OpenClawRpcArgs): Promise<JsonObject> => {
+const runLocalRead = async (args: ToolArgs): Promise<JsonObject> => {
     const filePath = readString(args.path) ?? readString(args.subtask);
     if (!filePath) {
         throw new OpenClawError("ast_read requires a file path.");
@@ -155,8 +155,8 @@ const runLocalRead = async (args: OpenClawRpcArgs): Promise<JsonObject> => {
 
 export const runLocalPseudoTool = async (
     tool: string,
-    args: OpenClawRpcArgs,
-    options?: OpenClawRpcOptions,
+    args: ToolArgs,
+    options?: ToolCallOptions,
 ): Promise<JsonObject | null> => {
     switch (tool) {
         case ToolName.SHELL_EXEC:

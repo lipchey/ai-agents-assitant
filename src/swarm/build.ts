@@ -2,15 +2,22 @@
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import { SWARM_BLOCKED_ROUTE, SwarmNode, WORKER_ROUTES } from "../consts";
 import { SwarmWorkerState } from "../state";
-import { blocked, codeExplorer, humanGate, infraOps, leadDelegator, smeOracle, webResearcher, workerCompress } from "./nodes.ts";
+import { getDefaultToolRegistry } from "../tools";
+import type { ToolRegistry } from "../types/tools";
+import { blocked, createWorkerNodes, humanGate, leadDelegator, smeOracle, workerCompress } from "./nodes.ts";
 import { delegateToWorker, routeAfterHuman, routeAfterSme, routeAfterWorker } from "./routing.ts";
 
-export const buildSwarm = () => {
+export type BuildSwarmOptions = {
+    readonly tools?: ToolRegistry;
+};
+
+export const buildSwarm = (options?: BuildSwarmOptions) => {
+    const workers = createWorkerNodes(options?.tools ?? getDefaultToolRegistry());
     const graph = new StateGraph(SwarmWorkerState)
         .addNode(SwarmNode.LEAD_DELEGATOR, leadDelegator)
-        .addNode(SwarmNode.CODE_EXPLORER, codeExplorer)
-        .addNode(SwarmNode.INFRA_OPS, infraOps)
-        .addNode(SwarmNode.WEB_RESEARCHER, webResearcher)
+        .addNode(SwarmNode.CODE_EXPLORER, workers.codeExplorer)
+        .addNode(SwarmNode.INFRA_OPS, workers.infraOps)
+        .addNode(SwarmNode.WEB_RESEARCHER, workers.webResearcher)
         .addNode(SwarmNode.SME_ORACLE, smeOracle)
         .addNode(SwarmNode.HUMAN_GATE, humanGate)
         .addNode(SwarmNode.WORKER_COMPRESS, workerCompress)

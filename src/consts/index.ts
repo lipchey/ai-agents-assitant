@@ -39,6 +39,7 @@ export {
 } from "./openclaw.ts";
 export { MISSING_FILE_ERROR_CODE, OriginalReadKind, PATCH_BLOCK, PROTECTED_SEGMENTS } from "./patching.ts";
 export {
+    BuiltInToolId,
     GIT_STATUS_SHORT_COMMAND,
     KILL_GRACE_MS,
     MAX_PROCESS_OUTPUT_CHARS,
@@ -47,11 +48,17 @@ export {
     NPM_TEST_COMMAND,
     SAFE_COMMAND_SPECS,
     SAFE_DIRECT_EXEC_COMMANDS,
+    TOOL_REGISTRY_CONFIG_KEY,
     TSC_NO_EMIT_COMMAND,
+    ToolCapability,
+    ToolErrorKind,
     ToolName,
+    ToolProviderName,
     ToolStatus,
     VERIFY_TYPECHECK_COMMAND,
     isSafeDirectExecCommand,
+    isToolName,
+    isToolStatus,
 } from "./tools.ts";
 export type { SafeDirectExecCommand } from "./tools.ts";
 export {
@@ -89,6 +96,7 @@ export {
     FALLBACK_PROVIDER_LABEL,
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
     TAVILY_SEARCH_DEPTH,
+    WebGatewayToolName,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
     WEB_SEARCH_MAX_RESULTS,
 } from "./web.ts";

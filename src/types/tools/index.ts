@@ -1,4 +1,21 @@
 export type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "./llm.ts";
 export type { ModelProvider, ModelRouting } from "./models.ts";
 export type { ModelPricing, ProviderUsage } from "./pricing.ts";
-export type { JsonObject, OpenClawRpcArgs, OpenClawRpcOptions } from "./rpc.ts";
+export type {
+    QualifiedToolId,
+    SanitizedAction,
+    ToolAccessPolicy,
+    ToolAlias,
+    ToolDescriptor,
+    ToolProvider,
+    ToolRegistry,
+    ToolResult,
+} from "./provider.ts";
+export type {
+    JsonObject,
+    OpenClawRpcArgs,
+    OpenClawRpcOptions,
+    ToolArgs,
+    ToolCallContext,
+    ToolCallOptions,
+} from "./rpc.ts";

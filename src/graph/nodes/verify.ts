@@ -1,11 +1,11 @@
 /* Consensus is not correctness; code paths still need an objective typecheck. */
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { GraphComplexity, ToolName, ToolStatus, VERIFY_RPC_TIMEOUT_S, VERIFY_TIMEOUT_S, VERIFY_TYPECHECK_COMMAND } from "../../consts";
 import { errorMessage } from "../../shared";
-import { openclawRpc } from "../../tools";
-import { extractToolStatus } from "../parsers.ts";
+import { readToolRegistry } from "../../tools";
 import type { GraphStateValue } from "../../types/graph";
 
-export const verify = async (state: GraphStateValue) => {
+export const verify = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const verifyAttempts = (state.verifyAttempts ?? 0) + 1;
 
     if (state.complexity === GraphComplexity.PURE_REASONING) {
@@ -18,13 +18,12 @@ export const verify = async (state: GraphStateValue) => {
     }
 
     try {
-        const report = await openclawRpc(
+        const report = await readToolRegistry(config).invoke(
             ToolName.RUN_TESTS,
             { command: VERIFY_TYPECHECK_COMMAND, timeout: VERIFY_TIMEOUT_S },
             { timeoutS: VERIFY_RPC_TIMEOUT_S, idempotencyKey: `verify-${state.debateIterations}`, maxRetries: 0 },
         );
-        const { status, exitCode } = extractToolStatus(report);
-        const passed = status === ToolStatus.COMPLETED && (exitCode === undefined || exitCode === 0);
+        const passed = report.status === ToolStatus.COMPLETED && (report.exitCode === undefined || report.exitCode === 0);
 
         return {
             verificationPassed: passed,

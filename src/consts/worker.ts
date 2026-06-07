@@ -52,7 +52,7 @@ export const WORKER_ROUTES = {
 } as const;
 
 /* Per-worker catalogs turn out-of-scope tools into recoverable planner feedback. */
-export const WORKER_TOOLS: Record<WorkerKind, readonly string[]> = {
+export const WORKER_TOOLS: Record<WorkerKind, readonly ToolName[]> = {
     [WorkerKind.CODE_EXPLORER]: [ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],
     [WorkerKind.INFRA_OPS]: [ToolName.SHELL_EXEC, ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],
     [WorkerKind.WEB_RESEARCHER]: [ToolName.WEB_LOOKUP],

@@ -1,8 +1,8 @@
 import type { ReactDecisionKind } from "../../consts";
-import type { OpenClawRpcArgs } from "../tools";
+import type { ToolArgs, SanitizedAction } from "../tools";
 
 export type ReactDecision =
-    | { kind: typeof ReactDecisionKind.ACT; thought: string; tool: string; args: OpenClawRpcArgs }
+    | { kind: typeof ReactDecisionKind.ACT; thought: string; tool: string; args: ToolArgs }
     | { kind: typeof ReactDecisionKind.FINAL; thought: string; final: string };
 
 export type ReactStep = {
@@ -12,6 +12,4 @@ export type ReactStep = {
     ok: boolean;
 };
 
-export type SanitizedAction =
-    | { ok: true; args: OpenClawRpcArgs }
-    | { ok: false; error: string };
+export type { SanitizedAction };

@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled, printReport } from "./cli";
-import { HITL_RESOLVER_CONFIG_KEY, MAIN_GRAPH_RECURSION_LIMIT } from "./consts";
+import { HITL_RESOLVER_CONFIG_KEY, MAIN_GRAPH_RECURSION_LIMIT, TOOL_REGISTRY_CONFIG_KEY } from "./consts";
 import { buildMainGraph } from "./graph";
-import { startOpenClawGateway, stopOpenClawGateway } from "./tools";
+import { createDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
 
 const run = async (): Promise<void> => {
     const task = process.argv.slice(2).join(" ").trim();
@@ -11,9 +11,12 @@ const run = async (): Promise<void> => {
         process.exit(1);
     }
 
+    const tools = createDefaultToolRegistry();
+
     console.log("Ensuring OpenClaw Gateway is running...");
     try {
         await startOpenClawGateway();
+        await tools.start();
         console.log(`Gateway ready. Starting agent with task: "${task}"\n`);
     } catch (error) {
         console.error("Failed to start OpenClaw Gateway:", error instanceof Error ? error.message : String(error));
@@ -30,7 +33,13 @@ const run = async (): Promise<void> => {
         const finalState = await graph.invoke(
             { originalTask: task, costBudgetUsd, patchApplicationEnabled },
             /* Keep the non-serializable HITL resolver out of checkpointed graph state. */
-            { recursionLimit: MAIN_GRAPH_RECURSION_LIMIT, configurable: { [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver() } },
+            {
+                recursionLimit: MAIN_GRAPH_RECURSION_LIMIT,
+                configurable: {
+                    [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver(),
+                    [TOOL_REGISTRY_CONFIG_KEY]: tools,
+                },
+            },
         );
 
         printReport(finalState, costBudgetUsd);
@@ -38,6 +47,7 @@ const run = async (): Promise<void> => {
         console.error("Agent execution failed:", error instanceof Error ? error.message : String(error));
         process.exitCode = 1;
     } finally {
+        await tools.stop();
         await stopOpenClawGateway();
     }
 };

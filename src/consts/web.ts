@@ -10,3 +10,10 @@ export const TAVILY_SEARCH_DEPTH = "advanced";
 
 /* DuckDuckGo's OpenClaw wrapper accepts count rather than max_results. */
 export const WEB_SEARCH_FALLBACK_COUNT_CAP = 10;
+
+export const WebGatewayToolName = {
+    TAVILY_SEARCH: "tavily_search",
+    WEB_SEARCH: "web_search",
+} as const;
+
+export type WebGatewayToolName = (typeof WebGatewayToolName)[keyof typeof WebGatewayToolName];

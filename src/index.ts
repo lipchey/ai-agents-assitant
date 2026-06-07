@@ -30,3 +30,23 @@ export type { UsageBreakdown, UsageStats } from "./types";
 export { buildSwarm } from "./swarm";
 export { humanGate } from "./swarm";
 export { parseReactDecision, sanitizeToolArgs } from "./swarm";
+
+export {
+    createDefaultToolRegistry,
+    createToolRegistry,
+    getDefaultToolRegistry,
+    readToolRegistry,
+    ToolError,
+} from "./tools";
+export type {
+    QualifiedToolId,
+    ToolAccessPolicy,
+    ToolAlias,
+    ToolArgs,
+    ToolCallContext,
+    ToolCallOptions,
+    ToolDescriptor,
+    ToolProvider,
+    ToolRegistry,
+    ToolResult,
+} from "./types";

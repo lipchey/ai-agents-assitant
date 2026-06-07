@@ -1,7 +1,9 @@
 export { buildSwarm } from "./build.ts";
+export type { BuildSwarmOptions } from "./build.ts";
 export {
     blocked,
     codeExplorer,
+    createWorkerNodes,
     humanGate,
     infraOps,
     leadDelegator,

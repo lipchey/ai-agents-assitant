@@ -19,13 +19,14 @@ import {
 } from "../consts";
 import { WORKER_PROMPTS } from "../prompts";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate, emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared";
-import { callLlm, openclawRpc, storeArtifact, type LlmCallResult } from "../tools";
+import { callLlm, getDefaultToolRegistry, storeArtifact, type LlmCallResult } from "../tools";
 import type { ToolCallRecord } from "../types/state";
 import type { ReactStep } from "../types/swarm";
+import type { ToolRegistry } from "../types/tools";
 import type { SwarmWorkerStateValue } from "../state";
 import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.ts";
 
-const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[]): string => {
+const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[], toolCatalog: string): string => {
     const guidance = readString(state.escalationResponse);
     const priorObservations = readString(state.rawToolOutput);
     const transcript = steps.length === 0
@@ -42,6 +43,7 @@ const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[]): s
         `SUBTASK:\n${state.subtask}`,
         guidance ? `ESCALATION GUIDANCE (apply this first):\n${guidance}` : "",
         priorObservations ? `EARLIER ATTEMPT OBSERVATIONS:\n${truncate(priorObservations, MAX_PRIOR_TRANSCRIPT_CHARS)}` : "",
+        toolCatalog,
         `STEP BUDGET: ${MAX_REACT_STEPS} total; used ${steps.length}.`,
         `PROGRESS THIS ATTEMPT:\n${transcript}`,
         "Decide the next single step. Respond with ONE JSON object only.",
@@ -56,10 +58,15 @@ const composeRaw = (rawOutputs: string[], finalSummary: string): string => {
     return parts.join("\n\n");
 };
 
-export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerKind) => {
+export const runReactWorker = async (
+    state: SwarmWorkerStateValue,
+    kind: WorkerKind,
+    tools: ToolRegistry = getDefaultToolRegistry(),
+) => {
     const system = WORKER_PROMPTS[kind];
     const usageKey = WORKER_USAGE_KEY[kind];
     const attempts = (state.attempts ?? 0) + 1;
+    const toolCatalog = tools.renderCatalog(kind);
 
     const steps: ReactStep[] = [];
     const rawOutputs: string[] = [];
@@ -87,7 +94,7 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
     for (let step = 0; step < MAX_REACT_STEPS; step += 1) {
         let planResult: LlmCallResult;
         try {
-            planResult = await callLlm(ModelRole.WORKER, system, buildWorkerContext(state, steps), {
+            planResult = await callLlm(ModelRole.WORKER, system, buildWorkerContext(state, steps, toolCatalog), {
                 maxTokens: 700,
                 responseFormat: RESPONSE_FORMAT_JSON,
                 thinking: ThinkingMode.DISABLED,
@@ -106,7 +113,7 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
         }
 
         const actionSummary = truncate(`${decision.tool} ${safeJson(decision.args)}`, MAX_ACTION_SUMMARY_CHARS);
-        const sanitized = sanitizeToolArgs(kind, decision.tool, decision.args);
+        const sanitized = sanitizeToolArgs(kind, decision.tool, decision.args, tools);
         if (!sanitized.ok) {
             /* Validation errors feed back to the planner but still count against the cap. */
             toolFailures += 1;
@@ -119,22 +126,22 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
         }
 
         try {
-            const result = await openclawRpc(decision.tool, sanitized.args, {
-                timeoutS: decision.tool === ToolName.SHELL_EXEC ? SHELL_EXEC_TIMEOUT_S : TOOL_TIMEOUT_S,
+            const result = await tools.invoke(sanitized.alias, sanitized.args, {
+                timeoutS: sanitized.alias === ToolName.SHELL_EXEC ? SHELL_EXEC_TIMEOUT_S : TOOL_TIMEOUT_S,
                 idempotencyKey: `${kind}-${attempts}-${step}`,
                 maxRetries: 1,
             });
 
             const serialized = stringifyPretty(result);
             const artifact = await storeArtifact(serialized);
-            producedArtifacts[`${decision.tool}-${step}`] = artifact;
+            producedArtifacts[`${sanitized.alias}-${step}`] = artifact;
             rawOutputs.push(`### Step ${step + 1}: ${actionSummary}\n${serialized}`);
-            toolCalls.push({ tool: decision.tool, ok: true, artifact });
+            toolCalls.push({ tool: sanitized.alias, ok: true, artifact });
             successfulToolCalls += 1;
 
             /* Non-zero shell exit is evidence to report, not a worker failure. */
             const exitCode = readExitCode(result);
-            const observationNote = decision.tool === ToolName.SHELL_EXEC && exitCode !== undefined && exitCode !== 0
+            const observationNote = sanitized.alias === ToolName.SHELL_EXEC && exitCode !== undefined && exitCode !== 0
                 ? `[non-zero exit ${exitCode}]\n`
                 : "";
             steps.push({
@@ -145,7 +152,7 @@ export const runReactWorker = async (state: SwarmWorkerStateValue, kind: WorkerK
             });
         } catch (error) {
             const message = errorMessage(error);
-            if (classifyFailure(message) === FailureType.ENVIRONMENT) {
+            if (classifyFailure(error) === FailureType.ENVIRONMENT) {
                 /* Out-of-band issues preserve SOS escalation through humanGate. */
                 toolCalls.push({ tool: decision.tool, ok: false, error: message });
                 return escalate(FailureType.ENVIRONMENT, message);

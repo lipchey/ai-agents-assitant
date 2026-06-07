@@ -4,6 +4,7 @@ import {
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
     TAVILY_SEARCH_DEPTH,
     ToolName,
+    WebGatewayToolName,
 } from "../src/consts";
 import { openclawRpc } from "../src/tools";
 
@@ -48,27 +49,27 @@ const fallbackOk: GatewayBody = {
 
 const run = async (): Promise<void> => {
     reset((tool) =>
-        tool === ToolName.TAVILY_SEARCH
+        tool === WebGatewayToolName.TAVILY_SEARCH
             ? { ok: true, result: toolResult({ answer: "AI summary", results: [{ title: "t", url: "u" }] }) }
             : fallbackOk,
     );
     let res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "langgraph swarm" }, { maxRetries: 0 });
     assert.equal(res.searchProvider, PRIMARY_WEB_SEARCH_PROVIDER_LABEL, "A: Tavily should answer");
-    assert.ok(calls.some((c) => c.tool === ToolName.TAVILY_SEARCH), "A: tavily_search called");
-    assert.ok(!calls.some((c) => c.tool === ToolName.WEB_SEARCH), "A: fallback must NOT be called");
-    const tavilyArgs = calls.find((c) => c.tool === ToolName.TAVILY_SEARCH)!.args;
+    assert.ok(calls.some((c) => c.tool === WebGatewayToolName.TAVILY_SEARCH), "A: tavily_search called");
+    assert.ok(!calls.some((c) => c.tool === WebGatewayToolName.WEB_SEARCH), "A: fallback must NOT be called");
+    const tavilyArgs = calls.find((c) => c.tool === WebGatewayToolName.TAVILY_SEARCH)!.args;
     assert.equal(tavilyArgs.search_depth, TAVILY_SEARCH_DEPTH, "A: rich search_depth sent");
     assert.equal(tavilyArgs.include_answer, true, "A: rich include_answer sent");
 
     reset((tool) =>
-        tool === ToolName.TAVILY_SEARCH ? { ok: false, error: { message: "tavily 500" } } : fallbackOk,
+        tool === WebGatewayToolName.TAVILY_SEARCH ? { ok: false, error: { message: "tavily 500" } } : fallbackOk,
     );
     res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 });
     assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "B: fallback on Tavily error");
     assert.ok(String(res.tavilyFallbackReason).includes("tavily 500"), "B: reason carries Tavily error");
 
     reset((tool) =>
-        tool === ToolName.TAVILY_SEARCH ? { ok: true, result: toolResult({ results: [], answer: "" }) } : fallbackOk,
+        tool === WebGatewayToolName.TAVILY_SEARCH ? { ok: true, result: toolResult({ results: [], answer: "" }) } : fallbackOk,
     );
     res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 });
     assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "C: fallback on empty Tavily");

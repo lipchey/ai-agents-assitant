@@ -15,9 +15,16 @@ import {
 import { SystemPrompts } from "../prompts";
 import { asRecord, extractJsonObject, safeJson, truncate, emptyUsage, usageFromLlm } from "../shared";
 import { callLlm } from "../tools";
+import type { ToolRegistry } from "../types/tools";
 import type { HitlInterruptPayload, HitlResolution } from "../types/hitl";
 import type { SwarmWorkerStateValue } from "../state";
 import { runReactWorker } from "./react-worker.ts";
+
+export const createWorkerNodes = (tools: ToolRegistry) => ({
+    codeExplorer: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER, tools),
+    infraOps: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS, tools),
+    webResearcher: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER, tools),
+});
 
 export const codeExplorer = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER);
 export const infraOps = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS);

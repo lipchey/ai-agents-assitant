@@ -1,6 +1,6 @@
 import { DEFAULT_TIMEOUT_S, OpenClawControl } from "../consts";
 import { stringifyError } from "../shared";
-import type { JsonObject, OpenClawRpcOptions } from "../types/tools";
+import type { JsonObject, ToolCallOptions } from "../types/tools";
 import { OpenClawError } from "./errors.ts";
 import { authHeaders, getGatewayBaseUrl, sleep } from "./gateway.ts";
 
@@ -41,7 +41,7 @@ export const jsonPost = async <T>(
 export const invokeGatewayTool = async (
     tool: string,
     args: JsonObject,
-    options?: OpenClawRpcOptions,
+    options?: ToolCallOptions,
 ): Promise<JsonObject> => {
     const maxRetries = options?.maxRetries ?? 1;
     let lastError: unknown;

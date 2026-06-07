@@ -1,10 +1,10 @@
 # Tooling Architecture — Pluggable Tool Providers (Design)
 
-> **Status: Proposed (not yet implemented).** Design/ADR record. Read with
+> **Status: Partially implemented (2026-06-07).** Design/ADR record. Read with
 > [memory.md](memory.md) §4 (OpenClaw and Tooling) and
-> [code-guidelines.md](code-guidelines.md) §1/§3/§7. No code has changed yet. When
-> Phase 1 lands, fold the durable parts into [memory.md](memory.md) and downgrade
-> this file to the parts that are still open.
+> [code-guidelines.md](code-guidelines.md) §1/§3/§7. Phases 0-2 landed, plus a
+> thin local/web provider split that routes through `ToolRegistry`; the remaining
+> transport/workspace/artifact extraction is still open.
 >
 > This is a rewrite that supersedes the earlier "Opus draft + Codex review" pair.
 > Both inputs were evaluated; what was kept, changed, and rejected is recorded in
@@ -30,27 +30,30 @@ The Brain depends only on an **interface (port)**; every backend is an
 Two facts from the current tree drive every decision below. Both were checked,
 not assumed.
 
-### 2.1 There is exactly one tool-execution seam
+### 2.1 There is exactly one Brain tool-execution seam
 
-Every tool call funnels through `openclawRpc(tool, args, options) → Promise<JsonObject>`
-([src/tools/rpc.ts](../src/tools/rpc.ts)). It is called in exactly two places:
+As of the 2026-06-07 implementation, Brain tool calls funnel through
+`ToolRegistry.invoke(alias, args, context) → Promise<ToolResult>`. It is called
+in exactly two runtime places:
 
-- [src/swarm/react-worker.ts:122](../src/swarm/react-worker.ts#L122) — the swarm worker ReAct loop.
-- [src/graph/nodes/verify.ts:21](../src/graph/nodes/verify.ts#L21) — the main-graph `run_tests` (typecheck) call.
+- [src/swarm/react-worker.ts](../src/swarm/react-worker.ts) — the swarm worker ReAct loop.
+- [src/graph/nodes/verify.ts](../src/graph/nodes/verify.ts) — the main-graph `run_tests` (typecheck) call.
 
-That single function is the natural port boundary. Lifecycle
-(`startOpenClawGateway`/`stopOpenClawGateway` in [src/main.ts](../src/main.ts)) is
-a second, separate seam.
+`openclawRpc(tool, args, options)` still exists as a compatibility wrapper in
+[src/tools/rpc.ts](../src/tools/rpc.ts): Brain aliases route through the default
+registry and unwrap raw payloads; unknown raw tool ids still go to the gateway.
+Lifecycle (`startOpenClawGateway`/`stopOpenClawGateway` in
+[src/main.ts](../src/main.ts)) remains a second, separate seam.
 
 ### 2.2 The "OpenClaw tools" are mostly local; only web search uses the gateway
 
-This is the correction that shrinks the whole task. Tracing
-[src/tools/rpc.ts](../src/tools/rpc.ts):
+This is the correction that shrinks the whole task. The default registry now
+binds these logical aliases to local/web provider descriptors:
 
 | Logical tool | Real backend today | Touches OpenClaw gateway? |
 | --- | --- | --- |
-| `find_files`, `grep_code`, `ast_read`, `shell_exec`, `run_tests` | `runLocalPseudoTool` → local `rg`/`npm`/`tsc`/`fs` processes ([local-tools.ts](../src/tools/local-tools.ts)) | **No** |
-| `web_lookup` | `tavily_search` then `web_search` via `invokeGatewayTool` ([web-search.ts](../src/tools/web-search.ts)) | **Yes** |
+| `find_files`, `grep_code`, `ast_read`, `shell_exec`, `run_tests` | `local:*` descriptors wrapping `runLocalPseudoTool` → local `rg`/`npm`/`tsc`/`fs` processes ([local-tools.ts](../src/tools/local-tools.ts)) | **No** |
+| `web_lookup` | `web:lookup` descriptor wrapping `tavily_search` then `web_search` via `invokeGatewayTool` ([web-search.ts](../src/tools/web-search.ts)) | **Yes** |
 | `callLlm` (chat, not a tool) | `jsonPost` → `/v1/chat/completions` ([llm.ts](../src/tools/llm.ts)) | **Yes** (10 call sites) |
 
 Consequences:
@@ -423,6 +426,65 @@ for plugin extensibility. Mitigations: (a) the Brain's hardcoded references
 merged catalog at startup (strict ids) so duplicate/missing-owner errors surface
 at boot; (c) `QualifiedToolId` is a template-literal type and aliases stay a
 closed union, so raw-string drift is caught by the compiler.
+
+## 15. Codex implementation delta for Opus review (2026-06-07)
+
+Implemented:
+
+- `ToolName` is now the Brain-facing alias vocabulary only. Gateway backend ids
+  moved to `WebGatewayToolName`, so `tavily_search`/`web_search` no longer appear
+  as first-class Brain tools.
+- Neutral tool contracts landed under `src/types/tools/`: `ToolArgs`,
+  `ToolCallOptions`, `ToolResult`, `ToolError`, `ToolDescriptor`,
+  `ToolProvider`, `ToolAccessPolicy`, and `ToolRegistry`. The old
+  `OpenClawRpcArgs`/`OpenClawRpcOptions` names remain as compatibility aliases.
+- `createDefaultToolRegistry()` registers local and web providers, validates
+  duplicate qualified ids at startup, resolves aliases through
+  `DEFAULT_TOOL_BINDINGS`, and exposes `invoke`, `validate`, `allowedAliases`,
+  `renderCatalog`, `start`, and `stop`.
+- Main graph `verify` reads the registry from `configurable` via
+  `readToolRegistry(config)` and consumes structured `ToolResult.status` /
+  `ToolResult.exitCode` directly.
+- `swarmNode` reads the same injected registry and passes it by closure into
+  `buildSwarm({ tools })`; `runReactWorker` validates and invokes through the
+  registry, while appending the policy-rendered catalog to worker user context.
+- `sanitizeToolArgs()` remains as a public compatibility helper, but delegates to
+  the default registry instead of owning the validation switch.
+- `openclawRpc()` remains as a compatibility wrapper: Brain aliases route through
+  the default registry and unwrap raw payloads; unknown raw tool ids still go to
+  `invokeGatewayTool`.
+- Smoke coverage now checks default registry policy rendering and strict
+  duplicate qualified-id failure, alongside the existing ReAct, patch, HITL, and
+  web-search paths.
+
+Plan improvements made during implementation:
+
+- Provider descriptors wrap the existing local/web executors first instead of
+  moving `workspace`, `artifacts`, and `transport` in the same patch. This keeps
+  the behavior-preserving registry seam reviewable before the physical package
+  layout changes.
+- Validation lives on descriptors, but the registry performs the Brain-owned
+  authorization check before calling descriptor validation. That makes policy
+  enforcement depend on alias binding plus `WORKER_TOOLS`, not provider
+  `suggestedKinds`.
+- The runtime catalog is appended to worker user context while leaving
+  `WORKER_PROMPTS` byte-stable.
+- `ToolError` classification was introduced before the full provider split so
+  environment/provider/timeout failures can route to HITL without brittle text
+  matching when providers start throwing structured errors.
+
+Still open:
+
+- Extract `transport/`, `workspace/`, and `artifacts/` into their proposed
+  subsystem roots; `patching` still imports `resolveWorkspacePath` from
+  `src/tools`.
+- Split local provider descriptors into one file per tool if Opus wants the
+  target folder layout exactly.
+- Add a fake-provider test that drives `verify` and a ReAct loop without touching
+  OpenClaw; current smoke coverage validates registry policy and duplicate-id
+  safety but does not yet exercise a full fake invocation path.
+- Add an alternate real web provider or mock binding test to prove alias rebinding
+  beyond the current compatibility wrapper.
 
 ---
 
