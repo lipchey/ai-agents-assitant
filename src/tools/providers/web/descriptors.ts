@@ -1,14 +1,40 @@
 import {
     BuiltInToolId,
     ToolCapability,
+    ToolErrorKind,
     ToolName,
     ToolProviderName,
     WorkerKind,
 } from "../../../consts";
-import { readString } from "../../../shared";
-import type { ToolDescriptor } from "../../../types/tools";
+import { errorMessage, readString } from "../../../shared";
+import type { ToolArgs, ToolCallContext, ToolDescriptor, ToolResult } from "../../../types/tools";
+import { ToolError } from "../../errors.ts";
 import { createToolResult } from "../../results.ts";
 import { runWebLookupWithFallback } from "../../web-search.ts";
+
+const invokeWebLookup = async (args: ToolArgs, context?: ToolCallContext): Promise<ToolResult> => {
+    try {
+        return createToolResult(
+            ToolProviderName.WEB,
+            BuiltInToolId.WEB_LOOKUP,
+            await runWebLookupWithFallback(args, context),
+            ToolName.WEB_LOOKUP,
+        );
+    } catch (error) {
+        if (error instanceof ToolError) {
+            throw new ToolError(error.kind, error.message, {
+                cause: error,
+                provider: error.provider ?? ToolProviderName.WEB,
+                toolId: error.toolId ?? BuiltInToolId.WEB_LOOKUP,
+            });
+        }
+        throw new ToolError(ToolErrorKind.EXECUTION, errorMessage(error), {
+            cause: error,
+            provider: ToolProviderName.WEB,
+            toolId: BuiltInToolId.WEB_LOOKUP,
+        });
+    }
+};
 
 export const webDescriptors: readonly ToolDescriptor[] = [
     {
@@ -24,11 +50,6 @@ export const webDescriptors: readonly ToolDescriptor[] = [
             }
             return { ok: true, alias: ToolName.WEB_LOOKUP, args: { query } };
         },
-        invoke: async (args, context) => createToolResult(
-            ToolProviderName.WEB,
-            BuiltInToolId.WEB_LOOKUP,
-            await runWebLookupWithFallback(args, context),
-            ToolName.WEB_LOOKUP,
-        ),
+        invoke: invokeWebLookup,
     },
 ];

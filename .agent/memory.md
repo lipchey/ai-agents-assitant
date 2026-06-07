@@ -145,6 +145,11 @@ OpenClaw details:
   to the Brain alias `web_lookup`). Duplicate qualified ids fail at registry
   construction; policy catalogs are derived from active alias bindings so
   worker prompts describe the descriptor that invocation will actually route to.
+- Local and web provider executors now leave the provider boundary as structured
+  `ToolError`s with attribution. Local validation/policy/execution exceptions
+  still route to `REASONING`; web total backend failure routes to HITL through
+  `PROVIDER_UNAVAILABLE`; registry classification is now only a conservative
+  `EXECUTION` fallback for unexpected non-`ToolError` leaks.
 - `ToolName` is the closed Brain-facing alias set only. Gateway backend ids
   (`tavily_search`, `web_search`) live under `WebGatewayToolName`.
 - `openclawRpc()` remains as a compatibility wrapper: Brain aliases route

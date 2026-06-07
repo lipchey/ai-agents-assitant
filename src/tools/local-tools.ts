@@ -8,6 +8,7 @@ import {
     SAFE_COMMAND_SPECS,
     SHELL_EXEC_TIMEOUT_S,
     TOOL_TIMEOUT_S,
+    ToolErrorKind,
     ToolName,
     ToolStatus,
     VERIFY_TYPECHECK_COMMAND,
@@ -16,12 +17,15 @@ import {
 import type { SafeDirectExecCommand } from "../consts";
 import { clampInt, readNumber, readString, truncate } from "../shared";
 import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
-import { OpenClawError } from "./errors.ts";
+import { ToolError } from "./errors.ts";
 import { resolveWorkspacePath } from "./workspace.ts";
 
 function assertSafeDirectExecCommand(tool: string, command: string): asserts command is SafeDirectExecCommand {
     if (!isSafeDirectExecCommand(command)) {
-        throw new OpenClawError(`${tool} rejected unsafe command. Use an allowlisted verification command or add a guarded approval flow.`);
+        throw new ToolError(
+            ToolErrorKind.POLICY,
+            `${tool} rejected unsafe command. Use an allowlisted verification command or add a guarded approval flow.`,
+        );
     }
 }
 
@@ -89,7 +93,7 @@ const runLocalSafeCommand = async (
     assertSafeDirectExecCommand(tool, commandText);
     const spec = SAFE_COMMAND_SPECS[commandText];
     if (!spec) {
-        throw new OpenClawError(`${tool} has no local command spec for ${commandText}.`);
+        throw new ToolError(ToolErrorKind.EXECUTION, `${tool} has no local command spec for ${commandText}.`);
     }
     return await runLocalProcess(tool, spec.command, [...spec.args], {
         cwd: readString(args.workdir) ?? ".",
@@ -116,7 +120,7 @@ const runLocalFindFiles = async (args: ToolArgs, options?: ToolCallOptions): Pro
 const runLocalGrepCode = async (args: ToolArgs, options?: ToolCallOptions): Promise<JsonObject> => {
     const pattern = readString(args.pattern) ?? readString(args.query) ?? readString(args.subtask);
     if (!pattern) {
-        throw new OpenClawError("grep_code requires a pattern.");
+        throw new ToolError(ToolErrorKind.VALIDATION, "grep_code requires a pattern.");
     }
     const searchPath = readString(args.path) ?? ".";
     resolveWorkspacePath(searchPath);
@@ -142,7 +146,7 @@ const runLocalGrepCode = async (args: ToolArgs, options?: ToolCallOptions): Prom
 const runLocalRead = async (args: ToolArgs): Promise<JsonObject> => {
     const filePath = readString(args.path) ?? readString(args.subtask);
     if (!filePath) {
-        throw new OpenClawError("ast_read requires a file path.");
+        throw new ToolError(ToolErrorKind.VALIDATION, "ast_read requires a file path.");
     }
     const resolved = resolveWorkspacePath(filePath);
     const content = await fs.readFile(resolved, "utf8");
@@ -164,7 +168,7 @@ export const runLocalPseudoTool = async (
             const command = readString(args.command)
                 ?? (tool === ToolName.RUN_TESTS ? VERIFY_TYPECHECK_COMMAND : readString(args.subtask));
             if (!command) {
-                throw new OpenClawError(`${tool} requires a command.`);
+                throw new ToolError(ToolErrorKind.VALIDATION, `${tool} requires a command.`);
             }
             return await runLocalSafeCommand(tool, command, args, options);
         }

@@ -29,7 +29,7 @@ export type { UsageBreakdown, UsageStats } from "./types";
 
 export { buildSwarm } from "./swarm";
 export { humanGate } from "./swarm";
-export { parseReactDecision, sanitizeToolArgs } from "./swarm";
+export { classifyFailure, parseReactDecision, sanitizeToolArgs } from "./swarm";
 
 export {
     createDefaultToolRegistry,

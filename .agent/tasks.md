@@ -22,10 +22,9 @@ None.
   `artifacts/` to their proposed subsystem roots; add fake-provider coverage for
   `verify` + ReAct; broaden replacement coverage beyond the current
   catalog-level alias-rebinding smoke test if needed.
-- [ ] Structured provider errors: convert local + web executors from
+- [x] Structured provider errors: convert local + web executors from
   `OpenClawError` to structured `ToolError` so HITL-vs-reasoning routing relies on
-  `ToolError.kind`, not substring matching. Full spec in
-  [structured-tool-errors.md](structured-tool-errors.md).
+  `ToolError.kind`, not substring matching.
 - [ ] Main-graph HITL: wire `interrupt()`-based approval/escalation for the
   reasoning layer. Current HITL is swarm-only.
 - [ ] Structured logging: emit warnings for empty DuckDuckGo fallback results so

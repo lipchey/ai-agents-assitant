@@ -9,7 +9,7 @@ import {
     VERIFY_TYPECHECK_COMMAND,
     WorkerKind,
 } from "../../../consts";
-import { clampInt, readString } from "../../../shared";
+import { clampInt, errorMessage, readString } from "../../../shared";
 import type { SanitizedAction, ToolArgs, ToolCallContext, ToolDescriptor, ToolResult } from "../../../types/tools";
 import { ToolError } from "../../errors.ts";
 import { runLocalPseudoTool } from "../../local-tools.ts";
@@ -25,14 +25,26 @@ type LocalDescriptorConfig = {
 };
 
 const invokeLocal = async (id: BuiltInToolId, alias: ToolName, args: ToolArgs, context?: ToolCallContext): Promise<ToolResult> => {
-    const payload = await runLocalPseudoTool(alias, args, context);
-    if (!payload) {
-        throw new ToolError(ToolErrorKind.EXECUTION, `Local provider does not own ${alias}.`, {
+    try {
+        const payload = await runLocalPseudoTool(alias, args, context);
+        if (!payload) {
+            throw new ToolError(ToolErrorKind.EXECUTION, `Local provider does not own ${alias}.`);
+        }
+        return createToolResult(ToolProviderName.LOCAL, id, payload, alias);
+    } catch (error) {
+        if (error instanceof ToolError) {
+            throw new ToolError(error.kind, error.message, {
+                cause: error,
+                provider: error.provider ?? ToolProviderName.LOCAL,
+                toolId: error.toolId ?? id,
+            });
+        }
+        throw new ToolError(ToolErrorKind.EXECUTION, errorMessage(error), {
+            cause: error,
             provider: ToolProviderName.LOCAL,
             toolId: id,
         });
     }
-    return createToolResult(ToolProviderName.LOCAL, id, payload, alias);
 };
 
 const localDescriptor = (config: LocalDescriptorConfig): ToolDescriptor => ({

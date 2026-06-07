@@ -12,7 +12,7 @@ import {
 } from "../consts";
 import { errorMessage, readString } from "../shared";
 import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
-import { OpenClawError, ToolError } from "./errors.ts";
+import { ToolError } from "./errors.ts";
 import { invokeGatewayTool } from "./http.ts";
 
 const isNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
@@ -51,7 +51,7 @@ export const runWebLookupWithFallback = async (
 ): Promise<JsonObject> => {
     const query = readString(args.query) ?? readString(args.subtask);
     if (!query) {
-        throw new OpenClawError("web_lookup requires a query.");
+        throw new ToolError(ToolErrorKind.VALIDATION, "web_lookup requires a query.");
     }
 
     let tavilyFailure: string;

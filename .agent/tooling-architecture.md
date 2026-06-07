@@ -453,9 +453,9 @@ Implemented:
 - `openclawRpc()` remains as a compatibility wrapper: Brain aliases route through
   the default registry and unwrap raw payloads; unknown raw tool ids still go to
   `invokeGatewayTool`.
-- Smoke coverage now checks default registry policy rendering and strict
-  duplicate qualified-id failure, alongside the existing ReAct, patch, HITL, and
-  web-search paths.
+- Smoke coverage now checks default registry policy rendering, strict
+  duplicate qualified-id failure, and structured provider error kinds alongside
+  the existing ReAct, patch, HITL, and web-search paths.
 
 Plan improvements made during implementation:
 
@@ -469,9 +469,10 @@ Plan improvements made during implementation:
   `suggestedKinds`.
 - The runtime catalog is appended to worker user context while leaving
   `WORKER_PROMPTS` byte-stable.
-- `ToolError` classification was introduced before the full provider split so
-  environment/provider/timeout failures can route to HITL without brittle text
-  matching when providers start throwing structured errors.
+- Local/web providers now throw structured `ToolError`s at the provider
+  boundary. `classifyProviderError()` no longer string-matches provider messages;
+  it preserves existing `ToolError.kind` values and treats unexpected non-tool
+  errors as `EXECUTION`.
 
 Still open:
 

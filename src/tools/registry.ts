@@ -1,4 +1,5 @@
 import { ToolErrorKind, isToolName, type WorkerKind } from "../consts";
+import { errorMessage } from "../shared";
 import type {
     QualifiedToolId,
     SanitizedAction,
@@ -27,28 +28,8 @@ export type CreateToolRegistryOptions = {
     readonly policy?: ToolAccessPolicy;
 };
 
-const classifyProviderError = (error: unknown): ToolErrorKind => {
-    if (error instanceof ToolError) {
-        return error.kind;
-    }
-
-    const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-    if (message.includes("timeout") || message.includes("timed out")) {
-        return ToolErrorKind.TIMEOUT;
-    }
-    if (
-        message.includes("gateway")
-        || message.includes("not found")
-        || message.includes("permission")
-        || message.includes("unauthorized")
-        || message.includes("spawn")
-    ) {
-        return ToolErrorKind.ENVIRONMENT;
-    }
-    return ToolErrorKind.EXECUTION;
-};
-
-const errorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error);
+const classifyProviderError = (error: unknown): ToolErrorKind =>
+    error instanceof ToolError ? error.kind : ToolErrorKind.EXECUTION;
 
 class DefaultToolRegistry implements ToolRegistry {
     private readonly providers: readonly ToolProvider[];

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
     BuiltInToolId,
+    FailureType,
     NPM_TEST_COMMAND,
     ReactDecisionKind,
     ToolCapability,
@@ -11,12 +12,21 @@ import {
     VERIFY_TYPECHECK_COMMAND,
     WorkerKind,
 } from "../src/consts";
-import { createDefaultToolRegistry, createToolRegistry, parseReactDecision, sanitizeToolArgs, ToolError, type ToolProvider } from "../src";
+import {
+    classifyFailure,
+    createDefaultToolRegistry,
+    createToolRegistry,
+    parseReactDecision,
+    sanitizeToolArgs,
+    ToolError,
+    type ToolArgs,
+    type ToolProvider,
+} from "../src";
 import { DEFAULT_TOOL_BINDINGS } from "../src/tools/bindings.ts";
 import { createLocalProvider } from "../src/tools/providers";
 import type { QualifiedToolId } from "../src";
 
-const run = (): void => {
+const run = async (): Promise<void> => {
     const act = parseReactDecision(JSON.stringify({
         thought: "look",
         action: { tool: ToolName.GREP_CODE, args: { pattern: "callLlm" } },
@@ -74,6 +84,43 @@ const run = (): void => {
         "default registry must expose the code explorer aliases through policy",
     );
     assert.match(registry.renderCatalog(WorkerKind.INFRA_OPS), /shell_exec/u, "rendered catalog must include policy-allowed tools");
+    const rejects = async (
+        alias: ToolName,
+        args: ToolArgs,
+        kind: ToolErrorKind,
+        provider: ToolProviderName,
+        toolId: BuiltInToolId,
+    ): Promise<void> => {
+        await assert.rejects(
+            () => registry.invoke(alias, args),
+            (error: unknown) =>
+                error instanceof ToolError
+                && error.kind === kind
+                && error.provider === provider
+                && error.toolId === toolId,
+            `${alias} must reject with ${kind}`,
+        );
+    };
+    await rejects(ToolName.GREP_CODE, {}, ToolErrorKind.VALIDATION, ToolProviderName.LOCAL, BuiltInToolId.LOCAL_GREP_CODE);
+    await rejects(ToolName.AST_READ, {}, ToolErrorKind.VALIDATION, ToolProviderName.LOCAL, BuiltInToolId.LOCAL_AST_READ);
+    await rejects(
+        ToolName.SHELL_EXEC,
+        { command: "rm -rf /" },
+        ToolErrorKind.POLICY,
+        ToolProviderName.LOCAL,
+        BuiltInToolId.LOCAL_SHELL_EXEC,
+    );
+    await rejects(
+        ToolName.FIND_FILES,
+        { path: "../../etc" },
+        ToolErrorKind.EXECUTION,
+        ToolProviderName.LOCAL,
+        BuiltInToolId.LOCAL_FIND_FILES,
+    );
+    await rejects(ToolName.WEB_LOOKUP, {}, ToolErrorKind.VALIDATION, ToolProviderName.WEB, BuiltInToolId.WEB_LOOKUP);
+    assert.equal(classifyFailure(new ToolError(ToolErrorKind.VALIDATION, "x")), FailureType.REASONING);
+    assert.equal(classifyFailure(new ToolError(ToolErrorKind.PROVIDER_UNAVAILABLE, "x")), FailureType.ENVIRONMENT);
+    console.log("PASS: structured ToolError kinds route without provider substring matching");
 
     const webProvider = (name: string, id: QualifiedToolId, description: string): ToolProvider => ({
         name,
@@ -134,7 +181,7 @@ const run = (): void => {
 };
 
 try {
-    run();
+    await run();
 } catch (error) {
     console.error("ReAct worker guard smoke test FAILED:", error);
     process.exitCode = 1;
