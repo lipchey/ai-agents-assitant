@@ -24,7 +24,8 @@ export type ToolDescriptor = {
     readonly id: QualifiedToolId;
     readonly aliases: readonly ToolAlias[];
     readonly capabilities: readonly ToolCapability[];
-    readonly suggestedKinds: readonly WorkerKind[];
+    /* Advisory only; the Brain-owned policy (WORKER_TOOLS) decides authorization, not the provider. */
+    readonly suggestedKinds?: readonly WorkerKind[];
     readonly description: string;
     validate(args: ToolArgs): SanitizedAction;
     invoke(args: ToolArgs, context?: ToolCallContext): Promise<ToolResult>;

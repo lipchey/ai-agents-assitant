@@ -1,15 +1,18 @@
 /* OpenClaw web_search lacks provider override/runtime failover, so Tavily -> DuckDuckGo is explicit. */
 import {
+    BuiltInToolId,
     FALLBACK_PROVIDER_LABEL,
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
     TAVILY_SEARCH_DEPTH,
+    ToolErrorKind,
+    ToolProviderName,
     WebGatewayToolName,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
     WEB_SEARCH_MAX_RESULTS,
 } from "../consts";
 import { errorMessage, readString } from "../shared";
 import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
-import { OpenClawError } from "./errors.ts";
+import { OpenClawError, ToolError } from "./errors.ts";
 import { invokeGatewayTool } from "./http.ts";
 
 const isNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
@@ -78,9 +81,11 @@ export const runWebLookupWithFallback = async (
             ?? FALLBACK_PROVIDER_LABEL;
         return { ...fallback, searchProvider: fallbackProvider, tavilyFallbackReason: tavilyFailure };
     } catch (fallbackError) {
-        throw new OpenClawError(
+        /* Both backends down is an environment problem: route to HITL via a structured kind, not text matching. */
+        throw new ToolError(
+            ToolErrorKind.PROVIDER_UNAVAILABLE,
             `web_lookup failed: tavily(${tavilyFailure}); ${FALLBACK_PROVIDER_LABEL}(${errorMessage(fallbackError)}).`,
-            { cause: fallbackError },
+            { cause: fallbackError, provider: ToolProviderName.WEB, toolId: BuiltInToolId.WEB_LOOKUP },
         );
     }
 };

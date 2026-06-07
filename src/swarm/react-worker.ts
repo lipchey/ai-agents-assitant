@@ -19,12 +19,12 @@ import {
 } from "../consts";
 import { WORKER_PROMPTS } from "../prompts";
 import { errorMessage, readString, safeJson, stringifyPretty, truncate, emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared";
-import { callLlm, getDefaultToolRegistry, storeArtifact, type LlmCallResult } from "../tools";
+import { callLlm, getDefaultToolRegistry, storeArtifact, unwrapToolResult, type LlmCallResult } from "../tools";
 import type { ToolCallRecord } from "../types/state";
 import type { ReactStep } from "../types/swarm";
 import type { ToolRegistry } from "../types/tools";
 import type { SwarmWorkerStateValue } from "../state";
-import { classifyFailure, parseReactDecision, readExitCode, sanitizeToolArgs } from "./tool-validation.ts";
+import { classifyFailure, parseReactDecision, sanitizeToolArgs } from "./tool-validation.ts";
 
 const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[], toolCatalog: string): string => {
     const guidance = readString(state.escalationResponse);
@@ -132,7 +132,8 @@ export const runReactWorker = async (
                 maxRetries: 1,
             });
 
-            const serialized = stringifyPretty(result);
+            /* Show the planner the provider payload only; routing fields stay out of the transcript. */
+            const serialized = stringifyPretty(unwrapToolResult(result));
             const artifact = await storeArtifact(serialized);
             producedArtifacts[`${sanitized.alias}-${step}`] = artifact;
             rawOutputs.push(`### Step ${step + 1}: ${actionSummary}\n${serialized}`);
@@ -140,7 +141,7 @@ export const runReactWorker = async (
             successfulToolCalls += 1;
 
             /* Non-zero shell exit is evidence to report, not a worker failure. */
-            const exitCode = readExitCode(result);
+            const exitCode = result.exitCode;
             const observationNote = sanitized.alias === ToolName.SHELL_EXEC && exitCode !== undefined && exitCode !== 0
                 ? `[non-zero exit ${exitCode}]\n`
                 : "";
@@ -154,12 +155,12 @@ export const runReactWorker = async (
             const message = errorMessage(error);
             if (classifyFailure(error) === FailureType.ENVIRONMENT) {
                 /* Out-of-band issues preserve SOS escalation through humanGate. */
-                toolCalls.push({ tool: decision.tool, ok: false, error: message });
+                toolCalls.push({ tool: sanitized.alias, ok: false, error: message });
                 return escalate(FailureType.ENVIRONMENT, message);
             }
             toolFailures += 1;
             steps.push({ thought: decision.thought, summary: actionSummary, observation: truncate(message, MAX_OBSERVATION_CHARS), ok: false });
-            toolCalls.push({ tool: decision.tool, ok: false, error: message });
+            toolCalls.push({ tool: sanitized.alias, ok: false, error: message });
             if (toolFailures >= MAX_REACT_TOOL_FAILURES) {
                 return escalate(FailureType.REASONING, message);
             }

@@ -74,18 +74,3 @@ export const parseFrontierCriticDecision = (content: string): FrontierCriticDeci
 
     return { ...baseDecision, confidence, requiresStrongCritic, escalationReason };
 };
-
-export const extractToolStatus = (report: Record<string, unknown>): { status: string; exitCode?: number } => {
-    const details = asRecord(report.details);
-    const status = typeof details?.status === "string"
-        ? details.status
-        : typeof report.status === "string"
-            ? report.status
-            : "";
-    const exitCode = typeof details?.exitCode === "number"
-        ? details.exitCode
-        : typeof report.exitCode === "number"
-            ? report.exitCode
-            : undefined;
-    return exitCode === undefined ? { status } : { status, exitCode };
-};

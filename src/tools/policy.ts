@@ -1,23 +1,27 @@
 import { WORKER_TOOLS } from "../consts";
-import type { ToolAccessPolicy, ToolAlias, ToolDescriptor } from "../types/tools";
+import type { ToolAccessPolicy } from "../types/tools";
 
-const descriptorAliases = (descriptor: ToolDescriptor): readonly ToolAlias[] => descriptor.aliases;
-
-export const createDefaultToolAccessPolicy = (): ToolAccessPolicy => ({
-    allowedAliases: (kind, catalog) => {
-        const available = new Set(catalog.flatMap(descriptorAliases));
+export const createDefaultToolAccessPolicy = (): ToolAccessPolicy => {
+    /* Single source of "what this worker may use": the role catalog intersected with what providers expose. */
+    const allowedAliases: ToolAccessPolicy["allowedAliases"] = (kind, catalog) => {
+        const available = new Set(catalog.flatMap((descriptor) => descriptor.aliases));
         return WORKER_TOOLS[kind].filter((alias) => available.has(alias));
-    },
-    renderCatalog: (kind, descriptors) => {
-        const allowed = new Set(WORKER_TOOLS[kind]);
-        const lines = descriptors
-            .flatMap((descriptor) => descriptor.aliases.map((alias) => ({ alias, descriptor })))
-            .filter(({ alias }) => allowed.has(alias))
-            .sort((left, right) => left.alias.localeCompare(right.alias))
-            .map(({ alias, descriptor }) => `- ${alias} ${descriptor.description}`);
+    };
 
-        return lines.length > 0
-            ? ["AVAILABLE TOOLS:", ...lines].join("\n")
-            : "AVAILABLE TOOLS:\n(none)";
-    },
-});
+    return {
+        allowedAliases,
+        renderCatalog: (kind, descriptors) => {
+            const describeFor = new Map(
+                descriptors.flatMap((descriptor) =>
+                    descriptor.aliases.map((alias) => [alias, descriptor.description] as const)),
+            );
+            const lines = [...allowedAliases(kind, descriptors)]
+                .sort((left, right) => left.localeCompare(right))
+                .map((alias) => `- ${alias} ${describeFor.get(alias) ?? ""}`);
+
+            return lines.length > 0
+                ? ["AVAILABLE TOOLS:", ...lines].join("\n")
+                : "AVAILABLE TOOLS:\n(none)";
+        },
+    };
+};

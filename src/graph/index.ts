@@ -11,7 +11,6 @@ export { buildMainGraph } from "./build.ts";
 export { buildSwarmSubtask, selectWorkerKind } from "./context-terms.ts";
 export { strongEscalationReasonForTask } from "./escalation.ts";
 export {
-    extractToolStatus,
     parseCriticDecision,
     parseFrontierArchitectureDecision,
     parseFrontierCriticDecision,

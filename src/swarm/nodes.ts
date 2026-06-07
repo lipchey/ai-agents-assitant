@@ -26,10 +26,6 @@ export const createWorkerNodes = (tools: ToolRegistry) => ({
     webResearcher: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER, tools),
 });
 
-export const codeExplorer = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER);
-export const infraOps = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS);
-export const webResearcher = (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER);
-
 const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
     const parsed = asRecord(extractJsonObject(content));
     const value = typeof parsed?.workerKind === "string" ? parsed.workerKind.trim().toLowerCase() : "";

@@ -63,10 +63,3 @@ export const classifyFailure = (error: unknown): FailureType => {
     }
     return FailureType.REASONING;
 };
-
-export const readExitCode = (value: unknown): number | undefined => {
-    const record = asRecord(value);
-    const details = asRecord(record?.details);
-    const exitCode = details?.exitCode ?? record?.exitCode;
-    return typeof exitCode === "number" && Number.isFinite(exitCode) ? exitCode : undefined;
-};

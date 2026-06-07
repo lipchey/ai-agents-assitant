@@ -2,7 +2,7 @@ import "dotenv/config";
 import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled, printReport } from "./cli";
 import { HITL_RESOLVER_CONFIG_KEY, MAIN_GRAPH_RECURSION_LIMIT, TOOL_REGISTRY_CONFIG_KEY } from "./consts";
 import { buildMainGraph } from "./graph";
-import { createDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
+import { getDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
 
 const run = async (): Promise<void> => {
     const task = process.argv.slice(2).join(" ").trim();
@@ -11,7 +11,8 @@ const run = async (): Promise<void> => {
         process.exit(1);
     }
 
-    const tools = createDefaultToolRegistry();
+    /* One shared registry: the same instance the compatibility seams and DI fallbacks resolve to. */
+    const tools = getDefaultToolRegistry();
 
     console.log("Ensuring OpenClaw Gateway is running...");
     try {
