@@ -117,6 +117,9 @@ When enabled:
 - `verify` reads `ToolRegistry` from `configurable[TOOL_REGISTRY_CONFIG_KEY]`
   and invokes the `run_tests` alias with `npm run typecheck`; `pure_reasoning`
   skips typecheck and finalizes the reasoning output.
+- `verify` reports objective results to later LLM nodes through a compact
+  projection: status/exit code and bounded stdout/stderr tails. It does not
+  serialize the full `ToolResult.raw` payload into `verificationReport`.
 - `finalize` keeps applied files only when verification passed. If verification
   failed after patches were applied, it restores backed-up files and deletes
   created files.
@@ -206,8 +209,11 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
 
 ## 6. Current Status and Backlog
 
-Current status as of 2026-06-07:
+Current status as of 2026-06-08:
 - MVP is executable through `npm start -- "<task>"`.
+- RTK local exec integration was reviewed and rejected for the runtime verify
+  path; the dependency-free replacement is compact `verificationReport`
+  serialization that preserves pass/fail semantics while reducing prompt tokens.
 - `npm test` passes outside this restricted Codex sandbox. The sandbox can block
   `tsx` IPC pipes with `listen EPERM`, so smoke scripts may need unsandboxed
   execution.

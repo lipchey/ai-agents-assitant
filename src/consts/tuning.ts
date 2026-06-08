@@ -42,6 +42,10 @@ export const RECENT_DEBATE_WINDOW = 3;
 export const VERIFY_TIMEOUT_S = 120;
 export const VERIFY_RPC_TIMEOUT_S = 150;
 
+/* Verification feedback keeps recent diagnostics without replaying full tool payloads. */
+export const VERIFY_REPORT_OUTPUT_TAIL_LINES = 80;
+export const VERIFY_REPORT_OUTPUT_MAX_CHARS = 12_000;
+
 /* ReAct workers are bounded so failed plans escalate instead of spinning. */
 export const MAX_REACT_STEPS = 6;
 export const MAX_REACT_TOOL_FAILURES = 3;
