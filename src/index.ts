@@ -1,5 +1,9 @@
 export { buildMainGraph } from "./graph";
 
+export { configureLogging, createLogger, getLogger, getOutputWriter, StreamSink } from "./logging";
+export { LogFormat, LogLevel } from "./consts";
+export type { ConfigureLoggingOptions, LogFields, Logger, LogRecord, LogSink, OutputWriter } from "./types";
+
 export {
     autoAbortResolver,
     createStdinHitlResolver,
@@ -7,6 +11,7 @@ export {
     HITL_RESOLVER_CONFIG_KEY,
     readHitlResolver,
 } from "./hitl";
+export type { StdinHitlResolverOptions } from "./hitl";
 export type {
     HitlDrivableGraph,
     HitlGraphRunConfig,

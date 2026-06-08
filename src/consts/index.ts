@@ -16,6 +16,18 @@ export {
     HitlResolutionAction,
 } from "./hitl.ts";
 export {
+    DEFAULT_LOG_FORMAT,
+    DEFAULT_LOG_LEVEL,
+    LOG_FIELD_MAX_ARRAY_ITEMS,
+    LOG_FIELD_MAX_DEPTH,
+    LOG_FIELD_STRING_MAX_CHARS,
+    LOG_LEVEL_RANK,
+    LogFormat,
+    LogLevel,
+    isLogFormat,
+    isLogLevel,
+} from "./logging.ts";
+export {
     ChatRole,
     ModelProvider,
     ModelRef,
@@ -101,6 +113,7 @@ export {
     TAVILY_SEARCH_DEPTH,
     WebGatewayToolName,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
+    WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS,
     WEB_SEARCH_MAX_RESULTS,
 } from "./web.ts";
 export {

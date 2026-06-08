@@ -8,9 +8,11 @@ import {
     ToolProviderName,
     WebGatewayToolName,
     WEB_SEARCH_FALLBACK_COUNT_CAP,
+    WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS,
     WEB_SEARCH_MAX_RESULTS,
 } from "../consts";
-import { errorMessage, readString } from "../shared";
+import { getLogger } from "../logging";
+import { errorMessage, readString, truncate } from "../shared";
 import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
 import { ToolError } from "./errors.ts";
 import { invokeGatewayTool } from "./http.ts";
@@ -79,6 +81,14 @@ export const runWebLookupWithFallback = async (
         const fallbackProvider = readString(fallback.provider)
             ?? readString(fallbackPayload.provider)
             ?? FALLBACK_PROVIDER_LABEL;
+        if (webSearchResultIsEmpty(fallback)) {
+            getLogger().child({ module: "web-search" }).warn("web_lookup fallback returned no results.", {
+                provider: PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+                fallbackProvider,
+                tavilyFallbackReason: tavilyFailure,
+                queryPreview: truncate(query, WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS),
+            });
+        }
         return { ...fallback, searchProvider: fallbackProvider, tavilyFallbackReason: tavilyFailure };
     } catch (fallbackError) {
         /* Both backends down is an environment problem: route to HITL via a structured kind, not text matching. */

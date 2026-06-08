@@ -11,6 +11,9 @@ export const TAVILY_SEARCH_DEPTH = "advanced";
 /* DuckDuckGo's OpenClaw wrapper accepts count rather than max_results. */
 export const WEB_SEARCH_FALLBACK_COUNT_CAP = 10;
 
+/* Search text can contain user task details, so log only a short preview. */
+export const WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS = 120;
+
 export const WebGatewayToolName = {
     TAVILY_SEARCH: "tavily_search",
     WEB_SEARCH: "web_search",

@@ -13,6 +13,18 @@ export type {
     HitlResolution,
     HitlResolver,
 } from "./hitl";
+export type {
+    ConfigureLoggingOptions,
+    LogFields,
+    LogFormatter,
+    Logger,
+    LoggerOptions,
+    LogRecord,
+    LogSink,
+    OutputWriter,
+    OutputWriterOptions,
+    StreamSinkOptions,
+} from "./logging.ts";
 export type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "./patching";
 export type { SystemPromptKey } from "./prompts.ts";
 export type { DebateEntry, ToolCallRecord } from "./state";

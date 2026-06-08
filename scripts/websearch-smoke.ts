@@ -1,18 +1,29 @@
 import assert from "node:assert/strict";
 import {
     FALLBACK_PROVIDER_LABEL,
+    LogLevel,
     PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
     TAVILY_SEARCH_DEPTH,
     ToolName,
     WebGatewayToolName,
 } from "../src/consts";
+import { configureLogging } from "../src/logging";
 import { openclawRpc } from "../src/tools";
+import type { LogRecord, LogSink } from "../src/types";
 
 type GatewayBody = { ok: boolean; result?: unknown; error?: { message?: string } };
 type Handler = (tool: string, args: Record<string, unknown>) => GatewayBody;
 
 const calls: Array<{ tool: string; args: Record<string, unknown> }> = [];
 let handler: Handler = () => ({ ok: false, error: { message: "no handler set" } });
+
+class RecordingSink implements LogSink {
+    records: LogRecord[] = [];
+
+    write(record: LogRecord): void {
+        this.records.push(record);
+    }
+}
 
 const makeResponse = (body: unknown, status = 200): Response =>
     ({
@@ -75,20 +86,35 @@ const run = async (): Promise<void> => {
     assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "C: fallback on empty Tavily");
     assert.equal(res.tavilyFallbackReason, `${PRIMARY_WEB_SEARCH_PROVIDER_LABEL} returned no results`, "C: empty-result reason");
 
+    const loggingSink = new RecordingSink();
+    configureLogging({ level: LogLevel.WARN, sink: loggingSink });
+    reset((tool) =>
+        tool === WebGatewayToolName.TAVILY_SEARCH
+            ? { ok: true, result: toolResult({ results: [], answer: "" }) }
+            : { ok: true, result: toolResult({ provider: FALLBACK_PROVIDER_LABEL, results: [] }) },
+    );
+    res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "empty fallback query" }, { maxRetries: 0 });
+    assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "D: empty fallback still returns successfully");
+    assert.equal(loggingSink.records.length, 1, "D: empty fallback emits one warning");
+    assert.equal(loggingSink.records[0]?.level, LogLevel.WARN, "D: warning level is used");
+    assert.equal(loggingSink.records[0]?.fields?.module, "web-search", "D: warning carries module context");
+    assert.equal(loggingSink.records[0]?.fields?.fallbackProvider, FALLBACK_PROVIDER_LABEL, "D: fallback provider is logged");
+    assert.equal(loggingSink.records[0]?.fields?.queryPreview, "empty fallback query", "D: bounded query preview is logged");
+
     reset(() => ({ ok: false, error: { message: "down" } }));
     await assert.rejects(
         () => openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 }),
         (err: Error) => /tavily\(/.test(err.message) && /duckduckgo\(/.test(err.message),
-        "D: both-fail error mentions Tavily and DuckDuckGo",
+        "E: both-fail error mentions Tavily and DuckDuckGo",
     );
 
     reset(() => fallbackOk);
     await assert.rejects(
         () => openclawRpc(ToolName.WEB_LOOKUP, {}, { maxRetries: 0 }),
         /web_lookup requires a query/,
-        "E: missing query rejected",
+        "F: missing query rejected",
     );
-    assert.equal(calls.length, 0, "E: no gateway call for a missing query");
+    assert.equal(calls.length, 0, "F: no gateway call for a missing query");
 };
 
 run()

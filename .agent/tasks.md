@@ -1,7 +1,8 @@
 # Project Tasks
 
 **Status (2026-06-08):** MVP complete; no active implementation tasks.
-Compact verify-report projection now has dedicated smoke coverage.
+Structured logging and compact verify-report projection now have dedicated
+smoke coverage.
 
 Use this file for live work only. Current architecture and durable project
 context live in [.agent/memory.md](memory.md); engineering rules live in
@@ -33,7 +34,7 @@ None.
   `ToolError.kind`, not substring matching.
 - [ ] Main-graph HITL: wire `interrupt()`-based approval/escalation for the
   reasoning layer. Current HITL is swarm-only.
-- [ ] Structured logging: implement the consolidated `Logger` design in
+- [x] Structured logging: implement the consolidated `Logger` design in
   [logging-plan.md](logging-plan.md) (pluggable `LogSink`, child context,
   level/format env config). Closes the empty-DuckDuckGo-fallback warning so
   zero-hit searches are visible without failing the worker.

@@ -2,25 +2,28 @@ import "dotenv/config";
 import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled, printReport } from "./cli";
 import { HITL_RESOLVER_CONFIG_KEY, MAIN_GRAPH_RECURSION_LIMIT, TOOL_REGISTRY_CONFIG_KEY } from "./consts";
 import { buildMainGraph } from "./graph";
+import { getLogger, getOutputWriter } from "./logging";
 import { getDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
 
 const run = async (): Promise<void> => {
+    const logger = getLogger().child({ module: "main" });
+    const output = getOutputWriter();
     const task = process.argv.slice(2).join(" ").trim();
     if (!task) {
-        console.error('Usage: npm start -- "<your task description>"');
+        output.errorLine('Usage: npm start -- "<your task description>"');
         process.exit(1);
     }
 
     /* One shared registry: the same instance the compatibility seams and DI fallbacks resolve to. */
     const tools = getDefaultToolRegistry();
 
-    console.log("Ensuring OpenClaw Gateway is running...");
+    logger.info("Ensuring OpenClaw Gateway is running.");
     try {
         await startOpenClawGateway();
         await tools.start();
-        console.log(`Gateway ready. Starting agent with task: "${task}"\n`);
+        logger.info("Gateway ready. Starting agent.", { taskPreview: task });
     } catch (error) {
-        console.error("Failed to start OpenClaw Gateway:", error instanceof Error ? error.message : String(error));
+        logger.error("Failed to start OpenClaw Gateway.", { error });
         process.exit(1);
     }
 
@@ -29,7 +32,7 @@ const run = async (): Promise<void> => {
         const costBudgetUsd = readCostBudgetUsd();
         const patchApplicationEnabled = readPatchApplicationEnabled();
         if (patchApplicationEnabled) {
-            console.log("Patch application ENABLED: verified changes will be written to the repository.\n");
+            logger.info("Patch application enabled; verified changes will be written to the repository.");
         }
         const finalState = await graph.invoke(
             { originalTask: task, costBudgetUsd, patchApplicationEnabled },
@@ -43,9 +46,9 @@ const run = async (): Promise<void> => {
             },
         );
 
-        printReport(finalState, costBudgetUsd);
+        printReport(finalState, costBudgetUsd, output);
     } catch (error) {
-        console.error("Agent execution failed:", error instanceof Error ? error.message : String(error));
+        logger.error("Agent execution failed.", { error });
         process.exitCode = 1;
     } finally {
         await tools.stop();

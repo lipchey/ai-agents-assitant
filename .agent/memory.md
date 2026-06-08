@@ -217,10 +217,16 @@ Current status as of 2026-06-08:
 - RTK local exec integration was reviewed and rejected for the runtime verify
   path; the dependency-free replacement is compact `verificationReport`
   serialization that preserves pass/fail semantics while reducing prompt tokens.
+- Structured logging is centralized under `src/logging/`: diagnostics flow
+  through leveled `Logger` records to a pluggable `LogSink` (stderr by default),
+  while final reports and HITL headers use a plain `OutputWriter` configured by
+  the same `configureLogging(...)` entrypoint. `AGENT_LOG_LEVEL` and
+  `AGENT_LOG_FORMAT` control the default logger, and the DuckDuckGo empty
+  fallback now emits a bounded warning without failing the worker.
 - `npm run smoke` covers react/patch/HITL/websearch plus compact
-  verify-report projection. `npm test` has passed in the current workspace; some
-  restricted sandboxes can still block `tsx` IPC pipes with `listen EPERM`, so
-  smoke scripts may need unsandboxed execution.
+  verify-report projection and logging. `npm test` has passed in the current
+  workspace; some restricted sandboxes can still block `tsx` IPC pipes with
+  `listen EPERM`, so smoke scripts may need unsandboxed execution.
 - Full live end-to-end execution still needs valid provider credentials and a
   reachable OpenClaw Gateway/runtime.
 
@@ -230,8 +236,6 @@ Open backlog:
   `verify` and ReAct without OpenClaw; broaden replacement coverage beyond the
   current catalog-level alias-rebinding smoke test if needed.
 - Wire main-graph HITL approval/interrupt flows; current HITL is swarm-only.
-- Add structured logging, including warnings for empty DuckDuckGo fallback
-  results.
 
 ---
 
