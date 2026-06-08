@@ -66,9 +66,6 @@ const buildRuntime = (options: ConfigureLoggingOptions): { runtime: Runtime; war
     const envLevel = options.level ? { level: options.level, warnings: [] } : readEnvLevel();
     const envFormat = options.format ? { format: options.format, warnings: [] } : readEnvFormat();
     const streamOptions: StreamSinkOptions = { formatter: formatterForFormat(envFormat.format) };
-    if (options.diagnosticStdout) {
-        streamOptions.stdout = options.diagnosticStdout;
-    }
     if (options.diagnosticStderr) {
         streamOptions.stderr = options.diagnosticStderr;
     }

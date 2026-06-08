@@ -11,10 +11,26 @@ const MAX_DEPTH_VALUE = "[MaxDepth]";
 
 const normalizeString = (value: string): string => truncate(value, LOG_FIELD_STRING_MAX_CHARS);
 
-const normalizeError = (error: Error): LogFields => ({
-    name: normalizeString(error.name),
-    message: normalizeString(error.message),
-});
+/* name/message are captured explicitly; stack is omitted to keep logs bounded and path-free. */
+const ERROR_OWN_KEYS_TO_SKIP = new Set(["name", "message", "stack"]);
+
+const normalizeError = (error: Error, seen: WeakSet<object>, depth: number): LogFields => {
+    const normalized: LogFields = {
+        name: normalizeString(error.name),
+        message: normalizeString(error.message),
+    };
+    /* Preserve structured error props (e.g. ToolError's kind/provider/toolId) instead of dropping them. */
+    for (const key of Object.keys(error).sort()) {
+        if (ERROR_OWN_KEYS_TO_SKIP.has(key)) {
+            continue;
+        }
+        const value = normalizeLogValue((error as unknown as Record<string, unknown>)[key], seen, depth + 1);
+        if (value !== undefined) {
+            normalized[key] = value;
+        }
+    }
+    return normalized;
+};
 
 const normalizeObject = (value: Record<string, unknown>, seen: WeakSet<object>, depth: number): LogFields => {
     const normalized: LogFields = {};
@@ -49,9 +65,6 @@ export const normalizeLogValue = (value: unknown, seen: WeakSet<object> = new We
     if (value instanceof Date) {
         return Number.isFinite(value.getTime()) ? value.toISOString() : "Invalid Date";
     }
-    if (value instanceof Error) {
-        return normalizeError(value);
-    }
     if (seen.has(value)) {
         return CIRCULAR_VALUE;
     }
@@ -61,6 +74,9 @@ export const normalizeLogValue = (value: unknown, seen: WeakSet<object> = new We
 
     seen.add(value);
     try {
+        if (value instanceof Error) {
+            return normalizeError(value, seen, depth);
+        }
         if (Array.isArray(value)) {
             const normalized = value
                 .slice(0, LOG_FIELD_MAX_ARRAY_ITEMS)

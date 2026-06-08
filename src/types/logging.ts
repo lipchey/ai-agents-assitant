@@ -39,7 +39,6 @@ export interface LoggerOptions {
 
 export interface StreamSinkOptions {
     formatter?: LogFormatter;
-    stdout?: NodeJS.WritableStream;
     stderr?: NodeJS.WritableStream;
 }
 
@@ -53,7 +52,6 @@ export interface ConfigureLoggingOptions {
     format?: LogFormat;
     sink?: LogSink;
     output?: OutputWriter;
-    diagnosticStdout?: NodeJS.WritableStream;
     diagnosticStderr?: NodeJS.WritableStream;
     userStdout?: NodeJS.WritableStream;
     userStderr?: NodeJS.WritableStream;

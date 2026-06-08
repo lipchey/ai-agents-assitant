@@ -6,8 +6,7 @@ export class StreamSink {
     private readonly stderr;
 
     constructor(options: StreamSinkOptions = {}) {
-        const { formatter = textFormatter, stderr = process.stderr, stdout: _stdout } = options;
-        void _stdout;
+        const { formatter = textFormatter, stderr = process.stderr } = options;
         this.formatter = formatter;
         this.stderr = stderr;
     }

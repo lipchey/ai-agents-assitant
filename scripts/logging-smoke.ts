@@ -86,14 +86,30 @@ const run = (): void => {
     assert.equal(parsed.fields.count, "1", "json formatter tolerates bigint fields");
     assert.equal(parsed.fields.error.message, "json boom", "json formatter preserves Error messages");
 
-    const stdout = new CaptureStream();
+    class TaggedError extends Error {
+        readonly kind = "provider_unavailable";
+
+        constructor(message: string) {
+            super(message);
+            this.name = "TaggedError";
+        }
+    }
+    const tagged = jsonFormatter({
+        level: LogLevel.ERROR,
+        message: "tagged error",
+        time: new Date("2026-06-08T12:00:00.000Z"),
+        fields: { error: new TaggedError("nope") },
+    });
+    const parsedTagged = JSON.parse(tagged) as { fields: { error: { name: string; message: string; kind?: string } } };
+    assert.equal(parsedTagged.fields.error.message, "nope", "structured error keeps its message");
+    assert.equal(parsedTagged.fields.error.kind, "provider_unavailable", "structured error props (e.g. kind) are preserved");
+
     const stderr = new CaptureStream();
-    const streamSink = new StreamSink({ stdout, stderr, formatter: textFormatter });
+    const streamSink = new StreamSink({ stderr, formatter: textFormatter });
     streamSink.write({ level: LogLevel.DEBUG, message: "debug diagnostic", time: new Date(), fields: {} });
     streamSink.write({ level: LogLevel.WARN, message: "warn diagnostic", time: new Date(), fields: {} });
-    assert.equal(stdout.text(), "", "default StreamSink keeps diagnostics off stdout");
-    assert.match(stderr.text(), /debug diagnostic/u, "default StreamSink writes low-severity diagnostics to stderr");
-    assert.match(stderr.text(), /warn diagnostic/u, "default StreamSink writes warning diagnostics to stderr");
+    assert.match(stderr.text(), /debug diagnostic/u, "StreamSink writes low-severity diagnostics to stderr");
+    assert.match(stderr.text(), /warn diagnostic/u, "StreamSink writes warning diagnostics to stderr");
 };
 
 run();
