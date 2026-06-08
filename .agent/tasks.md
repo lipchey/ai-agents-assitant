@@ -1,6 +1,7 @@
 # Project Tasks
 
 **Status (2026-06-08):** MVP complete; no active implementation tasks.
+Compact verify-report projection now has dedicated smoke coverage.
 
 Use this file for live work only. Current architecture and durable project
 context live in [.agent/memory.md](memory.md); engineering rules live in
@@ -16,7 +17,9 @@ None.
 
 - [x] RTK local exec optimization review: rejected RTK in the runtime verify path
   after critical review; implemented compact `verificationReport` serialization
-  instead.
+  instead. Follow-up review moved the projection to `tools/result-reports`, kept
+  head+tail diagnostics, bounded provider-specific fallback fields, and added
+  verify-report smoke coverage.
 - [x] Pluggable tool providers: implement the port/registry design in
   [tooling-architecture.md](tooling-architecture.md) so tool modules become
   replaceable and can run in parallel behind one `ToolRegistry` seam. Phase 0-2

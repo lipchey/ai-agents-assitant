@@ -5,8 +5,8 @@ Working rules derived from the 2026-06-06 refactor audit. They complement
 is a codebase where a scalar is defined once, a helper exists once, each file has
 one job, and the type checker catches mistakes the runtime would otherwise hide.
 
-> Hard rule before any commit: `npm run typecheck` **and** the four smoke tests
-> (`npm run smoke:react smoke:patch smoke:hitl smoke:websearch`) pass.
+> Hard rule before any commit: `npm run typecheck` **and** the smoke suite
+> (`npm run smoke`, currently react/patch/HITL/websearch/verify-report) pass.
 
 ---
 

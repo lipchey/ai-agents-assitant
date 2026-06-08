@@ -17,6 +17,7 @@ export { calculateUsage, loadPricing } from "./pricing.ts";
 export { createDefaultToolRegistry, createToolRegistry, getDefaultToolRegistry } from "./registry.ts";
 export { createDefaultToolAccessPolicy } from "./policy.ts";
 export { readToolRegistry } from "./config.ts";
+export { buildCompactToolResultReport } from "./result-reports.ts";
 export { unwrapToolResult } from "./results.ts";
 export { openclawRpc } from "./rpc.ts";
 export { runWebLookupWithFallback } from "./web-search.ts";

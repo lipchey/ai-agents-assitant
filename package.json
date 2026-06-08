@@ -17,7 +17,8 @@
     "smoke:react": "tsx scripts/react-smoke.ts",
     "smoke:patch": "tsx scripts/patch-smoke.ts",
     "smoke:websearch": "tsx scripts/websearch-smoke.ts",
-    "smoke": "npm run smoke:react && npm run smoke:patch && npm run smoke:hitl && npm run smoke:websearch",
+    "smoke:verify-report": "tsx scripts/verify-report-smoke.ts",
+    "smoke": "npm run smoke:react && npm run smoke:patch && npm run smoke:hitl && npm run smoke:websearch && npm run smoke:verify-report",
     "test": "npm run typecheck && npm run lint && npm run smoke"
   },
   "keywords": [],
