@@ -165,7 +165,34 @@ no-shell-interpolation local adapters are each independent guards. When touching
 tools/swarm, preserve all layers; the local OpenClaw adapters remain the
 authoritative guard regardless of caller-side checks.
 
-## 8. Memory & task automation (unchanged)
+## 8. Logging — instrument diagnostically valuable changes
+
+Structured logging lives in [src/logging/](../src/logging/). Whenever you add or
+change code, evaluate whether the change is worth a log line and add one when it
+would help an operator diagnose a production run. Diagnostically valuable points
+include caught errors and failures, fallbacks/retries, external/Gateway calls,
+recovery and HITL paths, routing/state transitions, budget/escalation decisions,
+and dropped or empty results. Trivial pure helpers and hot inner loops usually
+are not — instrument the decision, not every line.
+
+- Use the structured logger, never `console.*`. Obtain it with `getLogger()` and
+  scope it via `.child({ module: "<area>" })`; pass per-call **structured
+  fields** (`logger.warn("fallback returned no results.", { provider, queryPreview })`),
+  not string interpolation.
+- stdout is reserved for user-facing output through `OutputWriter`
+  (`getOutputWriter()`); all diagnostics go through the logger to stderr. Never
+  mix the two channels.
+- Pick the level deliberately: `debug` (detailed tracing), `info` (lifecycle
+  milestones), `warn` (recoverable/degraded — fallback used, empty result,
+  invalid config defaulted), `error` (an operation failed).
+- Log errors as `{ error }` so structured props (`ToolError` kind/provider/toolId)
+  survive — the field normalizer captures them and bounds depth/size.
+- Keep fields cheap and safe: no secrets or tokens, and preview large or
+  user-derived text instead of dumping it (e.g.
+  `truncate(query, WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS)`). Log an event once, at
+  the layer that owns the decision — don't re-log it up the stack.
+
+## 9. Memory & task automation (unchanged)
 
 Per [guidelines.md](guidelines.md): update [memory.md](memory.md) (Architecture /
 Current Status) and [tasks.md](tasks.md) before completing a task.
