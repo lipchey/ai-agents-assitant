@@ -27,8 +27,8 @@ The quality system was adopted in sessions S6-S7, driven from the meta repo
   in report-only mode (ADR-002). Schema: `schemas/quality.schema.json`.
 - Pinned gitleaks wrapper (`tools/run-gitleaks` + `tools/TOOL_VERSIONS.json`,
   gitleaks 8.30.1) with a custom `.gitleaks.toml`.
-- Native hooks (`core.hooksPath -> .githooks`): pre-commit runs
-  `./verify --staged`, pre-push runs `./verify --fast`. Prettier baseline done.
+- Native hooks (`core.hooksPath -> .githooks`): pre-commit/pre-push run
+  `./verify` (see Verification Surface). Prettier baseline done.
 
 CI bootstrap is in progress (S7 Task 10); the `quality.yml` workflow is not yet
 live and must not be described as such until that push lands.

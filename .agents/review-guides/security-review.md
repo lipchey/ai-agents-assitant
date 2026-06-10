@@ -50,6 +50,10 @@ a suggested fix. No prose dumps.
   interpolation and a workspace path bound. Flag any new exec path that bypasses
   the allowlist, interpolates model/user text into a command, or routes exec
   outside the local provider guards.
+- Flag any path where fetched web content, read file content, or worker/model
+  output reaches a privileged action (patch target or content, exec command,
+  outbound request) without being treated as untrusted data (prompt injection
+  via tool results).
 
 ### Patch-apply filesystem writes (`src/patching`)
 

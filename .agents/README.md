@@ -6,6 +6,14 @@ generated model memory. Root entrypoints stay thin and route here
 (`AGENTS.md` is the primary router; `CLAUDE.md` is the thin Claude Code
 adapter). This directory replaced the legacy single-file `.agent` dir in S7.
 
+## Start here
+
+1. `memory.md` - architecture, invariants, current status.
+2. `guidelines.md` + `code-guidelines.md` - binding engineering rules.
+3. `project-facts.md` - local facts, sensitive paths, verification surface.
+4. `session-protocol.md` / `resume-protocol.md` + `handoffs/STATE.md` - how
+   work is driven and where the live pointer is.
+
 ## Files
 
 - `memory.md` - dual-graph architecture (Main Graph + Swarm Sub-Graph),

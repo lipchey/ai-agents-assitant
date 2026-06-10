@@ -350,7 +350,7 @@ so each gets its own folder and barrel.
 
 Ordered for the smallest blast radius first. Recommended scope for this solo repo:
 **do Phase 0–1 next; Phase 2–3 reach the requested target; Phase 4–5 are
-deferred.** Each phase ends green on `npm test` (typecheck + lint + the four smoke
+deferred.** Each phase ends green on `npm test` (typecheck + lint + the six smoke
 suites).
 
 ### Phase 0 — Neutralize names, no behavior change

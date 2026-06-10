@@ -186,10 +186,12 @@ re-export noise. The tuned config reduces this to the real signal below.
 - Plan note vs. measured reality: the plan's draft Files list suggested
   `scripts/*.ts` as an entry. That was deliberately NOT applied, because making
   every script an entry would suppress `scripts/gateway-smoke.ts` - the one
-  unwired script the plan explicitly wants kept as a finding. Knip auto-detects
-  the six wired `smoke:*` scripts from `package.json`, so `gateway-smoke.ts`
-  (which has no npm-script wiring) remains the sole unused-file finding. This is
-  the plan's sanctioned "adjust from measured findings".
+  unwired script the plan explicitly wants kept as a finding. Of the seven
+  `smoke:*` scripts in `package.json` (plus the `smoke` aggregate), six wire a
+  distinct `scripts/*-smoke.ts` file via `tsx` (`smoke:offline` and `smoke` just
+  recompose those six), and knip auto-detects those file paths; `gateway-smoke.ts`
+  (which has no npm-script wiring) therefore remains the sole unused-file finding.
+  This is the plan's sanctioned "adjust from measured findings".
 
 - No dependency ignores. `openclaw` is flagged as an unused dependency because it
   is consumed as a CLI binary outside npm scripts, not as an imported module; it

@@ -36,9 +36,8 @@ affirmative line in the same message.
   boundary**. Do not start the next task even if time remains.
 - R0 gate: if `STATE.md` does not record `r0_keys_rotated: true`, stop and
   ask the owner — no session may run on the leaked keys.
-- Verification boundary command: `npm test` (typecheck + lint + unit +
-  smoke). When the meta-repo's S6 lands `./verify` in this repo, use
-  `./verify --fast` instead (whichever exists).
+- Verification boundary command: `./verify --fast` (live since S6). `npm test`
+  (typecheck + lint + unit + smoke) is the legacy/fallback surface.
 - Commits: per the plan's pinned messages; commit directly to `main`; no
   branches/PRs; never push without an explicit line.
 - Out-of-scope findings: record in `.agents/tasks.md` § Backlog with one
