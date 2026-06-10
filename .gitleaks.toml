@@ -1,14 +1,19 @@
 # Extends the default gitleaks ruleset with formats used by this repo's
 # providers. Owner-approved 2026-06-10 (S6 residue P3).
+#
+# Burned gateway dev token (the literal "dev_token_123", rotated 2026-06-10):
+# it is worthless and only ever appears in historical commits of
+# openclaw.config.json5. It is suppressed with a RULE-SCOPED, exact-value
+# allowlist on the openclaw rule below (regexTarget = "secret", anchored
+# ^dev_token_123$) rather than a global substring allowlist, so a future token
+# that merely *contains* that substring (e.g. "dev_token_1234") still fires.
+# Rationale: the baseline default-config history scan was 0 findings, so no
+# default rule matches the bare "dev_token_123" -- only the openclaw rule does,
+# making a rule-scoped suppression sufficient (S6 review chain P2s).
 title = "ai-agents-assitant gitleaks config"
 
 [extend]
 useDefault = true
-
-[allowlist]
-description = "Burned pre-rotation gateway dev token (rotated 2026-06-10); appears in historical commits only and is worthless"
-regexTarget = "match"
-regexes = ['''dev_token_123''']
 
 [[rules]]
 id = "anthropic-api-key"
@@ -31,6 +36,19 @@ keywords = ["sk-"]
 [[rules]]
 id = "openclaw-gateway-token-literal"
 description = "Literal gateway token in openclaw.config.json5; must be the ${OPENCLAW_GATEWAY_TOKEN} env reference (D4)"
-regex = '''token:\s*["'][^"'$][^"']*["']'''
+# Intent: catch ANY quoted string literal assigned to the gateway "token" key
+# in this config, across all JSON5 key spellings -- bare `token:`, quoted
+# `"token":` / `'token':`, and whitespace-before-colon `token :`. The
+# `[^"'$]` first-value-char class exempts the legitimate ${OPENCLAW_GATEWAY_TOKEN}
+# env reference (RE2: no lookarounds). The \b word boundaries keep the match on
+# the whole `token` key and avoid matching a `token` *value* of another key
+# (e.g. `mode: "token"`). secretGroup = 1 narrows the finding to the value so
+# the exact-value allowlist below can anchor on the burned literal.
+regex = '''["']?\btoken\b["']?\s*:\s*["']([^"'$][^"']*)["']'''
+secretGroup = 1
 path = '''openclaw\.config\.json5'''
 keywords = ["token"]
+  [rules.allowlist]
+  description = "Burned pre-rotation gateway dev token (rotated 2026-06-10); historical commits only, worthless. Exact-value scoped so look-alike values still fire."
+  regexTarget = "secret"
+  regexes = ['''^dev_token_123$''']
