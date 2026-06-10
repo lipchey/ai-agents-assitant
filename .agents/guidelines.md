@@ -14,8 +14,8 @@
 
 ## 3. Operations & Memory Automation
 
-- **MEMORY AUTOMATION**: Before completing any task, you MUST update `.agent/memory.md` under the "Pending / Open Context" section if there are unresolved issues, or under "Architecture" if structural changes were made.
-- **Task Tracking**: Keep `.agent/tasks.md` up to date by marking items as `[x]` when completed.
+- **MEMORY AUTOMATION**: Before completing any task, you MUST update `.agents/memory.md` under the "Pending / Open Context" section if there are unresolved issues, or under "Architecture" if structural changes were made.
+- **Task Tracking**: Keep `.agents/tasks.md` up to date by marking items as `[x]` when completed.
 - **Testing**: Run `npx tsc --noEmit` before committing any code to ensure graph typings are perfectly aligned.
 - **Verification surface**: `./verify --staged` runs on pre-commit; `./verify --fast` is the pre-push gate and the agent handoff check before declaring work done. Install the hooks once per clone with `git config core.hooksPath .githooks`.
 - **Git Workflow**: This is a single-developer repository. Commit directly to `main` — do NOT create feature branches or open PRs unless explicitly asked. Commit only when the developer asks.

@@ -1,10 +1,12 @@
 # Project Facts - `ai-agents-assitant`
 
-First file of the future `.agents/` knowledge directory (Gate 0a draft).
-S7 completes the directory and migrates the legacy `.agent/` dir; until then
-this file stands alone and does not assume sibling `.agents/` files exist.
+Local facts, sensitive paths, no-touch zones, and the verification surface for
+the pilot. Part of the canonical `.agents/` knowledge directory (the legacy
+`.agent` dir was migrated in S7). Keep it current; route to ADRs rather than
+duplicating decisions.
 
 ## Repository Role
+
 TypeScript multi-agent assistant service built on `@langchain/langgraph`.
 It is a dual-graph autonomous development agent: a Main Graph for
 orchestration plus a Swarm Sub-Graph. It runs via `tsx src/main.ts`, drives
@@ -13,74 +15,103 @@ uses Tavily (primary) with DuckDuckGo (fallback) for web search.
 Capabilities include tool use, human-in-the-loop (HITL), guarded patch
 application, and structured logging.
 
+## Quality System (LIVE since S6-S7)
+
+The quality system was adopted in sessions S6-S7, driven from the meta repo
+`self-maintaining-system`. All of the following are LIVE in this repo:
+
+- `./verify` shim + vendored pinned runner (`tools/verify-runner.mjs`, pin
+  record `tools/RUNNER_SOURCE.json`, dev-standards tag `v0.0.2`).
+- `quality.json` manifest with `staged` / `fast` / `full` tiers; the
+  `architecture` check is dependency-cruiser (ADR-001) and `dead-code` is knip
+  in report-only mode (ADR-002). Schema: `schemas/quality.schema.json`.
+- Pinned gitleaks wrapper (`tools/run-gitleaks` + `tools/TOOL_VERSIONS.json`,
+  gitleaks 8.30.1) with a custom `.gitleaks.toml`.
+- Native hooks (`core.hooksPath -> .githooks`): pre-commit runs
+  `./verify --staged`, pre-push runs `./verify --fast`. Prettier baseline done.
+
+CI bootstrap is in progress (S7 Task 10); the `quality.yml` workflow is not yet
+live and must not be described as such until that push lands.
+
 ## Canonical Files
-- `AGENTS.md` / `CLAUDE.md` - thin routers; currently point at the legacy
-  `.agent/` dir (migrates to `.agents/` in S7).
+
+- `AGENTS.md` / `CLAUDE.md` - thin routers into `.agents/`.
 - `package.json` - npm scripts, deps, and `engines` Node range.
 - `tsconfig.json` - TypeScript compiler config (`outDir: dist`).
-- `eslint.config.js` - flat ESLint config incl. local `block-comments-only`
-  rule.
+- `eslint.config.js` - flat ESLint config incl. the local `block-comments-only`
+  rule and the advisory `eslint-plugin-boundaries` layer mirror (ADR-001).
 - `.prettierrc.json` / `.prettierignore` / `.editorconfig` - formatting.
-- `openclaw.config.json5` - OpenClaw gateway, agents, plugins, tools config.
+- `.dependency-cruiser.cjs` - authoritative layer-DAG enforcement (ADR-001).
+- `knip.json` - dead-code config (ADR-002).
+- `quality.json` / `schemas/quality.schema.json` - the `./verify` manifest.
+- `.gitleaks.toml` - secret-scan rules and allowlist.
+- `openclaw.config.json5` - OpenClaw gateway, agents, plugins, tools config;
+  references the gateway token only via `${OPENCLAW_GATEWAY_TOKEN}` env
+  substitution (no literals).
 - `src/main.ts` / `src/index.ts` - entrypoints.
-- `.agent/` - current (legacy) canonical agent-knowledge dir.
 
 ## Sensitive Paths
+
 Changes here should trigger at least a lightweight review:
+
 - `.github/workflows/**`
-- `.githooks/**` (future)
-- `verify` (future)
-- `tools/**` (future top-level skill-owned dir; NOT `src/tools/`, which is
-  application code)
-- `openclaw.config.json5` (holds a gateway token literal)
-- `openclaw.config.json5.last-good` (snapshot of the above; same token)
-- `src/consts/openclaw.ts` (holds the same token literal as
-  `DEFAULT_GATEWAY_TOKEN`; `src/tools/gateway.ts` wires it as the live env
-  fallback - see Gate 0a D4 in the meta repo's `docs/quality-baseline.md`)
+- `.githooks/**`
+- `verify`, `tools/**` (the skill-owned quality tooling; NOT `src/tools/`,
+  which is application code)
+- `quality.json`, `schemas/**`
+- `openclaw.config.json5` and `openclaw.config.json5.last-good`
 - `.env*`
 - `scripts/run-task.sh`
 
+## Gateway Token Handling (env-only, fail-loud)
+
+The gateway token is read env-only via `getGatewayToken()` in
+`src/tools/gateway.ts` (`process.env[EnvVar.GATEWAY_TOKEN]`), which throws when
+unset. The former `DEFAULT_GATEWAY_TOKEN` fallback in `src/consts/openclaw.ts`
+was DELETED in S6 and the live config now substitutes the token from the
+environment (`${OPENCLAW_GATEWAY_TOKEN}`); the previously committed literal was
+rotated and is worthless. No token literal lives in source or config.
+
 ## No-Touch Zones
-The future repo-local `deep-review-refactor` skill must never autonomously
-edit these paths; findings here are emitted as a plan, not a fix. This list
-extends the skill-owned baseline (`.githooks/`, `.github/workflows/`,
-`./verify`, `tools/`, `auth/**`, `credentials/**`) and cannot shrink it.
-Repo-specific additions:
+
+These paths must never be edited autonomously by a deep review/refactor pass;
+findings here are emitted as a plan, not a fix. This list extends the
+skill-owned baseline (`.githooks/`, `.github/workflows/`, `./verify`, `tools/`,
+`auth/**`, `credentials/**`) and cannot shrink it. Repo-specific additions:
+
 - `openclaw.config.json5` (and `openclaw.config.json5.last-good`)
 - `.env*`
 
 ## Generated Or Transient Paths
+
 - `dist/` - TypeScript build output (`tsconfig` `outDir`); gitignored.
 - `.codegraph/` - local CodeGraph index; gitignored.
 - `.openclaw_state/` - OpenClaw runtime state; gitignored.
-- `reports/quality/` - quality-runner output (future; will be gitignored).
+- `reports/quality/` - quality-runner output; gitignored.
 
 ## Known False Positives
-Pointer only. Accepted tool/review false positives will live in
-`.agents/known-false-positives.md`, which S7 creates; it is seeded empty for
-now (no entries yet).
+
+Accepted tool/review false positives live in
+[known-false-positives.md](known-false-positives.md). Reviewers must not
+re-report them: the depcruise `no-orphans` warnings on two type-only modules,
+the gitleaks burned `dev_token_123`, and the knip `openclaw` unused-dependency
+finding.
 
 ## Verification Surface
-Current: `npm test` runs the chain
-`npm run typecheck && npm run lint && npm run smoke`, where
-`npm run smoke` runs the six smoke scripts in order: `smoke:react`,
-`smoke:patch`, `smoke:hitl`, `smoke:websearch`, `smoke:verify-report`,
-`smoke:logging`. `typecheck` is `tsc --noEmit`; `lint` is `eslint .`.
-Target: a `./verify` runner with `--staged`, `--fast`, and `--full` scopes,
-arriving in S6.
 
-## Layer Facts (draft)
-Draft pending owner decision D3; to be corrected against the measured
-dependency-cruiser graph (S5 measurement battery).
+- `./verify --staged` - pre-commit scope (staged files).
+- `./verify --fast` - pre-push scope; includes the depcruise architecture gate.
+- `./verify --full` - full scope; adds knip dead-code (report-only).
+- `./verify --doctor` - environment/toolchain self-check.
+- `npm test` - the legacy chain `npm run typecheck && npm run lint && npm run smoke`,
+  where `smoke` runs the six smoke scripts (`smoke:react`, `smoke:patch`,
+  `smoke:hitl`, `smoke:websearch`, `smoke:verify-report`, `smoke:logging`);
+  `typecheck` is `tsc --noEmit`, `lint` is `eslint .`.
 
-| Layer | Modules | May import from |
-|---|---|---|
-| L0 foundation | `src/types`, `src/consts` | (nothing) |
-| L1 base | `src/shared`, `src/state`, `src/prompts`, `src/logging` | L0 |
-| L2 capabilities | `src/tools`, `src/hitl`, `src/patching` | L0-L1 |
-| L3 orchestration | `src/swarm`, `src/graph` | L0-L2, and `graph -> swarm` (never `swarm -> graph`) |
-| L4 composition | `src/cli`, `src/main.ts`, `src/index.ts` | L0-L3 |
+## Layer Facts
 
-Note: `ls src/` confirms all listed module dirs exist; there are no extra
-top-level `src/` dirs (only files `src/index.ts` and `src/main.ts` beyond
-them). No discrepancies at draft time.
+The `src/` layer DAG is DECIDED (owner decision D3, session S5) and recorded in
+[architecture-decisions.md](architecture-decisions.md) ADR-001 (8 bands L0-L7,
+the only allowed intra-band edge being `graph -> swarm`). Do not duplicate the
+table here; ADR-001 is authoritative and is mirrored in `.dependency-cruiser.cjs`
+(the gate) and `eslint.config.js` (advisory).

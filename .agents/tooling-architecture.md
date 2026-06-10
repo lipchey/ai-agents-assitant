@@ -50,11 +50,11 @@ Lifecycle (`startOpenClawGateway`/`stopOpenClawGateway` in
 This is the correction that shrinks the whole task. The default registry now
 binds these logical aliases to local/web provider descriptors:
 
-| Logical tool | Real backend today | Touches OpenClaw gateway? |
-| --- | --- | --- |
-| `find_files`, `grep_code`, `ast_read`, `shell_exec`, `run_tests` | `local:*` descriptors wrapping `runLocalPseudoTool` → local `rg`/`npm`/`tsc`/`fs` processes ([local-tools.ts](../src/tools/local-tools.ts)) | **No** |
-| `web_lookup` | `web:lookup` descriptor wrapping `tavily_search` then `web_search` via `invokeGatewayTool` ([web-search.ts](../src/tools/web-search.ts)) | **Yes** |
-| `callLlm` (chat, not a tool) | `jsonPost` → `/v1/chat/completions` ([llm.ts](../src/tools/llm.ts)) | **Yes** (10 call sites) |
+| Logical tool                                                     | Real backend today                                                                                                                          | Touches OpenClaw gateway? |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `find_files`, `grep_code`, `ast_read`, `shell_exec`, `run_tests` | `local:*` descriptors wrapping `runLocalPseudoTool` → local `rg`/`npm`/`tsc`/`fs` processes ([local-tools.ts](../src/tools/local-tools.ts)) | **No**                    |
+| `web_lookup`                                                     | `web:lookup` descriptor wrapping `tavily_search` then `web_search` via `invokeGatewayTool` ([web-search.ts](../src/tools/web-search.ts))    | **Yes**                   |
+| `callLlm` (chat, not a tool)                                     | `jsonPost` → `/v1/chat/completions` ([llm.ts](../src/tools/llm.ts))                                                                         | **Yes** (10 call sites)   |
 
 Consequences:
 
@@ -78,18 +78,18 @@ goal asks for.
 The prior draft left these open; they are now decided. Rationale is in the
 referenced sections.
 
-| Question | Decision | Why |
-| --- | --- | --- |
-| Provider-id uniqueness | **Strict**: duplicate qualified id at registration throws | Fail at boot, not mid-run (§7). Matches the project's fail-at-build ethos. |
-| Replacing a logical tool | **Alias → qualified-id binding**, not priority shadowing | Brain keeps asking for `web_lookup`; config rebinds it. No prompt churn (§5, §6). |
-| Dynamic external tools | **Qualified ids** (`provider:tool`); Brain never sees raw strings | Collisions impossible; aliases stay the stable Brain vocabulary (§6). |
-| "Parallel" semantics | **Routing** (one alias → one provider), not fan-out execution | Retries/errors/idempotency stay well-defined; aggregation is a dedicated provider if ever needed (§5). |
-| Worker authorization | **Brain-owned `ToolAccessPolicy`**; providers only *suggest* roles via capability tags | A provider must not be able to grant itself a dangerous role (§7). |
-| Result/error shape | **Structured `ToolResult` + `ToolError`** envelope; built-ins preserve `ToolStatus`/exit-code | `verify` and `classifyFailure` depend on shape today (§8). |
-| Planner tool list | **Stable system prompt + appended runtime catalog**, policy-filtered | Protect prompt-cache anchors (§9). |
-| `transport/` + `llm/` extraction | Extract **`transport/` now**; `llm/` extraction optional/deferred | The boundary needs a neutral transport; moving the model layer is cosmetic (§4, §10). |
-| `verify` needing a non-local `run_tests` | **No.** `run_tests` is already local; the `run_tests` alias defaults to the local provider and is rebindable | Keeps the main graph simple; only the swarm needs full pluggability (§5). |
-| External folder vs external package | **Import boundary first**, package extraction last | Prove the seam before packaging work (§10, Phase 5). |
+| Question                                 | Decision                                                                                                     | Why                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Provider-id uniqueness                   | **Strict**: duplicate qualified id at registration throws                                                    | Fail at boot, not mid-run (§7). Matches the project's fail-at-build ethos.                             |
+| Replacing a logical tool                 | **Alias → qualified-id binding**, not priority shadowing                                                     | Brain keeps asking for `web_lookup`; config rebinds it. No prompt churn (§5, §6).                      |
+| Dynamic external tools                   | **Qualified ids** (`provider:tool`); Brain never sees raw strings                                            | Collisions impossible; aliases stay the stable Brain vocabulary (§6).                                  |
+| "Parallel" semantics                     | **Routing** (one alias → one provider), not fan-out execution                                                | Retries/errors/idempotency stay well-defined; aggregation is a dedicated provider if ever needed (§5). |
+| Worker authorization                     | **Brain-owned `ToolAccessPolicy`**; providers only _suggest_ roles via capability tags                       | A provider must not be able to grant itself a dangerous role (§7).                                     |
+| Result/error shape                       | **Structured `ToolResult` + `ToolError`** envelope; built-ins preserve `ToolStatus`/exit-code                | `verify` and `classifyFailure` depend on shape today (§8).                                             |
+| Planner tool list                        | **Stable system prompt + appended runtime catalog**, policy-filtered                                         | Protect prompt-cache anchors (§9).                                                                     |
+| `transport/` + `llm/` extraction         | Extract **`transport/` now**; `llm/` extraction optional/deferred                                            | The boundary needs a neutral transport; moving the model layer is cosmetic (§4, §10).                  |
+| `verify` needing a non-local `run_tests` | **No.** `run_tests` is already local; the `run_tests` alias defaults to the local provider and is rebindable | Keeps the main graph simple; only the swarm needs full pluggability (§5).                              |
+| External folder vs external package      | **Import boundary first**, package extraction last                                                           | Prove the seam before packaging work (§10, Phase 5).                                                   |
 
 ## 4. Four layers (separation of concerns)
 
@@ -174,72 +174,62 @@ export type ToolAlias = ToolName;
 export type QualifiedToolId = `${string}:${string}`;
 
 /* Capability tags a provider declares; the Brain policy reasons over these, not over tool names. */
-export type ToolCapability =
-    | "read_workspace"
-    | "write_workspace"
-    | "exec_allowlisted"
-    | "external_network";
+export type ToolCapability = "read_workspace" | "write_workspace" | "exec_allowlisted" | "external_network";
 
 /* Structured failure kind so routing does not string-match error text (§8). */
-export type ToolErrorKind =
-    | "validation"
-    | "policy"
-    | "timeout"
-    | "environment"
-    | "provider_unavailable"
-    | "execution";
+export type ToolErrorKind = "validation" | "policy" | "timeout" | "environment" | "provider_unavailable" | "execution";
 
 /* Neutral envelope returned by every invocation; built-ins preserve ToolStatus + exit code. */
 export interface ToolResult {
-    readonly status: ToolStatus;
-    readonly provider: string;
-    readonly toolId: QualifiedToolId;
-    readonly alias?: ToolAlias;
-    readonly exitCode?: number;        // preserved for shell_exec / run_tests evidence
-    readonly details?: JsonObject;
-    readonly content?: string;
-    readonly raw?: JsonObject;         // untouched provider payload for dynamic tools
+  readonly status: ToolStatus;
+  readonly provider: string;
+  readonly toolId: QualifiedToolId;
+  readonly alias?: ToolAlias;
+  readonly exitCode?: number; // preserved for shell_exec / run_tests evidence
+  readonly details?: JsonObject;
+  readonly content?: string;
+  readonly raw?: JsonObject; // untouched provider payload for dynamic tools
 }
 
 export class ToolError extends Error {
-    readonly kind: ToolErrorKind;
-    readonly provider?: string;
-    readonly toolId?: QualifiedToolId;
+  readonly kind: ToolErrorKind;
+  readonly provider?: string;
+  readonly toolId?: QualifiedToolId;
 }
 
 /* One executable capability, owned by exactly one provider. */
 export interface ToolDescriptor {
-    readonly id: QualifiedToolId;
-    readonly aliases?: readonly ToolAlias[];     // logical names the Brain may bind to this id
-    readonly capabilities: readonly ToolCapability[];
-    readonly suggestedKinds?: readonly WorkerKind[]; // hint only; the Brain policy decides (§7)
-    readonly describe: string;                   // short, schema-like line for the catalog render
-    validate(args: ToolArgs): SanitizedAction;   // Brain-side planner feedback (advisory)
-    invoke(args: ToolArgs, context: ToolCallContext): Promise<ToolResult>; // authoritative guard + execution
+  readonly id: QualifiedToolId;
+  readonly aliases?: readonly ToolAlias[]; // logical names the Brain may bind to this id
+  readonly capabilities: readonly ToolCapability[];
+  readonly suggestedKinds?: readonly WorkerKind[]; // hint only; the Brain policy decides (§7)
+  readonly describe: string; // short, schema-like line for the catalog render
+  validate(args: ToolArgs): SanitizedAction; // Brain-side planner feedback (advisory)
+  invoke(args: ToolArgs, context: ToolCallContext): Promise<ToolResult>; // authoritative guard + execution
 }
 
 /* One backend module (local, web, mcp, mock, ...). Owns its own runtime lifecycle. */
 export interface ToolProvider {
-    readonly name: string;                       // stable id for telemetry and conflict messages
-    readonly catalog: readonly ToolDescriptor[];
-    start?(): Promise<void>;                      // idempotent; no-op when nothing external to start
-    stop?(): Promise<void>;
+  readonly name: string; // stable id for telemetry and conflict messages
+  readonly catalog: readonly ToolDescriptor[];
+  start?(): Promise<void>; // idempotent; no-op when nothing external to start
+  stop?(): Promise<void>;
 }
 
 /* Brain-owned authorization and prompt rendering. */
 export interface ToolAccessPolicy {
-    allowedAliases(kind: WorkerKind, catalog: readonly ToolDescriptor[]): readonly ToolAlias[];
-    validate(kind: WorkerKind, alias: ToolAlias, args: ToolArgs): SanitizedAction;
-    renderCatalog(kind: WorkerKind): string;     // runtime context, not a system-prompt anchor (§9)
+  allowedAliases(kind: WorkerKind, catalog: readonly ToolDescriptor[]): readonly ToolAlias[];
+  validate(kind: WorkerKind, alias: ToolAlias, args: ToolArgs): SanitizedAction;
+  renderCatalog(kind: WorkerKind): string; // runtime context, not a system-prompt anchor (§9)
 }
 
 /* The composite the Brain talks to. Aliases in, structured results out. */
 export interface ToolRegistry {
-    invoke(alias: ToolAlias, args: ToolArgs, context: ToolCallContext): Promise<ToolResult>;
-    allowedAliases(kind: WorkerKind): readonly ToolAlias[]; // replaces the static WORKER_TOOLS lookup
-    renderCatalog(kind: WorkerKind): string;                // replaces the static prompt tool list
-    start(): Promise<void>;                                  // fan-out to every provider, in order
-    stop(): Promise<void>;                                   // reverse order
+  invoke(alias: ToolAlias, args: ToolArgs, context: ToolCallContext): Promise<ToolResult>;
+  allowedAliases(kind: WorkerKind): readonly ToolAlias[]; // replaces the static WORKER_TOOLS lookup
+  renderCatalog(kind: WorkerKind): string; // replaces the static prompt tool list
+  start(): Promise<void>; // fan-out to every provider, in order
+  stop(): Promise<void>; // reverse order
 }
 ```
 
@@ -254,13 +244,13 @@ for the core path while allowing open extension at the edges.
 The existing four independent guards ([code-guidelines.md](code-guidelines.md) §7)
 survive the split and are strengthened by landing on opposite sides of the port.
 
-| Guard | Owner after split | Where it lives |
-| --- | --- | --- |
-| Which role may request which tool | **Brain** | `ToolAccessPolicy.allowedAliases(kind, catalog)` — replaces the static `WORKER_TOOLS` map. Providers only *suggest* via `suggestedKinds`/`capabilities`; the policy is authoritative so a provider cannot self-grant a role. |
-| Arg shaping + planner feedback | Per-tool (advisory) | `ToolDescriptor.validate()` — the per-tool cases extracted from the `sanitizeToolArgs` switch in [tool-validation.ts](../src/swarm/tool-validation.ts). |
-| Workspace path bound | Provider (authoritative) | inside each local descriptor's `invoke()`, via the shared `resolveWorkspacePath`. Runs **always**, regardless of caller checks. |
-| Shell allowlist re-check | Provider (authoritative) | inside the exec descriptor's `invoke()`, via `SAFE_DIRECT_EXEC_COMMANDS`/`SAFE_COMMAND_SPECS`. |
-| Shared contract (`ToolName`, `ToolStatus`, `SAFE_DIRECT_EXEC_COMMANDS`) | Shared | stays defined once in [src/consts/tools.ts](../src/consts/tools.ts). |
+| Guard                                                                   | Owner after split        | Where it lives                                                                                                                                                                                                               |
+| ----------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Which role may request which tool                                       | **Brain**                | `ToolAccessPolicy.allowedAliases(kind, catalog)` — replaces the static `WORKER_TOOLS` map. Providers only _suggest_ via `suggestedKinds`/`capabilities`; the policy is authoritative so a provider cannot self-grant a role. |
+| Arg shaping + planner feedback                                          | Per-tool (advisory)      | `ToolDescriptor.validate()` — the per-tool cases extracted from the `sanitizeToolArgs` switch in [tool-validation.ts](../src/swarm/tool-validation.ts).                                                                      |
+| Workspace path bound                                                    | Provider (authoritative) | inside each local descriptor's `invoke()`, via the shared `resolveWorkspacePath`. Runs **always**, regardless of caller checks.                                                                                              |
+| Shell allowlist re-check                                                | Provider (authoritative) | inside the exec descriptor's `invoke()`, via `SAFE_DIRECT_EXEC_COMMANDS`/`SAFE_COMMAND_SPECS`.                                                                                                                               |
+| Shared contract (`ToolName`, `ToolStatus`, `SAFE_DIRECT_EXEC_COMMANDS`) | Shared                   | stays defined once in [src/consts/tools.ts](../src/consts/tools.ts).                                                                                                                                                         |
 
 **Trusted-code boundary (explicit).** A `ToolProvider` is executable code; a TS
 interface does not sandbox it. In-repo providers are trusted. Any future
@@ -272,7 +262,7 @@ access. This is a stated boundary, not built now.
 
 Today `verify` reads `extractToolStatus(report)` for `{ status, exitCode }`
 ([graph/parsers.ts](../src/graph/parsers.ts), [verify.ts](../src/graph/nodes/verify.ts)),
-and the worker treats non-zero shell exit as *evidence, not failure*
+and the worker treats non-zero shell exit as _evidence, not failure_
 ([react-worker.ts](../src/swarm/react-worker.ts)). `classifyFailure()`
 string-matches messages for "gateway/timeout/permission/…".
 
@@ -364,6 +354,7 @@ deferred.** Each phase ends green on `npm test` (typecheck + lint + the four smo
 suites).
 
 ### Phase 0 — Neutralize names, no behavior change
+
 - Rename public tool types `OpenClawRpcArgs`/`OpenClawRpcOptions` →
   `ToolArgs`/`ToolCallOptions` (≈10 files; mechanical).
 - Split the `ToolName` union: keep Brain aliases (`find_files`, `grep_code`,
@@ -372,6 +363,7 @@ suites).
   [consts/web.ts](../src/consts/web.ts). Lowest risk; establishes the vocabulary.
 
 ### Phase 1 — Registry facade + DI, no file moves
+
 - Add `ToolRegistry` as a thin facade over today's `openclawRpc`, plus
   `createDefaultToolRegistry()`.
 - Inject into `verify` via `configurable[TOOL_REGISTRY_CONFIG_KEY]` and into the
@@ -380,6 +372,7 @@ suites).
   `verify` and the ReAct loop in tests without starting any OpenClaw path.
 
 ### Phase 2 — Structured contracts + Brain-owned policy
+
 - Introduce `ToolResult`/`ToolError`; built-ins preserve `status`/`exitCode`;
   `verify`/`classifyFailure` read structured fields.
 - Convert the `sanitizeToolArgs` switch into per-descriptor `validate()`.
@@ -387,6 +380,7 @@ suites).
   stable, catalog appended to user context.
 
 ### Phase 3 — Real provider split + alias binding + parallel (the requested target)
+
 - Split into `providers/local/` (workspace+exec, no gateway) and `providers/web/`
   (gateway-backed lookup). Extract `transport/`, `workspace/`, `artifacts/` to
   their shared owners (this also removes the `patching → tools` edge).
@@ -396,10 +390,12 @@ suites).
   `callLlm`/models/pricing into `src/llm/`.
 
 ### Phase 4 — Fully dynamic catalog (only if a real need appears)
+
 - Namespaced dynamic tools the planner discovers at runtime; registry-derived
   `allowedAliases`/`renderCatalog`; first MCP adapter.
 
 ### Phase 5 — Package-level extraction (optional)
+
 - Once the contract is stable, move a provider to `packages/<provider>/` (or an
   external module) imported through the same factory. "Replace OpenClaw with a
   different module" becomes a packaging concern, not a graph refactor.

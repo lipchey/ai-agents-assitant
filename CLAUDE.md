@@ -1,10 +1,11 @@
-# `ai-agents-assitant` (LangGraph Agent Framework)
+@AGENTS.md
 
-Welcome to the `ai-agents-assitant` project! This repository contains a dual-graph autonomous development agent built with `@langchain/langgraph` in TypeScript.
+## Claude Code
 
-**All project knowledge lives in the `.agent/` directory.** Please read the following files before making changes:
+This file is a Claude Code adapter. Keep durable project knowledge in `AGENTS.md`
+and `.agents/`; add Claude-specific notes here only when they cannot live in the
+shared router.
 
-1. **[.agent/memory.md](.agent/memory.md)**: Contains the core architecture (Main Graph vs Swarm Sub-Graph), deployment context, and open issues.
-2. **[.agent/guidelines.md](.agent/guidelines.md)**: Coding standards, typing rules, and operational guidelines specific to this LangGraph implementation.
-3. **[.agent/code-guidelines.md](.agent/code-guidelines.md)**: Project structure conventions — constants, shared helpers, module decomposition/barrels, typing, and comment rules. Follow when adding or changing code.
-4. **[.agent/tasks.md](.agent/tasks.md)**: The current active task list for the project.
+If future Claude path-scoped rules are needed, keep `.claude/rules/` as an
+adapter that points to or mirrors canonical `.agents/` guidance. Do not make
+`.claude/rules/` a second source of truth.

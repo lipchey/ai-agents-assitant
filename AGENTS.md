@@ -1,12 +1,52 @@
-# AGENTS.md — entrypoint for non-Claude agents (Codex, Antigravity, etc.)
+# AGENTS.md - shared entrypoint for Codex and non-Claude agents
 
-**Welcome to `ai-agents-assitant`!**
+Welcome to `ai-agents-assitant`: a dual-graph autonomous development agent
+(Main Graph + Swarm Sub-Graph) built with `@langchain/langgraph` in TypeScript.
+This file is a thin router; Claude Code enters through `CLAUDE.md`, which
+imports this file. Durable project knowledge lives in `.agents/` - read it,
+don't duplicate it here.
 
-This file acts as a thin router. **All core project knowledge lives in `.agent/`** — read it, don't duplicate it here.
-(Claude enters through root `CLAUDE.md`, which routes to the same `.agent/` files.)
+## Resuming work
 
-## Read first (same for every agent)
-- `.agent/memory.md` — The architecture of our LangGraph agent (Main Graph vs Swarm Sub-Graph) and the current state of the code.
-- `.agent/guidelines.md` — Working rules: strict TypeScript guidelines, LangGraph Annotation usage, and MEMORY AUTOMATION. **Follow every rule in it.**
-- `.agent/code-guidelines.md` — Project structure conventions: constants, shared helpers, module decomposition + barrels, typing, comments. **Follow when changing code.**
-- `.agent/tasks.md` — Currently open action items for building out the agent framework.
+If the user says "продовжуй роботу" / "продовжуй" / "continue" / "resume",
+follow `.agents/resume-protocol.md`: read `.agents/handoffs/STATE.md`, perform
+one transition, stop and report. Batched refactor sessions ("виконай сесію
+R<n>") follow `.agents/session-protocol.md`. The trigger is standing
+authorization to commit that session's work to `main` (not to push).
+
+## Read first
+
+- `.agents/README.md` - map of the agent knowledge directory.
+- `.agents/memory.md` - dual-graph architecture and current code state.
+- `.agents/guidelines.md` - LangGraph/TypeScript working rules and memory
+  automation. Follow every rule.
+- `.agents/code-guidelines.md` - project structure conventions; follow when
+  changing code.
+- `.agents/core-code-guidelines.md` - the always-on 80/20 code baseline.
+- `.agents/project-facts.md` - sensitive paths, no-touch zones, the
+  verification surface, gateway-token handling.
+- `.agents/architecture-decisions.md` - all accepted decisions (ADR-001 layer
+  DAG, ADR-002 knip).
+- `.agents/known-false-positives.md` - accepted tool/review false positives.
+- `.agents/tooling-architecture.md` - the pluggable tool-provider design.
+- `.agents/review-guides/` - architecture and security review guides
+  (loaded by explicit instruction).
+- `.agents/tasks.md` - live backlog and the R0-R9 refactor schedule; live
+  pointer in `.agents/handoffs/STATE.md`.
+
+## Working rules
+
+- Verification = `./verify` scopes: `--staged` (pre-commit hook), `--fast`
+  (pre-push hook), `--full`, `--doctor`; `npm test` runs the legacy
+  typecheck/lint/smoke chain. Run the strongest available check before
+  declaring work done.
+- Prefer CodeGraph first for code/project navigation where available.
+- Deterministic gates run before AI judgment; never re-report what
+  `tsc`/`eslint`/`dependency-cruiser`/`knip`/`gitleaks`/`./verify` already prove
+  or what `.agents/known-false-positives.md` accepts.
+- Treat `.agents/` as checked-in project knowledge, not private agent memory;
+  route to it instead of duplicating durable knowledge. New decisions go to
+  `.agents/architecture-decisions.md` as a new ADR.
+- Single-developer repo: commit directly to `main` only when the user asks
+  (the resume/session triggers are the documented exception). No branches,
+  PRs, or pushes unless explicitly requested.

@@ -4,8 +4,8 @@
 > a full changelog. Keep it compact and update it when architecture, unresolved
 > context, or working contracts change.
 
-Read with [.agent/guidelines.md](guidelines.md), [.agent/code-guidelines.md](code-guidelines.md),
-and [.agent/tasks.md](tasks.md).
+Read with [.agents/guidelines.md](guidelines.md), [.agents/code-guidelines.md](code-guidelines.md),
+and [.agents/tasks.md](tasks.md).
 
 ## 1. Project Goal
 
@@ -29,6 +29,7 @@ Entry point: `src/main.ts` starts/probes OpenClaw Gateway, builds
 HITL resolver, then prints final answer, patch report, and telemetry.
 
 Topology in `src/graph/build.ts`:
+
 - `complexityRouter` routes tasks to:
   - `directResponder -> finalize` for trivial work.
   - `frontierArchitect -> optional claudeArchitect -> finalize` for `pure_reasoning`.
@@ -40,6 +41,7 @@ Topology in `src/graph/build.ts`:
   patch-format retry cap, then finalize.
 
 Model cascade in `src/tools/models.ts`:
+
 - `router`, `directResponder`, `firewall`, and worker planners use
   DeepSeek V4 Flash through `ModelRole.ROUTER`/`FIREWALL`/`WORKER`.
 - `frontierArchitect`, `frontierCritic`, and swarm `smeOracle` use
@@ -50,6 +52,7 @@ Model cascade in `src/tools/models.ts`:
   agent; Anthropic payloads omit temperature when adaptive thinking is enabled.
 
 Routing guards in `src/graph/routing.ts` and `src/graph/budget.ts`:
+
 - Soft USD budget: `GraphState.costBudgetUsd`, default `$1.00`
   (`AGENT_COST_BUDGET_USD` override). Routers stop expensive next steps when
   `totalCost + projectedCost` nears the soft ceiling.
@@ -66,6 +69,7 @@ for every main-graph swarm invocation, isolating HITL checkpoints between the
 initial context fetch and targeted refetches.
 
 Flow:
+
 - `leadDelegator` classifies the subtask into a `WorkerKind`, seeded by
   `selectWorkerKind()` and falling back to the heuristic if the model call fails.
 - Workers (`codeExplorer`, `infraOps`, `webResearcher`) are bounded ReAct agents:
@@ -89,6 +93,7 @@ to `smeOracle`.
 
 Swarm `humanGate` always calls LangGraph `interrupt()` with a structured
 `HitlInterruptPayload`; availability is decided by the resolver:
+
 - Interactive TTY runs use `createStdinHitlResolver()` by default.
 - Falsey `AGENT_HITL` or non-TTY runs use `autoAbortResolver()`.
 - `driveSwarmWithHitl()` resumes with `Command({ resume })`; retry guidance feeds
@@ -105,6 +110,7 @@ Patch application is opt-in through `AGENT_APPLY_PATCHES`; when disabled,
 `applyPatches` is a no-op before `verify`.
 
 When enabled:
+
 - `claudeCoder` must emit full-file blocks:
   `<<<PATCH file="relative/path">>> ... <<<END PATCH>>>`.
 - `parsePatchBlocks()` ignores prose outside blocks; later blocks for the same
@@ -142,6 +148,7 @@ extensions. Internal subsystem modules still import concrete files to preserve
 cycle safety.
 
 OpenClaw details:
+
 - Chat calls use `/v1/chat/completions` with `x-openclaw-model`; default body
   model is `openclaw/default` unless using the `strong-reasoning` agent.
 - Tool execution routes through `ToolRegistry`, injected through
@@ -178,7 +185,8 @@ present, and `UsageStats` is a sparse `UsageKey`-indexed record with totals in
 
 ## 5. Code Organization Rules That Matter
 
-Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
+Follow [.agents/code-guidelines.md](code-guidelines.md). High-signal reminders:
+
 - Define runtime scalars once in `src/consts/*`; pair each closed `as const`
   object with its same-named union type in the same consts module. There is no
   separate `src/types/consts/*` layer.
@@ -213,6 +221,7 @@ Follow [.agent/code-guidelines.md](code-guidelines.md). High-signal reminders:
 ## 6. Current Status and Backlog
 
 Current status as of 2026-06-08:
+
 - MVP is executable through `npm start -- "<task>"`.
 - RTK local exec integration was reviewed and rejected for the runtime verify
   path; the dependency-free replacement is compact `verificationReport`
@@ -233,12 +242,13 @@ Current status as of 2026-06-08:
 Status update 2026-06-10: a full project review and a boilerplate-refactor
 design/plan were authored (no code changes yet). The repo is scheduled to
 become a profile-driven multi-LLM boilerplate via sessions R1–R9 — see
-`.agent/tasks.md` § Active for the schedule and pointers; execution protocol
+`.agents/tasks.md` § Active for the schedule and pointers; execution protocol
 lives in `.agents/session-protocol.md` (cross-runtime review chain in
 `.agents/review-chain.md`). Working-tree `.env` keys must be rotated (R0)
 before any session runs.
 
 Open backlog:
+
 - Tool-provider hardening: extract `transport/`, `workspace/`, and `artifacts/`
   to their proposed subsystem roots; add a fake-provider test that drives
   `verify` and ReAct without OpenClaw; broaden replacement coverage beyond the
@@ -254,7 +264,7 @@ architecture, invariants, and backlog. Removed stale details that conflicted
 with code, especially older `humanGate` blocking notes and patch notes that
 omitted patch-format retries. Checked `src/graph/*`, `src/state/*`,
 `src/swarm/*`, `src/tools/*`, `src/patching/*`, `src/hitl/*`, `src/index.ts`,
-`src/main.ts`, and `package.json`. Companion cleanup reduced `.agent/tasks.md`
+`src/main.ts`, and `package.json`. Companion cleanup reduced `.agents/tasks.md`
 to active tasks and backlog only.
 
 Consistency refactor (same day): `WORKER_PROMPTS` moved to `src/prompts/`

@@ -37,7 +37,7 @@ silently at runtime instead of at compile time.
 - Tuning knobs are named constants with a one-line rationale
   (`CONFIDENCE_ESCALATION_THRESHOLD`, `DEFAULT_COST_BUDGET_USD`, the
   `PROJECTED_*` budget figures, the `MAX_*` loop caps).
-- Legitimately literal exceptions: prompt copy that *documents* a tool/command to
+- Legitimately literal exceptions: prompt copy that _documents_ a tool/command to
   the model, user-facing error-message text, and pure type annotations
   (e.g. `responseFormat?: "json_object"`).
 
@@ -66,8 +66,8 @@ never re-list those fields inline.
 - The root of `src/` is reserved for:
   - executable entrypoint (`main.ts`);
   - the single public export barrel (`index.ts`).
-  Do not add feature modules, domain enums, parsers, patching logic, HITL
-  drivers, adapters, or runtime data files directly under `src/`.
+    Do not add feature modules, domain enums, parsers, patching logic, HITL
+    drivers, adapters, or runtime data files directly under `src/`.
 - Put files next to their strongest owner:
   - graph orchestration in `src/graph/`;
   - graph node implementations in `src/graph/nodes/`;
@@ -105,7 +105,7 @@ never re-list those fields inline.
   subsystem boundary may import from the folder barrel instead of a concrete
   file when the symbol is part of the folder's public surface. Import the
   owning folder itself, not `/index.ts`.
-- **Cycle safety:** modules *inside* a subsystem import each other by concrete
+- **Cycle safety:** modules _inside_ a subsystem import each other by concrete
   file, **not** the barrel. A subsystem barrel must not be imported by a file it
   re-exports. Keep dependencies a DAG (shared types in a leaf module, e.g.
   `types/tools/rpc.ts`, `tools/errors.ts`).

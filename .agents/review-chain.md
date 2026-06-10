@@ -32,7 +32,7 @@ Agent tool. No `--dangerously-skip-permissions`, no `danger-full-access`.
      `docs/superpowers/plans/2026-06-10-boilerplate-refactor.md`, and spec
      §3 contracts in
      `docs/superpowers/specs/2026-06-10-boilerplate-refactor-design.md`;
-   - known/accepted findings NOT to re-report (from `.agent/tasks.md`
+   - known/accepted findings NOT to re-report (from `.agents/tasks.md`
      backlog and `.agents/known-false-positives.md` if present);
    - the P1/P2/P3 severity scale (P1 likely-broken behavior or security;
      P2 concrete correctness/maintainability gap; P3 polish);
@@ -60,7 +60,7 @@ Agent tool. No `--dangerously-skip-permissions`, no `danger-full-access`.
 ## Stop conditions
 
 - Confirmed-but-frozen-contract findings, all P3s, and anything still open
-  after the loop cap (one fix pass + one re-review) go to `.agent/tasks.md`
+  after the loop cap (one fix pass + one re-review) go to `.agents/tasks.md`
   backlog as `needs-human`, never auto-applied.
 - Handoff files under `/tmp/claude/<slug>/` are disposable; the durable
   record is the commits + the session report + backlog entries.

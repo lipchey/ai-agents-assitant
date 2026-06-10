@@ -12,7 +12,7 @@ repo (typically a cmux pane running `claude`):
 - `виконай сесію R<n>` / `execute session R<n>` / `run session R<n>` —
   execute exactly that session.
 - `виконай наступну сесію R` / `next R session` — the first unchecked
-  `R<n>` in `.agent/tasks.md`.
+  `R<n>` in `.agents/tasks.md`.
 
 Typing the trigger IS the standing authorization to commit that session's
 work to `main`. It is NOT authorization to push; pushing needs an explicit
@@ -26,7 +26,7 @@ affirmative line in the same message.
    "Standing rules" preamble.
 3. Spec contracts:
    `docs/superpowers/specs/2026-06-10-boilerplate-refactor-design.md` §2–§3.
-4. `.agent/memory.md`, `.agent/guidelines.md`, `.agent/code-guidelines.md`
+4. `.agents/memory.md`, `.agents/guidelines.md`, `.agents/code-guidelines.md`
    (repo engineering rules — binding), `.agents/project-facts.md`
    (sensitive paths / no-touch zones).
 
@@ -41,11 +41,11 @@ affirmative line in the same message.
   `./verify --fast` instead (whichever exists).
 - Commits: per the plan's pinned messages; commit directly to `main`; no
   branches/PRs; never push without an explicit line.
-- Out-of-scope findings: record in `.agent/tasks.md` § Backlog with one
+- Out-of-scope findings: record in `.agents/tasks.md` § Backlog with one
   line of context; do not fix inline.
-- Memory automation (`.agent/guidelines.md`) applies: update
-  `.agent/memory.md` when architecture changed; tick the plan checkboxes
-  and the `R<n>` line in `.agent/tasks.md`.
+- Memory automation (`.agents/guidelines.md`) applies: update
+  `.agents/memory.md` when architecture changed; tick the plan checkboxes
+  and the `R<n>` line in `.agents/tasks.md`.
 
 ## Review (every R-session = `codex-required`)
 
