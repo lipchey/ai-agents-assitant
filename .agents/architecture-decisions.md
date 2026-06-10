@@ -100,6 +100,14 @@ A healthy baseline run reports 107 modules, 336 dependencies, 0 errors, and 2
 warnings (the orphan false positives below). The check is blocking on errors
 only; zero error findings is the contract.
 
+The layer rules are a CLOSED enumeration. Adding a new top-level `src/` dir
+therefore requires updating, together: this ADR's layer table, the depcruise
+layer regexes in `.dependency-cruiser.cjs`, and the eslint mirror in
+`eslint.config.js`. Until that is done, the catch-all guard rules
+`unlayered-src-outgoing` / `unlayered-src-incoming` (severity error) fail loudly
+in both directions, so an unlayered dir cannot import or be imported with zero
+violations.
+
 `eslint-plugin-boundaries` (in `eslint.config.js`) MIRRORS the same layer rules
 for in-editor feedback ONLY. It is wired at `warn` severity, so it surfaces as
 editor squiggles and in `eslint .` output but never fails lint or
@@ -108,7 +116,10 @@ extensionless TypeScript imports via `eslint-import-resolver-typescript`. The
 two tools are complementary: dependency-cruiser is the gate but, with
 `tsPreCompilationDeps`, does not trace pure type-only RE-EXPORTS
 (`export type { X } from "..."`); the boundaries mirror does see those, so it
-provides earlier, broader feedback at the cost of being advisory.
+provides earlier, broader feedback at the cost of being advisory. The eslint
+mirror shares the same closed-enumeration design (one element per known dir) and
+stays advisory (warn-only), so depcruise remains the only gate: it is the catch-all
+guard rules there, not in eslint, that turn an unlayered dir into a hard failure.
 
 ### Known false positives
 

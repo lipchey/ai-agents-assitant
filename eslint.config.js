@@ -36,6 +36,7 @@ const projectPlugin = {
  * only from strictly lower layers plus same-layer siblings", with the single
  * intra-L6 exception graph -> swarm allowed, swarm -> graph forbidden.
  */
+// TODO: migrate to boundaries/dependencies + v6 object selectors (plugin emits v5-deprecation notices); depcruise stays the authoritative gate.
 const boundariesElements = [
     { type: "consts", mode: "full", pattern: "src/consts/**/*" },
     { type: "types", mode: "full", pattern: "src/types/**/*" },
