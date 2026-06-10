@@ -36,8 +36,11 @@ Agent tool. No `--dangerously-skip-permissions`, no `danger-full-access`.
      backlog and `.agents/known-false-positives.md` if present);
    - the P1/P2/P3 severity scale (P1 likely-broken behavior or security;
      P2 concrete correctness/maintainability gap; P3 polish);
-   - that deterministic checks (`npm test`) are already green — judge what
-     they cannot prove;
+   - the actual deterministic boundary that ran (`./verify --fast` since S6, or
+     stronger if `--full` was run) is already green — name that scope so the
+     reviewer judges what it cannot prove; `npm test` is only the legacy/fallback
+     surface and understates the gates (depcruise arch, gitleaks scan) that
+     `./verify --fast` adds;
    - instruction to write findings to `/tmp/claude/<slug>/codex-findings.md`.
 
 2. **Verify + fix (Opus subagent, fixer seat).** Dispatch one subagent
@@ -49,8 +52,9 @@ Agent tool. No `--dangerously-skip-permissions`, no `danger-full-access`.
    RunSummary once landed; pinned commit messages; `.agents/project-facts.md`
    no-touch zones — `.env*`, `openclaw.config.json5*`, CI workflows). If a
    fix needs a frozen-contract change, classify it `needs-owner-decision`
-   and record it. Run `npm test`; **revert any fix that cannot go green**
-   (no red commit). Commit each accepted fix; write
+   and record it. Re-run the session boundary (`./verify --fast`, or stronger
+   if the session ran it; `npm test` is the legacy fallback); **revert any fix
+   that cannot go green** (no red commit). Commit each accepted fix; write
    `/tmp/claude/<slug>/opus-result.md`.
 
 3. **Re-review (Codex).** Headless re-review of the **fix delta only**
