@@ -1,0 +1,149 @@
+name: Quality
+
+# Verify-driven CI. PRs run ./verify --fast (read-only token); pushes to main and
+# the weekly schedule run ./verify --full and upsert a single red-main tracking issue
+# on failure. No pull_request_target, no tag triggers, no secret echoing.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, Sunday 06:17 UTC (quiet slot, off the top of the hour).
+    - cron: "17 6 * * 0"
+
+# Read-only by default for the whole workflow; the full job widens to issues: write.
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    name: PR fast (verify --fast)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: quality-fast-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        # actions/checkout v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          # Full history so the gitleaks history scan (`gitleaks git`) sees real
+          # commits, not a shallow stub.
+          fetch-depth: 0
+      - name: Setup Node
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          # Engine-approved version; matches legacy ci.yml and engines range.
+          node-version: 24.15.0
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install pinned gitleaks
+        run: |
+          set -euo pipefail
+          # Pinned to TOOL_VERSIONS.json (gitleaks 8.30.1). Checksum source:
+          # https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt
+          VERSION="8.30.1"
+          TARBALL="gitleaks_${VERSION}_linux_x64.tar.gz"
+          SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          URL="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${TARBALL}"
+          curl --fail --silent --show-error --location -o "${TARBALL}" "${URL}"
+          echo "${SHA256}  ${TARBALL}" | sha256sum -c -
+          mkdir -p "${HOME}/.local/bin"
+          tar -xzf "${TARBALL}" -C "${HOME}/.local/bin" gitleaks
+          chmod +x "${HOME}/.local/bin/gitleaks"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Verify (fast)
+        run: ./verify --fast
+
+  full:
+    name: Full (verify --full)
+    # Push to main and the weekly schedule share one job body so the red-main
+    # upsert lives in exactly one place. PRs never reach this job.
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    concurrency:
+      # Serialize full runs per ref; do not cancel an in-flight full run.
+      group: quality-full-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        # actions/checkout v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          # Full history so the gitleaks history scan (`gitleaks git`) sees real
+          # commits, not a shallow stub.
+          fetch-depth: 0
+      - name: Setup Node
+        # actions/setup-node v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          # Engine-approved version; matches legacy ci.yml and engines range.
+          node-version: 24.15.0
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install pinned gitleaks
+        run: |
+          set -euo pipefail
+          # Pinned to TOOL_VERSIONS.json (gitleaks 8.30.1). Checksum source:
+          # https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt
+          VERSION="8.30.1"
+          TARBALL="gitleaks_${VERSION}_linux_x64.tar.gz"
+          SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          URL="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${TARBALL}"
+          curl --fail --silent --show-error --location -o "${TARBALL}" "${URL}"
+          echo "${SHA256}  ${TARBALL}" | sha256sum -c -
+          mkdir -p "${HOME}/.local/bin"
+          tar -xzf "${TARBALL}" -C "${HOME}/.local/bin" gitleaks
+          chmod +x "${HOME}/.local/bin/gitleaks"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Verify (full)
+        id: verify
+        run: ./verify --full
+      - name: Upsert red-main issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # All interpolation flows through env (never inline in the script body).
+          # Commit messages are intentionally excluded (script-injection hygiene).
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+          FAIL_SCOPE: verify --full (event ${{ github.event_name }})
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          LABEL="red-main"
+          # Ensure the label exists (idempotent; ignore "already exists").
+          gh label create "${LABEL}" \
+            --repo "${REPO}" \
+            --color B60205 \
+            --description "main is red: verify --full failed in CI" \
+            >/dev/null 2>&1 || true
+          BODY="$(printf 'main is red.\n\n- Run: %s\n- Commit: %s\n- Failing scope: %s\n' \
+            "${RUN_URL}" "${COMMIT_SHA}" "${FAIL_SCOPE}")"
+          # Find an existing OPEN red-main issue (oldest first); reuse it if present.
+          EXISTING="$(gh issue list \
+            --repo "${REPO}" \
+            --state open \
+            --label "${LABEL}" \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number // empty')"
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --repo "${REPO}" --body "${BODY}"
+          else
+            gh issue create \
+              --repo "${REPO}" \
+              --label "${LABEL}" \
+              --title "red-main: verify --full failing on main" \
+              --body "${BODY}"
+          fi
