@@ -1,6 +1,6 @@
 /* Refetches are targeted from critique terms to avoid paying for repeated inventory. */
 import { CONTEXT_TERM_STOP_WORDS, MAX_CONTEXT_SEARCH_TERMS, WorkerKind } from "../consts";
-import type { GraphStateValue } from "../types/graph";
+import type { GraphStateValue } from "../state";
 
 const extractContextSearchTerms = (text: string): string[] => {
     const terms = new Map<string, number>();

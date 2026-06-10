@@ -57,6 +57,11 @@
         "name": "secret-scan",
         "argv": ["./tools/run-gitleaks", "git", "--no-banner", "--redact"],
         "timeout_seconds": 60
+      },
+      {
+        "name": "architecture",
+        "argv": ["./node_modules/.bin/depcruise", "--config", ".dependency-cruiser.cjs", "src/**/*.ts"],
+        "timeout_seconds": 20
       }
     ],
     "full": [

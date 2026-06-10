@@ -2,7 +2,7 @@ import { ModelRole, ReasoningEffort, ThinkingMode, UsageKey } from "../../consts
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
-import type { GraphStateValue } from "../../types/graph";
+import type { GraphStateValue } from "../../state";
 
 export const smeTiebreaker = async (state: GraphStateValue) => {
     const result = await callLlm(

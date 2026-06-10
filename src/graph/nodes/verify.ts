@@ -10,7 +10,7 @@ import {
 } from "../../consts";
 import { errorMessage } from "../../shared";
 import { buildCompactToolResultReport, readToolRegistry } from "../../tools";
-import type { GraphStateValue } from "../../types/graph";
+import type { GraphStateValue } from "../../state";
 
 export const verify = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const verifyAttempts = (state.verifyAttempts ?? 0) + 1;

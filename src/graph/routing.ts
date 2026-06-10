@@ -12,7 +12,7 @@ import {
     PROJECTED_STRONG_CRITIC_USD,
 } from "../consts";
 import { canSpendUsd, isCostBudgetNear } from "./budget.ts";
-import type { GraphStateValue } from "../types/graph";
+import type { GraphStateValue } from "../state";
 
 export const routeByComplexity = (state: GraphStateValue): string => {
     if (state.complexity === GraphComplexity.TRIVIAL) {

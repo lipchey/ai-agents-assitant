@@ -12,7 +12,7 @@ import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseCriticDecision, parseFrontierCriticDecision } from "../parsers.ts";
-import type { GraphStateValue } from "../../types/graph";
+import type { GraphStateValue } from "../../state";
 
 export const frontierCritic = async (state: GraphStateValue) => {
     const result = await callLlm(

@@ -1,5 +1,5 @@
 import { getOutputWriter } from "../logging";
-import type { GraphStateValue } from "../types/graph";
+import type { GraphStateValue } from "../state";
 import type { OutputWriter } from "../types/logging.ts";
 
 export const printReport = (

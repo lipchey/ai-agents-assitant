@@ -11,7 +11,7 @@ import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseFrontierArchitectureDecision } from "../parsers.ts";
-import type { GraphStateValue } from "../../types/graph";
+import type { GraphStateValue } from "../../state";
 
 export const frontierArchitect = async (state: GraphStateValue) => {
     const result = await callLlm(

@@ -3,7 +3,7 @@ import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import { parseRouterDecision } from "../parsers.ts";
-import type { GraphStateValue } from "../../types/graph";
+import type { GraphStateValue } from "../../state";
 
 export const complexityRouter = async (state: GraphStateValue) => {
     const result = await callLlm(ModelRole.ROUTER, SystemPrompts.complexityRouter, state.originalTask, {

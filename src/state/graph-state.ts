@@ -108,3 +108,5 @@ export const GraphState = Annotation.Root({
         default: () => ({}),
     }),
 });
+
+export type GraphStateValue = typeof GraphState.State;

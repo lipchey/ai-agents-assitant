@@ -1,7 +1,7 @@
 /* No applicable patch blocks bounce to coder instead of verifying an unchanged tree. */
 import { GraphComplexity } from "../../consts";
 import { applyPatchBlocks, parsePatchBlocks } from "../../patching";
-import type { GraphStateValue } from "../../types/graph";
+import type { GraphStateValue } from "../../state";
 
 export const applyPatches = async (state: GraphStateValue) => {
     if (!state.patchApplicationEnabled || state.complexity === GraphComplexity.PURE_REASONING) {
