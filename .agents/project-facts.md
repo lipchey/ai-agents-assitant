@@ -34,6 +34,9 @@ Changes here should trigger at least a lightweight review:
   application code)
 - `openclaw.config.json5` (holds a gateway token literal)
 - `openclaw.config.json5.last-good` (snapshot of the above; same token)
+- `src/consts/openclaw.ts` (holds the same token literal as
+  `DEFAULT_GATEWAY_TOKEN`; `src/tools/gateway.ts` wires it as the live env
+  fallback - see Gate 0a D4 in the meta repo's `docs/quality-baseline.md`)
 - `.env*`
 - `scripts/run-task.sh`
 
