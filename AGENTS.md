@@ -41,6 +41,17 @@ authorization to commit that session's work to `main` (not to push).
   typecheck/lint/smoke chain. Run the strongest available check before
   declaring work done.
 - Prefer CodeGraph first for code/project navigation where available.
+- To read a **dependency's** source (esp. `@langchain/*`): if `opensrc` is
+  available, run `opensrc path <pkg>` and grep/read the returned source
+  (lockfile-pinned to the installed version). The returned path may be the
+  monorepo root — find the sub-package under `libs/`: e.g. `@langchain/core`
+  → `libs/langchain-core`, providers like `@langchain/openai` →
+  `libs/providers/langchain-openai`; `@langchain/langgraph` resolves straight
+  to `libs/langgraph-core`. If `opensrc` is unavailable (cloud agents, CI,
+  other sandboxes) or a package fails to resolve, read the compiled code in
+  `node_modules/<pkg>` instead. For _this project's own_ code prefer CodeGraph
+  — opensrc is for third-party deps (complementary, not competing). Read
+  dependency source via subagents/grep; never dump it into main context.
 - Deterministic gates run before AI judgment; never re-report what
   `tsc`/`eslint`/`dependency-cruiser`/`knip`/`gitleaks`/`./verify` already prove
   or what `.agents/known-false-positives.md` accepts.
