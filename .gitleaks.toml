@@ -1,0 +1,36 @@
+# Extends the default gitleaks ruleset with formats used by this repo's
+# providers. Owner-approved 2026-06-10 (S6 residue P3).
+title = "ai-agents-assitant gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Burned pre-rotation gateway dev token (rotated 2026-06-10); appears in historical commits only and is worthless"
+regexTarget = "match"
+regexes = ['''dev_token_123''']
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key"
+regex = '''\bsk-ant-[A-Za-z0-9_-]{24,}'''
+keywords = ["sk-ant-"]
+
+[[rules]]
+id = "openai-project-api-key"
+description = "OpenAI project-scoped API key"
+regex = '''\bsk-proj-[A-Za-z0-9_-]{24,}'''
+keywords = ["sk-proj-"]
+
+[[rules]]
+id = "deepseek-api-key"
+description = "DeepSeek API key (sk- followed by 32 hex)"
+regex = '''\bsk-[a-f0-9]{32}\b'''
+keywords = ["sk-"]
+
+[[rules]]
+id = "openclaw-gateway-token-literal"
+description = "Literal gateway token in openclaw.config.json5; must be the ${OPENCLAW_GATEWAY_TOKEN} env reference (D4)"
+regex = '''token:\s*["'][^"'$][^"']*["']'''
+path = '''openclaw\.config\.json5'''
+keywords = ["token"]
