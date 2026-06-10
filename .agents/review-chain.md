@@ -3,8 +3,8 @@
 How every `R<n>` session runs its own review at the session boundary, with
 no owner step in the loop. Seats per [model-roles.md](model-roles.md):
 Fable 5 produces, Codex (GPT 5.5) reviews, an Opus 4.8 subagent fixes.
-Adapted from the meta-repo's ADR-011 chain; machine-local paths below are an
-accepted exception (this file is operational, not reusable content).
+Adapted from the meta-repo's ADR-011 chain; the command below resolves the
+repo root with `git rev-parse` so it stays path-relative.
 
 ## Form: in-session orchestration
 
@@ -18,8 +18,9 @@ Agent tool. No `--dangerously-skip-permissions`, no `danger-full-access`.
    `/tmp/claude/<slug>/codex-task.md` (slug = `r<n>-<short-topic>`), then:
 
    ```bash
+   repo_root="$(git rev-parse --show-toplevel)"
    CODEX_HOME="$HOME/.codex" /Applications/Codex.app/Contents/Resources/codex exec \
-     -C /Users/admin/Projects/ai-agents-assitant -s workspace-write \
+     -C "${repo_root}" -s workspace-write \
      --add-dir /tmp/claude/<slug> \
      --output-last-message /tmp/claude/<slug>/codex-last.md \
      - < /tmp/claude/<slug>/codex-task.md
