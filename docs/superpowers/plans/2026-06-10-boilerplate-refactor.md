@@ -23,14 +23,47 @@ an offline full-graph e2e on a fake provider, and a promptfoo bench harness.
 `@langchain/anthropic|openai|deepseek`, `@langchain/langgraph-checkpoint-sqlite`,
 zod, json5, vitest, promptfoo.
 
-**Standing rules for every session (in addition to `.agent/*.md`):**
+**Standing rules for every session (in addition to `.agents/*.md`):**
 - Hard gate before any commit: `npm run typecheck` && `npm run lint` &&
-  smoke suite green; from R1 on, also `npx vitest run`.
-- Out-of-scope findings → `.agent/tasks.md` § Backlog, never fixed inline.
-- Never touch: `.env*`, `openclaw.config.json5*`, `.github/workflows/*`
-  except where a step explicitly says so.
+  smoke suite green; from R1 on, also `npx vitest run`. Post-S6 the native
+  hooks enforce `./verify --staged` on commit and `./verify --fast` on push
+  — keep them green; never bypass with `--no-verify`.
+- Out-of-scope findings → `.agents/tasks.md` § Backlog, never fixed inline.
+- Never touch: `.env*`, `openclaw.config.json5*`, `.github/workflows/*`,
+  and the quality-system surface (`verify`, `tools/**`, `schemas/**`,
+  `.githooks/**`) except where a step explicitly says so. `quality.json`
+  may be edited only where a step explicitly appends a check.
+- Any session that adds a new top-level `src/` dir (R2 `src/models/`, R4
+  `src/run/`) extends the layer-DAG ADR
+  (`.agents/architecture-decisions.md`) and `.dependency-cruiser.cjs` in
+  the same session, keeping `./verify --fast` green.
 - Each task ends at its verification boundary with the pinned commit(s);
-  update `.agents/handoffs/STATE.md` and `.agent/tasks.md` checkboxes.
+  update `.agents/handoffs/STATE.md` and `.agents/tasks.md` checkboxes.
+
+**Quality-system alignment (prerequisite: Phase 2 sessions S6+S7 of
+`self-maintaining-system` land in this repo BEFORE R1):**
+- S6 vendors the pinned `./verify` runner (`quality.json`, `verify` shim,
+  `tools/run-gitleaks`), installs native hooks
+  (`core.hooksPath -> .githooks/`), applies the one-time prettier baseline
+  (~53 files reformatted — rebase any draft diffs over it; this plan keeps
+  file-level references only, so no step here pins stale line numbers), and
+  executes D4: gateway-token rotation, env-only token, and REMOVAL of the
+  `DEFAULT_GATEWAY_TOKEN` fallback from `src/consts/openclaw.ts` /
+  `src/tools/gateway.ts`. R-sessions must not re-do or undo any of that.
+- S7 approves the layer-DAG ADR, adds devDeps (`dependency-cruiser`,
+  `eslint-plugin-boundaries`, `knip`), migrates `.agent/` -> `.agents/`,
+  rewrites the `AGENTS.md`/`CLAUDE.md` routers, and replaces `ci.yml` with
+  `quality.yml` (PR -> `./verify --fast`; push/weekly -> `./verify --full`).
+  This plan is written for the POST-S7 layout: all agent-doc paths are
+  `.agents/...`, and CI changes are made by appending checks to
+  `quality.json` tiers (CI picks them up via `./verify --full`), never by
+  editing `quality.yml` (generated, SHA-pinned, sensitive).
+- Tier-budget rule for appended checks: keep `sum(timeout_seconds) <=
+  budget` per tier (the manifest validator enforces it). Reference numbers
+  after S7: `full` 540s of a 720s budget; `fast` 170s of 180s — so new
+  checks default to the `full` tier; putting anything into `fast` requires
+  raising `fast_seconds`, recorded per the D2 convention in the meta repo's
+  `docs/quality-baseline.md`.
 
 ---
 
@@ -39,7 +72,9 @@ zod, json5, vitest, promptfoo.
 The working-tree `.env` holds live Anthropic/OpenAI/DeepSeek/Tavily keys
 (review §5). Rotate all four in their consoles, update `.env`, and confirm
 `git ls-files | grep -c "^\.env$"` prints `0`. No session may start before
-this is done.
+this is done. (The OpenClaw gateway token is NOT part of R0 - its rotation,
+env move, and fallback removal are owned by quality-adoption session S6/D4;
+R0 covers only the four provider keys.)
 
 ---
 
@@ -49,7 +84,8 @@ this is done.
 - Create: `vitest.config.ts`, `tests/unit/pricing.test.ts`,
   `tests/unit/budget.test.ts`, `tests/unit/graph-routing.test.ts`,
   `tests/unit/swarm-routing.test.ts`, `tests/unit/parsers.test.ts`
-- Modify: `package.json` (devDep `vitest`; scripts), `.github/workflows/ci.yml`
+- Modify: `package.json` (devDep `vitest`; scripts), `quality.json`
+  (append `unit` check to the `full` tier)
 - No `src/` behavior changes in this session.
 
 - [ ] **Step 1.1:** Add `vitest` as a devDependency (exact pin). Create
@@ -79,8 +115,13 @@ this is done.
   convergence; valid/malformed/fenced/prose-wrapped inputs.
 - [ ] **Step 1.7:** Wire scripts: `"test:unit": "vitest run"`, and change
   `"test"` to `npm run typecheck && npm run lint && npm run test:unit && npm run smoke`.
-  Add a Node version matrix to `ci.yml` covering the three `engines` ranges
-  (22 / 24 / latest), keeping the single job otherwise.
+  Append a `unit` check (`npm run test:unit`) to the `quality.json` `full`
+  tier with a measured timeout, keeping the tier sum within budget (see the
+  alignment rules above); `fast`-tier inclusion is an owner/budget decision,
+  not made here. Record to `.agents/tasks.md` § Backlog as an owner
+  decision: a multi-Node version matrix (22/24/latest engines) would now
+  live in `quality.yml`, which is generated and SHA-pinned - propose it
+  through the quality-system change process, not inline.
 - [ ] **Step 1.8:** Verify: `npx vitest run` → all pass; `npm test` → green.
 - [ ] **Step 1.9:** Commit: `test: add vitest characterization suite for pricing, budget, routing, parsers`
 
@@ -248,7 +289,7 @@ through the direct provider with non-zero cost accounting.
   parsers expect (router decision, architect decision incl. confidence,
   critic decision, tiebreaker, worker-kind selection). Source of truth = the
   current parser expectations + prompt contracts; do not change field names
-  (prompt copy and parsers stay aligned — `.agent/code-guidelines.md` §6).
+  (prompt copy and parsers stay aligned — `.agents/code-guidelines.md` §6).
 - [ ] **Step 5.2:** Direct provider: when `structuredSchema` is set, use the
   model's `withStructuredOutput(schema)` (native json_schema where
   supported; DeepSeek strict may need its beta endpoint — feature-flag per
@@ -281,7 +322,7 @@ Swarm ReAct-step structured migration is OUT of scope (backlog).
 - Modify: `src/cli/config.ts` + `src/main.ts` (`--profile` flag +
   `AGENT_PROFILE` env), `scripts/run-task.sh` (PROFILE passthrough),
   `.env.example`, `README.md` (or create — usage, profiles, resume, bench
-  pointer), `.agent/memory.md` (§ Architecture: profiles/providers note)
+  pointer), `.agents/memory.md` (§ Architecture: profiles/providers note)
 
 - [ ] **Step 6.1:** `--profile <name|path>` flag (default `default`),
   `AGENT_PROFILE` env override; profile name flows into RunSummary (already
@@ -352,11 +393,11 @@ produces a report with cost/latency per task.
 - Create: `src/models/providers/fake.ts`, `tests/e2e/offline-run.test.ts`,
   `tests/e2e/scripts/` fixtures as needed
 - Modify: `src/consts/patching.ts` (PROTECTED_SEGMENTS widening),
-  `src/consts/openclaw.ts` + `src/tools/gateway.ts` (remove
-  `DEFAULT_GATEWAY_TOKEN` fallback — token required for openclaw transport,
-  clear error otherwise), `package.json` (exact-pin `openclaw`,
-  `@langchain/*`, `typescript`; declare ripgrep requirement in README +
-  preflight warn), `.github/workflows/ci.yml` (vitest e2e stage)
+  `package.json` (exact-pin `openclaw`, `@langchain/*`, `typescript`;
+  declare ripgrep requirement in README + preflight warn), `quality.json`
+  (append `e2e` check to the `full` tier)
+- Verify only (S6/D4 already changed them): `src/consts/openclaw.ts`,
+  `src/tools/gateway.ts` — the `DEFAULT_GATEWAY_TOKEN` fallback is gone
 
 - [ ] **Step 8.1:** `fake.ts`: deterministic scripted `ChatProvider` —
   responses keyed by role (+ ordinal per role), loaded from a per-test
@@ -370,17 +411,24 @@ produces a report with cost/latency per task.
   RunSummary fields (status, nodeVisits order, cost > 0).
 - [ ] **Step 8.3:** Widen `PROTECTED_SEGMENTS` per spec D10; extend the R1-era
   patch tests (or `patch-smoke.ts`) to assert `.github/`, `.env`,
-  `package.json`, `openclaw.config.json5` are refused.
-- [ ] **Step 8.4:** Remove the token fallback: openclaw transport without
-  `OPENCLAW_GATEWAY_TOKEN` now fails fast with a clear message (direct
-  transport unaffected). Update `.env.example`.
+  `package.json`, `openclaw.config.json5` are refused — and the
+  quality-system surface too: `verify`, `tools/`, `schemas/`, `.githooks/`,
+  `quality.json` (the agent's patch engine must never edit its own gates).
+- [ ] **Step 8.4:** Verify the S6/D4 hardening still holds (do not re-do
+  it): `DEFAULT_GATEWAY_TOKEN` absent from the codebase, openclaw transport
+  without `OPENCLAW_GATEWAY_TOKEN` fails fast (direct transport
+  unaffected), `.env.example` documents the variable. If the S6 failure
+  message is unclear, improve the message only; never reintroduce a
+  default.
 - [ ] **Step 8.5:** Exact-pin `openclaw`, `@langchain/langgraph`,
   `@langchain/anthropic|openai|deepseek`, `typescript`, checkpoint-sqlite;
   `npm ci` clean; add a preflight `rg --version` check with a warning (not a
   crash) at swarm startup.
 - [ ] **Step 8.6:** Verify: `npm test` green INCLUDING the offline e2e —
   this is the first time the full dual-graph path is exercised without
-  credentials. Wire `tests/e2e` into CI.
+  credentials. Wire `tests/e2e` into the `quality.json` `full` tier (an
+  `e2e` check with a measured timeout, tier sum within budget) — CI's
+  `./verify --full` picks it up with no workflow edit.
 - [ ] **Step 8.7:** Commit (two allowed):
   `feat: fake provider + offline full-graph e2e` and
   `chore(security): widen patch guards, require gateway token, pin deps`
@@ -392,10 +440,11 @@ produces a report with cost/latency per task.
 ### Task R9: Live MVP validation + baseline tag
 
 **Files:**
-- Modify: `.agent/memory.md` (§2 architecture: profiles/providers/run
-  kernel; §6 status), `.agent/tasks.md` (close R-schedule, promote backlog),
+- Modify: `.agents/memory.md` (§2 architecture: profiles/providers/run
+  kernel; §6 status), `.agents/tasks.md` (close R-schedule, promote backlog),
   `docs/reviews/2026-06-10-project-review.md` (append "post-refactor status"
-  footnote), `README.md` (measured-cost table)
+  footnote), `README.md` (measured-cost table),
+  `quality-baselines/knip.json` (refresh — see Step 9.5)
 - No new subsystems.
 
 - [ ] **Step 9.1:** Live matrix (rotated keys, small budgets): for each of
@@ -408,11 +457,15 @@ produces a report with cost/latency per task.
 - [ ] **Step 9.3:** `npm run bench` full smoke suite live on
   `research-playground`; commit the generated summary table into
   `bench/README.md` as the first baseline.
-- [ ] **Step 9.4:** Update `.agent/memory.md` (architecture + status dated
-  entry), close `.agent/tasks.md` R-items, append measured-cost table to
+- [ ] **Step 9.4:** Update `.agents/memory.md` (architecture + status dated
+  entry), close `.agents/tasks.md` R-items, append measured-cost table to
   README.
-- [ ] **Step 9.5:** Verify: `npm test` green; all 9 live runs completed or
-  explained; baseline bench report committed.
+- [ ] **Step 9.5:** Refresh the dead-code baseline against the refactored
+  tree: re-run knip, commit the new finding set as
+  `quality-baselines/knip.json` (R3 made `@langchain/anthropic|openai`
+  load-bearing and R1-R8 moved/added modules, so the S7 baseline is stale).
+  Then verify: `npm test` green; `./verify --full` green within budgets;
+  all 9 live runs completed or explained; baseline bench report committed.
 - [ ] **Step 9.6:** Commit: `docs: live MVP validation results + baseline bench` then tag:
   `git tag v0.1.0-boilerplate`.
 
@@ -433,3 +486,13 @@ produces a report with cost/latency per task.
   `callLlm` internal signature, promptfoo provider API details — the
   executing session derives them from the live code/docs; the invariants
   that matter are pinned in spec §3.
+- 2026-06-10 alignment edit (owner-requested): R-sessions now explicitly
+  start AFTER quality-adoption sessions S6+S7 land here. Changes: standing
+  rules reference the post-S7 `.agents/` layout and the `./verify` hooks;
+  a Quality-system alignment section pins the S6/S7 deliverables and the
+  tier-budget rule; R0 scoped to the four provider keys (gateway token =
+  S6/D4); R1.7/R8.6 wire unit/e2e into `quality.json` `full` instead of the
+  deleted `ci.yml` (Node-matrix idea moved to backlog); R8 verifies rather
+  than re-does the S6/D4 fallback removal; R8.3 adds the quality-system
+  surface to the patch-refusal list; R9.5 refreshes the knip baseline and
+  gates on `./verify --full`.
