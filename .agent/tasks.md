@@ -41,3 +41,20 @@ None.
 - [x] Source layout cleanup: keep root `src/` to `index.ts` and `main.ts`,
   with feature code under owning folders and public exports centralized through
   `src/index.ts`.
+- [ ] Investigate scored verify loop (hill-climbing): evaluate turning the
+  binary `verify` gate (`run_tests`/typecheck pass-fail) into a continuous-score
+  loop that keeps the best candidate across attempts, where a measurable
+  objective exists (test pass count, runtime, diff size, lint score). Reframes
+  the existing `frontierCritic`/debate iteration (`MAX_DEBATE_ITERATIONS`) as a
+  scored search with best-so-far memory rather than pass-fail retries. Touch
+  points: `src/graph/build.ts`, `src/graph/routing.ts`, `verify` node, and the
+  budget guards in `src/graph/budget.ts`. Pattern reference: karpathy/autoresearch
+  (edit -> run -> measure objective metric -> keep/discard -> iterate).
+- [ ] Investigate autoresearch as a live e2e benchmark: assess pointing the
+  dual-graph agent at a self-contained, objectively-scored coding task
+  (karpathy/autoresearch `train.py`, graded by `val_bpb`) to get an external
+  numeric grade for agent coding quality and exercise the full live path that
+  current smoke tests skip. Good fit: single-file scope matches the full-file
+  patch format, guarded workspace bounds apply, and the numeric result enables
+  cross-model comparison across the cascade. Closes part of the "full live e2e
+  still needs credentials/Gateway" gap in [.agent/memory.md](memory.md) section 6.
