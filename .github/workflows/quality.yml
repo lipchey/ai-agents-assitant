@@ -1,8 +1,10 @@
 name: Quality
 
 # Verify-driven CI. PRs run ./verify --fast (read-only token); pushes to main and
-# the weekly schedule run ./verify --full and upsert a single red-main tracking issue
-# on failure. No pull_request_target, no tag triggers, no secret echoing.
+# the weekly schedule run ./verify --full. A separate report job (issues: write,
+# no checkout/install/verify) upserts a single red-main tracking issue on failure
+# and closes it on recovery. No pull_request_target, no tag triggers, no secret
+# echoing.
 
 on:
   push:
@@ -12,7 +14,8 @@ on:
     # Weekly, Sunday 06:17 UTC (quiet slot, off the top of the hour).
     - cron: "17 6 * * 0"
 
-# Read-only by default for the whole workflow; the full job widens to issues: write.
+# Read-only by default for the whole workflow; only the report job widens to
+# issues: write, and it carries no checkout/install/verify steps.
 permissions:
   contents: read
 
@@ -34,6 +37,9 @@ jobs:
           # Full history so the gitleaks history scan (`gitleaks git`) sees real
           # commits, not a shallow stub.
           fetch-depth: 0
+          # verify reads the local clone only (gitleaks git, npm, depcruise); no
+          # authenticated git operation needs the job token left on disk.
+          persist-credentials: false
       - name: Setup Node
         # actions/setup-node v6.4.0
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
@@ -63,13 +69,13 @@ jobs:
 
   full:
     name: Full (verify --full)
-    # Push to main and the weekly schedule share one job body so the red-main
-    # upsert lives in exactly one place. PRs never reach this job.
+    # Push to main and the weekly schedule share one job body so verify runs in
+    # exactly one place. PRs never reach this job. red-main issue maintenance is
+    # isolated in the report job below (issues: write, no untrusted code).
     if: github.event_name == 'push' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      issues: write
     concurrency:
       # Serialize full runs per ref; do not cancel an in-flight full run.
       group: quality-full-${{ github.ref }}
@@ -82,6 +88,9 @@ jobs:
           # Full history so the gitleaks history scan (`gitleaks git`) sees real
           # commits, not a shallow stub.
           fetch-depth: 0
+          # verify reads the local clone only; never leave the job token on disk
+          # ahead of npm ci / ./verify --full (untrusted lifecycle scripts).
+          persist-credentials: false
       - name: Setup Node
         # actions/setup-node v6.4.0
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
@@ -109,8 +118,21 @@ jobs:
       - name: Verify (full)
         id: verify
         run: ./verify --full
-      - name: Upsert red-main issue
-        if: failure()
+
+  report:
+    name: red-main tracking
+    # Maintain the single red-main tracking issue based on the full result.
+    # Isolated from checkout/install/verify so issues: write is never live while
+    # untrusted dependency or repo scripts run. No checkout: gh talks to the API
+    # over GH_TOKEN, so no local clone (and no contents access) is needed.
+    needs: full
+    if: always() && needs.full.result != 'skipped' && needs.full.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Upsert red-main issue on failure
+        if: needs.full.result == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # All interpolation flows through env (never inline in the script body).
@@ -147,3 +169,28 @@ jobs:
               --title "red-main: verify --full failing on main" \
               --body "${BODY}"
           fi
+      - name: Close red-main issues on recovery
+        if: needs.full.result == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Interpolation flows through env only (script-injection hygiene).
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          LABEL="red-main"
+          BODY="$(printf 'main recovered: verify --full passed.\n\n- Run: %s\n- Commit: %s\n' \
+            "${RUN_URL}" "${COMMIT_SHA}")"
+          # Close every open red-main issue (normally one); comment the green run.
+          NUMBERS="$(gh issue list \
+            --repo "${REPO}" \
+            --state open \
+            --label "${LABEL}" \
+            --limit 50 \
+            --json number \
+            --jq '.[].number')"
+          for NUMBER in ${NUMBERS}; do
+            gh issue comment "${NUMBER}" --repo "${REPO}" --body "${BODY}"
+            gh issue close "${NUMBER}" --repo "${REPO}" --reason completed
+          done
