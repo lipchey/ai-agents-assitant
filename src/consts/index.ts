@@ -37,7 +37,6 @@ export {
     ThinkingMode,
 } from "./models.ts";
 export {
-    DEFAULT_GATEWAY_TOKEN,
     DEFAULT_GATEWAY_URL,
     DEFAULT_OPENCLAW_MODEL,
     DEFAULT_TIMEOUT_S,

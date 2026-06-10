@@ -9,7 +9,21 @@ import {
 } from "../src/consts";
 import { configureLogging } from "../src/logging";
 import { openclawRpc } from "../src/tools";
+import { getGatewayToken } from "../src/tools/gateway";
 import type { LogRecord, LogSink } from "../src/types";
+
+/* D4: a missing gateway token must fail loudly, not silently fall back. */
+const savedGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+delete process.env.OPENCLAW_GATEWAY_TOKEN;
+assert.throws(getGatewayToken, /OPENCLAW_GATEWAY_TOKEN/, "D4: missing gateway token must throw");
+if (savedGatewayToken !== undefined) {
+    process.env.OPENCLAW_GATEWAY_TOKEN = savedGatewayToken;
+}
+
+/* The gateway transport is fully stubbed below, but auth-header construction now
+   requires OPENCLAW_GATEWAY_TOKEN to be present. Provide a dummy so the smoke
+   stays hermetic (no real token, no .env needed); the stubbed fetch ignores it. */
+process.env.OPENCLAW_GATEWAY_TOKEN ??= "smoke-dummy-token";
 
 type GatewayBody = { ok: boolean; result?: unknown; error?: { message?: string } };
 type Handler = (tool: string, args: Record<string, unknown>) => GatewayBody;

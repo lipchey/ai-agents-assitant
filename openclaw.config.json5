@@ -4,7 +4,9 @@
     bind: "loopback",
     auth: {
       mode: "token",
-      token: "dev_token_123",
+      /* Token comes from the OPENCLAW_GATEWAY_TOKEN env var; OpenClaw substitutes
+         ${VAR} at config load and throws when the var is missing or empty. */
+      token: "${OPENCLAW_GATEWAY_TOKEN}",
     },
     http: {
       endpoints: {

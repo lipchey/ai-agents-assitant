@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "repo": "ai-agents-assitant",
+  "stack": "node-service",
+  "scheduler_class": "github-actions-push-and-schedule",
+  "budgets": { "staged_seconds": 40, "fast_seconds": 180, "full_seconds": 720, "audit_seconds": 900 },
+  "policy": {
+    "mutates_by_default": false,
+    "format_fix_staged_allowed": false,
+    "typed_eslint_in_precommit": false,
+    "block_new_dead_code_only": true
+  },
+  "paths": { "reports": "reports/quality", "baselines": "quality-baselines" },
+  "generated": { "hooks_dir": ".githooks", "ci_quality": ".github/workflows/quality.yml" },
+  "workspaces": [{ "name": "root", "path": ".", "stack": "node-service", "package_manager": "npm" }],
+  "filesets": [
+    {
+      "name": "staged_ts",
+      "source": "git_staged",
+      "include": ["**/*.ts"],
+      "exclude": ["dist/**"],
+      "diff_filter": "ACMR"
+    },
+    {
+      "name": "staged_all",
+      "source": "git_staged",
+      "include": ["**/*"],
+      "exclude": ["dist/**", "tools/**", "schemas/**"],
+      "diff_filter": "ACMR"
+    }
+  ],
+  "tiers": {
+    "staged": [
+      {
+        "name": "eslint-staged",
+        "argv": ["./node_modules/.bin/eslint", "--cache", "--no-warn-ignored", "{files:staged_ts}"],
+        "skip_if_empty": "staged_ts",
+        "timeout_seconds": 15
+      },
+      {
+        "name": "prettier-staged",
+        "argv": ["./node_modules/.bin/prettier", "--check", "--ignore-unknown", "{files:staged_all}"],
+        "skip_if_empty": "staged_all",
+        "timeout_seconds": 5
+      },
+      {
+        "name": "secret-scan-staged",
+        "argv": ["./tools/run-gitleaks", "git", "--staged", "--no-banner", "--redact"],
+        "timeout_seconds": 10
+      }
+    ],
+    "fast": [
+      { "name": "typecheck", "argv": ["npm", "run", "typecheck"], "timeout_seconds": 45 },
+      { "name": "lint", "argv": ["npm", "run", "lint"], "timeout_seconds": 30 },
+      { "name": "smoke-offline", "argv": ["npm", "run", "smoke:offline"], "timeout_seconds": 15 },
+      {
+        "name": "secret-scan",
+        "argv": ["./tools/run-gitleaks", "git", "--no-banner", "--redact"],
+        "timeout_seconds": 60
+      }
+    ],
+    "full": [
+      { "name": "typecheck", "argv": ["npm", "run", "typecheck"], "timeout_seconds": 60 },
+      { "name": "lint", "argv": ["npm", "run", "lint"], "timeout_seconds": 60 },
+      { "name": "smoke", "argv": ["npm", "run", "smoke"], "timeout_seconds": 300 },
+      {
+        "name": "secret-scan",
+        "argv": ["./tools/run-gitleaks", "git", "--no-banner", "--redact"],
+        "timeout_seconds": 60
+      }
+    ],
+    "audit": []
+  },
+  "workflow": { "enabled": false }
+}

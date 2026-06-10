@@ -80,7 +80,7 @@ caps) without touching graph code. Ranked blockers found:
 | 3 | Topology is imperative code | `src/graph/build.ts:25-87`, `src/swarm/build.ts:14-52` | Variants require code forks. Nodes/routers are already cleanly separated, so this is deferred, not urgent (spec D3). |
 | 4 | Per-role LLM options inlined at call sites | e.g. `src/graph/nodes/architects.ts:27-29`, `critics.ts:27-32`, `swarm/react-worker.ts:98-101` | Rebinding a role to a model with different thinking/effort semantics means editing ~12 node files. |
 | 5 | Prompts encode the model cascade in prose | `src/prompts/core.ts:20-29` (names DeepSeek/Opus/GPT-5.5 explicitly) | Any rebinding makes cache-anchored prompts factually wrong. |
-| 6 | Dev gateway token baked in as live fallback | `src/consts/openclaw.ts:20` (`dev_token_123`), wired in `src/tools/gateway.ts:34`; also `openclaw.config.json5:7` | Unacceptable default for a client-facing boilerplate. Already flagged by Gate 0a D4. |
+| 6 | Dev gateway token baked in as live fallback | `src/consts/openclaw.ts:20` (`DEFAULT_GATEWAY_TOKEN` literal), wired in `src/tools/gateway.ts:34`; also `openclaw.config.json5:7` | Unacceptable default for a client-facing boilerplate. Already flagged by Gate 0a D4. |
 | 7 | `GraphState` is one flat ~38-field bag | `src/state/graph-state.ts:8-110` | Product-specific signals all land in one shared root. Workable; namespacing is a later cleanup. |
 
 Main-graph topology as implemented matches `.agent/memory.md` (verified node
@@ -141,7 +141,7 @@ Findings:
   Tavily). The file is gitignored and not in history (verified), but it sits
   in a directory about to be copied/turned into a boilerplate. **Rotate all
   four keys before R1.** Action R0 in the plan.
-- Hardcoded `dev_token_123` default token (see blocker #6). Loopback bind is
+- Hardcoded default gateway token (see blocker #6). Loopback bind is
   the only mitigation today. Remove the in-code fallback (plan R8).
 - **Patch protected-path list too narrow.** `PROTECTED_SEGMENTS = {.git,
   node_modules}` (`src/consts/patching.ts:5`); with patches enabled the model

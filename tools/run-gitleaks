@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pinned-version wrapper around gitleaks. The secret scan must fail loudly when
+# the binary is missing or its version drifts from the pin, never skip silently.
+
+SCRIPT_DIR="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
+VERSIONS_FILE="${SCRIPT_DIR}/TOOL_VERSIONS.json"
+
+if [[ ! -f "${VERSIONS_FILE}" ]]; then
+  echo "run-gitleaks: pin file not found at ${VERSIONS_FILE}" >&2
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "run-gitleaks: node not found on PATH; cannot read the pinned gitleaks version from ${VERSIONS_FILE}" >&2
+  exit 1
+fi
+
+# Parse the pinned version with node (robust JSON parse, no fragile sed/eval).
+if ! expected="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).gitleaks ?? ""' "${VERSIONS_FILE}" 2>/dev/null)"; then
+  echo "run-gitleaks: could not parse pinned version from ${VERSIONS_FILE} (malformed JSON?)" >&2
+  exit 1
+fi
+if [[ -z "${expected}" || "${expected}" == "undefined" ]]; then
+  echo "run-gitleaks: no 'gitleaks' version pinned in ${VERSIONS_FILE}" >&2
+  exit 1
+fi
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "run-gitleaks: gitleaks not found on PATH (expected version ${expected})" >&2
+  exit 1
+fi
+
+found="$(gitleaks version)"
+if [[ "${found}" != "${expected}" ]]; then
+  echo "run-gitleaks: gitleaks version mismatch (expected ${expected}, found ${found})" >&2
+  exit 1
+fi
+
+exec gitleaks "$@"

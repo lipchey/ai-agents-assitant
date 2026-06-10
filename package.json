@@ -20,6 +20,7 @@
     "smoke:verify-report": "tsx scripts/verify-report-smoke.ts",
     "smoke:logging": "tsx scripts/logging-smoke.ts",
     "smoke": "npm run smoke:react && npm run smoke:patch && npm run smoke:hitl && npm run smoke:websearch && npm run smoke:verify-report && npm run smoke:logging",
+    "smoke:offline": "npm run smoke:react && npm run smoke:patch && npm run smoke:hitl && npm run smoke:websearch && npm run smoke:verify-report && npm run smoke:logging",
     "test": "npm run typecheck && npm run lint && npm run smoke"
   },
   "keywords": [],

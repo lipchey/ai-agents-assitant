@@ -1,0 +1,13 @@
+{
+  "repo": "git@github.com:lipchey/dev-standards.git",
+  "commit": "e748bfc3b5b16f7d3db6293de3bdce85650617d8",
+  "tag": "v0.0.2",
+  "artifacts": ["tools/verify-runner.mjs", "schemas/quality.schema.json"],
+  "sha256": {
+    "tools/verify-runner.mjs": "133fedc55b9b8c3b18d57303df17cdacfa2aad05f8be2c1d59f6c2f90ecee9a4",
+    "schemas/quality.schema.json": "3cf5f5d0be3197ae54781db2506007af92b78ef7cb7bdecfbeda2794b1a9e120"
+  },
+  "build": "npm run build",
+  "node": "v26.0.0",
+  "vendored_at": "2026-06-10"
+}

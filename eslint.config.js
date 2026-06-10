@@ -28,7 +28,7 @@ const projectPlugin = {
 };
 
 export default tseslint.config(
-    { ignores: ["dist/**", "node_modules/**", "eslint.config.js"] },
+    { ignores: ["dist/**", "node_modules/**", "eslint.config.js", "tools/**", "schemas/**"] },
     js.configs.recommended,
     ...tseslint.configs.recommended,
     {

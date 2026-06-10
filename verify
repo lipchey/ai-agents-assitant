@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(CDPATH= cd "$(dirname "$0")" && pwd -P)"
+BUNDLE="${QUALITY_RUNNER:-${REPO_ROOT}/tools/verify-runner.mjs}"
+
+if [[ ! -f "${BUNDLE}" ]]; then
+  echo "verify-runner bundle not found at ${BUNDLE}. Re-vendor per tools/RUNNER_SOURCE.json" >&2
+  exit 127
+fi
+
+exec node "${BUNDLE}" --manifest "${REPO_ROOT}/quality.json" "$@"

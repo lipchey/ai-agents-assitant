@@ -2,7 +2,6 @@ import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
-    DEFAULT_GATEWAY_TOKEN,
     DEFAULT_GATEWAY_URL,
     EnvVar,
     GATEWAY_LOG_MAX_CHARS,
@@ -31,7 +30,15 @@ export const getGatewayBaseUrl = (): string => {
         .replace(/\/+$/u, "");
 };
 
-export const getGatewayToken = (): string => process.env[EnvVar.GATEWAY_TOKEN] ?? DEFAULT_GATEWAY_TOKEN;
+export const getGatewayToken = (): string => {
+    const token = process.env[EnvVar.GATEWAY_TOKEN];
+    if (!token) {
+        throw new OpenClawError(
+            `${EnvVar.GATEWAY_TOKEN} is not set. Provide the gateway token via the environment (e.g. in .env) before contacting the gateway.`,
+        );
+    }
+    return token;
+};
 
 export const authHeaders = (): Record<string, string> => ({
     Authorization: `Bearer ${getGatewayToken()}`,

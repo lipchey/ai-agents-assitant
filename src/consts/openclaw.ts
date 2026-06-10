@@ -17,7 +17,6 @@ export const STRONG_REASONING_AGENT_ID = OpenClawControl.STRONG_REASONING_AGENT_
 
 /* Local gateway defaults mirror the development OpenClaw setup. */
 export const DEFAULT_GATEWAY_URL = "http://127.0.0.1:18789";
-export const DEFAULT_GATEWAY_TOKEN = "dev_token_123";
 
 /* OpenClaw RPC defaults are intentionally shorter than long verification calls. */
 export const DEFAULT_TIMEOUT_S = 30;
