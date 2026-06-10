@@ -63,13 +63,14 @@ const summarizeProcessStream = (value: unknown): StreamReport | undefined => {
     const lines = trimmed.split(/\r?\n/u);
     const maxLines = VERIFY_REPORT_OUTPUT_HEAD_LINES + VERIFY_REPORT_OUTPUT_TAIL_LINES;
     const omittedLines = Math.max(0, lines.length - maxLines);
-    const selectedLines = omittedLines > 0
-        ? [
-            ...lines.slice(0, VERIFY_REPORT_OUTPUT_HEAD_LINES),
-            `[omitted ${omittedLines} lines]`,
-            ...lines.slice(-VERIFY_REPORT_OUTPUT_TAIL_LINES),
-        ]
-        : lines;
+    const selectedLines =
+        omittedLines > 0
+            ? [
+                  ...lines.slice(0, VERIFY_REPORT_OUTPUT_HEAD_LINES),
+                  `[omitted ${omittedLines} lines]`,
+                  ...lines.slice(-VERIFY_REPORT_OUTPUT_TAIL_LINES),
+              ]
+            : lines;
     const compact = compactMiddle(selectedLines.join("\n"));
 
     return {
@@ -77,10 +78,10 @@ const summarizeProcessStream = (value: unknown): StreamReport | undefined => {
         lineCount: lines.length,
         ...(omittedLines > 0
             ? {
-                headLines: VERIFY_REPORT_OUTPUT_HEAD_LINES,
-                tailLines: VERIFY_REPORT_OUTPUT_TAIL_LINES,
-                omittedLines,
-            }
+                  headLines: VERIFY_REPORT_OUTPUT_HEAD_LINES,
+                  tailLines: VERIFY_REPORT_OUTPUT_TAIL_LINES,
+                  omittedLines,
+              }
             : {}),
         ...(compact.truncatedChars !== undefined ? { truncatedChars: compact.truncatedChars } : {}),
     };

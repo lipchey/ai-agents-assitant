@@ -79,9 +79,13 @@ class DefaultToolRegistry implements ToolRegistry {
         return (Object.entries(this.bindings) as Array<[ToolAlias, QualifiedToolId]>).map(([alias, id]) => {
             const registered = this.descriptors.get(id);
             if (!registered) {
-                throw new ToolError(ToolErrorKind.VALIDATION, `Tool alias "${alias}" is bound to missing descriptor "${id}".`, {
-                    toolId: id,
-                });
+                throw new ToolError(
+                    ToolErrorKind.VALIDATION,
+                    `Tool alias "${alias}" is bound to missing descriptor "${id}".`,
+                    {
+                        toolId: id,
+                    },
+                );
             }
             return { ...registered.descriptor, aliases: [alias] };
         });
@@ -91,16 +95,23 @@ class DefaultToolRegistry implements ToolRegistry {
         const id = this.bindings[alias];
         const registered = this.descriptors.get(id);
         if (!registered) {
-            throw new ToolError(ToolErrorKind.VALIDATION, `Tool alias "${alias}" is not bound to a registered descriptor.`, {
-                toolId: id,
-            });
+            throw new ToolError(
+                ToolErrorKind.VALIDATION,
+                `Tool alias "${alias}" is not bound to a registered descriptor.`,
+                {
+                    toolId: id,
+                },
+            );
         }
         return registered;
     }
 
     async invoke(alias: ToolAlias, args: ToolArgs, context?: ToolCallContext): Promise<ToolResult> {
         if (args.requireConfirmation) {
-            throw new ToolError(ToolErrorKind.POLICY, `HITL_REQUIRED: confirmation required before executing ${alias}.`);
+            throw new ToolError(
+                ToolErrorKind.POLICY,
+                `HITL_REQUIRED: confirmation required before executing ${alias}.`,
+            );
         }
 
         const { provider, descriptor } = this.resolve(alias);

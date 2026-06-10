@@ -12,11 +12,7 @@ const omitControlArgs = (args: ToolArgs): JsonObject => {
     return rest;
 };
 
-export const openclawRpc = async (
-    tool: string,
-    args: ToolArgs,
-    options?: ToolCallOptions,
-): Promise<JsonObject> => {
+export const openclawRpc = async (tool: string, args: ToolArgs, options?: ToolCallOptions): Promise<JsonObject> => {
     if (isToolName(tool)) {
         return unwrapToolResult(await getDefaultToolRegistry().invoke(tool, args, options));
     }

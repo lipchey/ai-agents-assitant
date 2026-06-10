@@ -1,4 +1,11 @@
-import { ChatRole, DEFAULT_OPENCLAW_MODEL, ModelProvider, OpenClawControl, STRONG_REASONING_AGENT_ID, ThinkingMode } from "../consts";
+import {
+    ChatRole,
+    DEFAULT_OPENCLAW_MODEL,
+    ModelProvider,
+    OpenClawControl,
+    STRONG_REASONING_AGENT_ID,
+    ThinkingMode,
+} from "../consts";
 import { OpenClawError } from "./errors.ts";
 import { jsonPost } from "./http.ts";
 import { modelForRole } from "./models.ts";
@@ -38,9 +45,10 @@ export const callLlm = async (
 ): Promise<LlmCallResult> => {
     const { modelRef, provider, temperature } = modelForRole(role);
     /* Adaptive Anthropic thinking requires the strong-reasoning OpenClaw agent. */
-    const agentId = provider === ModelProvider.ANTHROPIC && options.thinking === ThinkingMode.ADAPTIVE
-        ? STRONG_REASONING_AGENT_ID
-        : undefined;
+    const agentId =
+        provider === ModelProvider.ANTHROPIC && options.thinking === ThinkingMode.ADAPTIVE
+            ? STRONG_REASONING_AGENT_ID
+            : undefined;
     const body: JsonObject = {
         model: agentId ? `openclaw/${agentId}` : DEFAULT_OPENCLAW_MODEL,
         messages: [
@@ -66,7 +74,11 @@ export const callLlm = async (
         if (options.thinking !== undefined) {
             body.thinking = { type: options.thinking };
         }
-        if (options.thinking !== undefined && options.thinking !== ThinkingMode.DISABLED && options.reasoningEffort !== undefined) {
+        if (
+            options.thinking !== undefined &&
+            options.thinking !== ThinkingMode.DISABLED &&
+            options.reasoningEffort !== undefined
+        ) {
             body.output_config = { effort: options.reasoningEffort };
         }
     } else {
@@ -74,7 +86,9 @@ export const callLlm = async (
             body.reasoning_effort = options.reasoningEffort;
         }
         if (options.thinking !== undefined) {
-            body.thinking = { type: options.thinking === ThinkingMode.ADAPTIVE ? ThinkingMode.ENABLED : options.thinking };
+            body.thinking = {
+                type: options.thinking === ThinkingMode.ADAPTIVE ? ThinkingMode.ENABLED : options.thinking,
+            };
         }
     }
 
@@ -83,7 +97,10 @@ export const callLlm = async (
         headers["x-openclaw-agent-id"] = agentId;
     }
 
-    const response = await jsonPost<ChatCompletionResponse>(OpenClawControl.CHAT_COMPLETIONS_ENDPOINT, body, { timeoutS: 180, headers });
+    const response = await jsonPost<ChatCompletionResponse>(OpenClawControl.CHAT_COMPLETIONS_ENDPOINT, body, {
+        timeoutS: 180,
+        headers,
+    });
 
     const content = contentToString(response.choices?.[0]?.message?.content);
     if (!content) {

@@ -48,7 +48,11 @@ export const invokeGatewayTool = async (
 
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
         try {
-            const response = await jsonPost<{ ok: boolean; result?: unknown; error?: { message?: string; type?: string } }>(
+            const response = await jsonPost<{
+                ok: boolean;
+                result?: unknown;
+                error?: { message?: string; type?: string };
+            }>(
                 OpenClawControl.TOOLS_INVOKE_ENDPOINT,
                 {
                     tool,

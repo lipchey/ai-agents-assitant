@@ -5,7 +5,9 @@ export type { ModelProvider, ModelRouting } from "../types/tools";
 
 export const providerForModel = (modelRef: string): ModelProvider => {
     const provider = modelRef.split("/", 1)[0];
-    return provider === ModelProvider.ANTHROPIC || provider === ModelProvider.DEEPSEEK || provider === ModelProvider.OPENAI
+    return provider === ModelProvider.ANTHROPIC ||
+        provider === ModelProvider.DEEPSEEK ||
+        provider === ModelProvider.OPENAI
         ? provider
         : ModelProvider.UNKNOWN;
 };

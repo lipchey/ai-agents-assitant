@@ -24,10 +24,7 @@ const appendGatewayLog = (chunk: Buffer): void => {
 
 export const getGatewayBaseUrl = (): string => {
     const configured = process.env[EnvVar.GATEWAY_URL] ?? process.env[EnvVar.BASE_URL] ?? DEFAULT_GATEWAY_URL;
-    return configured
-        .replace(/^ws:/u, "http:")
-        .replace(/^wss:/u, "https:")
-        .replace(/\/+$/u, "");
+    return configured.replace(/^ws:/u, "http:").replace(/^wss:/u, "https:").replace(/\/+$/u, "");
 };
 
 export const getGatewayToken = (): string => {
@@ -47,8 +44,7 @@ export const authHeaders = (): Record<string, string> => ({
 const getOpenClawConfigPath = (): string =>
     process.env[EnvVar.CONFIG_PATH] ?? path.join(process.cwd(), "openclaw.config.json5");
 
-const getOpenClawStateDir = (): string =>
-    process.env[EnvVar.STATE_DIR] ?? path.join(process.cwd(), ".openclaw_state");
+const getOpenClawStateDir = (): string => process.env[EnvVar.STATE_DIR] ?? path.join(process.cwd(), ".openclaw_state");
 
 const probeGateway = async (timeoutMs = GATEWAY_PROBE_TIMEOUT_MS): Promise<boolean> => {
     const baseUrl = getGatewayBaseUrl();

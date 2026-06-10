@@ -13,15 +13,14 @@ export const createDefaultToolAccessPolicy = (): ToolAccessPolicy => {
         renderCatalog: (kind, descriptors) => {
             const describeFor = new Map(
                 descriptors.flatMap((descriptor) =>
-                    descriptor.aliases.map((alias) => [alias, descriptor.description] as const)),
+                    descriptor.aliases.map((alias) => [alias, descriptor.description] as const),
+                ),
             );
             const lines = [...allowedAliases(kind, descriptors)]
                 .sort((left, right) => left.localeCompare(right))
                 .map((alias) => `- ${alias} ${describeFor.get(alias) ?? ""}`);
 
-            return lines.length > 0
-                ? ["AVAILABLE TOOLS:", ...lines].join("\n")
-                : "AVAILABLE TOOLS:\n(none)";
+            return lines.length > 0 ? ["AVAILABLE TOOLS:", ...lines].join("\n") : "AVAILABLE TOOLS:\n(none)";
         },
     };
 };

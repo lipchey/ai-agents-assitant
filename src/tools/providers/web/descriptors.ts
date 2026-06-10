@@ -1,11 +1,4 @@
-import {
-    BuiltInToolId,
-    ToolCapability,
-    ToolErrorKind,
-    ToolName,
-    ToolProviderName,
-    WorkerKind,
-} from "../../../consts";
+import { BuiltInToolId, ToolCapability, ToolErrorKind, ToolName, ToolProviderName, WorkerKind } from "../../../consts";
 import { errorMessage, readString } from "../../../shared";
 import type { ToolArgs, ToolCallContext, ToolDescriptor, ToolResult } from "../../../types/tools";
 import { ToolError } from "../../errors.ts";

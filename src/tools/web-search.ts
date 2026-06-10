@@ -20,7 +20,7 @@ import { invokeGatewayTool } from "./http.ts";
 const isNonEmptyArray = (value: unknown): boolean => Array.isArray(value) && value.length > 0;
 
 const readJsonObject = (value: unknown): JsonObject | undefined => {
-    return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : undefined;
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : undefined;
 };
 
 /* content can be non-empty with zero hits, so emptiness must prefer details. */
@@ -47,10 +47,7 @@ const webSearchResultIsEmpty = (result: JsonObject): boolean => {
     return true;
 };
 
-export const runWebLookupWithFallback = async (
-    args: ToolArgs,
-    options?: ToolCallOptions,
-): Promise<JsonObject> => {
+export const runWebLookupWithFallback = async (args: ToolArgs, options?: ToolCallOptions): Promise<JsonObject> => {
     const query = readString(args.query) ?? readString(args.subtask);
     if (!query) {
         throw new ToolError(ToolErrorKind.VALIDATION, "web_lookup requires a query.");
@@ -78,16 +75,17 @@ export const runWebLookupWithFallback = async (
             options,
         );
         const fallbackPayload = webSearchPayload(fallback);
-        const fallbackProvider = readString(fallback.provider)
-            ?? readString(fallbackPayload.provider)
-            ?? FALLBACK_PROVIDER_LABEL;
+        const fallbackProvider =
+            readString(fallback.provider) ?? readString(fallbackPayload.provider) ?? FALLBACK_PROVIDER_LABEL;
         if (webSearchResultIsEmpty(fallback)) {
-            getLogger().child({ module: "web-search" }).warn("web_lookup fallback returned no results.", {
-                provider: PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
-                fallbackProvider,
-                tavilyFallbackReason: tavilyFailure,
-                queryPreview: truncate(query, WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS),
-            });
+            getLogger()
+                .child({ module: "web-search" })
+                .warn("web_lookup fallback returned no results.", {
+                    provider: PRIMARY_WEB_SEARCH_PROVIDER_LABEL,
+                    fallbackProvider,
+                    tavilyFallbackReason: tavilyFailure,
+                    queryPreview: truncate(query, WEB_SEARCH_LOG_QUERY_PREVIEW_CHARS),
+                });
         }
         return { ...fallback, searchProvider: fallbackProvider, tavilyFallbackReason: tavilyFailure };
     } catch (fallbackError) {

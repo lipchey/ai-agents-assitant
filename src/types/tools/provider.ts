@@ -5,9 +5,7 @@ export type ToolAlias = ToolName;
 
 export type QualifiedToolId = `${string}:${string}`;
 
-export type SanitizedAction =
-    | { ok: true; alias: ToolAlias; args: ToolArgs }
-    | { ok: false; error: string };
+export type SanitizedAction = { ok: true; alias: ToolAlias; args: ToolArgs } | { ok: false; error: string };
 
 export type ToolResult = {
     readonly status: ToolStatus;

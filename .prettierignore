@@ -4,5 +4,5 @@ package-lock.json
 src/consts/pricing/model-pricing.json
 .openclaw_state
 .openclaw_artifacts
-tools/
+/tools/
 schemas/quality.schema.json

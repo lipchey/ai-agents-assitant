@@ -65,7 +65,10 @@ const runLocalProcess = async (
             if (forceKillTimer) {
                 clearTimeout(forceKillTimer);
             }
-            resolve({ status: ToolStatus.FAILED, details: { label, command, args, cwd, error: error.message, stdout, stderr } });
+            resolve({
+                status: ToolStatus.FAILED,
+                details: { label, command, args, cwd, error: error.message, stdout, stderr },
+            });
         });
         child.once("exit", (exitCode, signal) => {
             clearTimeout(timer);
@@ -80,7 +83,7 @@ const runLocalProcess = async (
 
 const readDetails = (result: JsonObject): JsonObject => {
     return result.details && typeof result.details === "object" && !Array.isArray(result.details)
-        ? result.details as JsonObject
+        ? (result.details as JsonObject)
         : {};
 };
 
@@ -137,7 +140,9 @@ const runLocalGrepCode = async (args: ToolArgs, options?: ToolCallOptions): Prom
         pattern,
         searchPath,
     ];
-    const result = await runLocalProcess(ToolName.GREP_CODE, "rg", rgArgs, { timeoutS: options?.timeoutS ?? TOOL_TIMEOUT_S });
+    const result = await runLocalProcess(ToolName.GREP_CODE, "rg", rgArgs, {
+        timeoutS: options?.timeoutS ?? TOOL_TIMEOUT_S,
+    });
     const details = readDetails(result);
     const stdout = typeof details.stdout === "string" ? limitLines(details.stdout, limit) : "";
     return { ...result, details: { ...details, stdout, limit, pattern, path: searchPath } };
@@ -165,8 +170,9 @@ export const runLocalPseudoTool = async (
     switch (tool) {
         case ToolName.SHELL_EXEC:
         case ToolName.RUN_TESTS: {
-            const command = readString(args.command)
-                ?? (tool === ToolName.RUN_TESTS ? VERIFY_TYPECHECK_COMMAND : readString(args.subtask));
+            const command =
+                readString(args.command) ??
+                (tool === ToolName.RUN_TESTS ? VERIFY_TYPECHECK_COMMAND : readString(args.subtask));
             if (!command) {
                 throw new ToolError(ToolErrorKind.VALIDATION, `${tool} requires a command.`);
             }

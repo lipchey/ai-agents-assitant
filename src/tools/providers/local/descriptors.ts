@@ -24,7 +24,12 @@ type LocalDescriptorConfig = {
     validate(args: ToolArgs): SanitizedAction;
 };
 
-const invokeLocal = async (id: BuiltInToolId, alias: ToolName, args: ToolArgs, context?: ToolCallContext): Promise<ToolResult> => {
+const invokeLocal = async (
+    id: BuiltInToolId,
+    alias: ToolName,
+    args: ToolArgs,
+    context?: ToolCallContext,
+): Promise<ToolResult> => {
     try {
         const payload = await runLocalPseudoTool(alias, args, context);
         if (!payload) {
@@ -76,7 +81,8 @@ export const localDescriptors: readonly ToolDescriptor[] = [
         alias: ToolName.GREP_CODE,
         capabilities: [ToolCapability.READ_WORKSPACE],
         suggestedKinds: [WorkerKind.CODE_EXPLORER, WorkerKind.INFRA_OPS],
-        description: '{"pattern":"regex","path":".","ignoreCase":false,"literal":false,"limit":80}: search file contents.',
+        description:
+            '{"pattern":"regex","path":".","ignoreCase":false,"literal":false,"limit":80}: search file contents.',
         validate: (rawArgs) => {
             const pattern = readString(rawArgs.pattern) ?? readString(rawArgs.query);
             if (!pattern) {
@@ -87,7 +93,13 @@ export const localDescriptors: readonly ToolDescriptor[] = [
             return {
                 ok: true,
                 alias: ToolName.GREP_CODE,
-                args: { path, pattern, ignoreCase: rawArgs.ignoreCase !== false, literal: rawArgs.literal === true, limit },
+                args: {
+                    path,
+                    pattern,
+                    ignoreCase: rawArgs.ignoreCase !== false,
+                    literal: rawArgs.literal === true,
+                    limit,
+                },
             };
         },
     }),
