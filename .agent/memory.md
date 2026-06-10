@@ -230,6 +230,14 @@ Current status as of 2026-06-08:
 - Full live end-to-end execution still needs valid provider credentials and a
   reachable OpenClaw Gateway/runtime.
 
+Status update 2026-06-10: a full project review and a boilerplate-refactor
+design/plan were authored (no code changes yet). The repo is scheduled to
+become a profile-driven multi-LLM boilerplate via sessions R1–R9 — see
+`.agent/tasks.md` § Active for the schedule and pointers; execution protocol
+lives in `.agents/session-protocol.md` (cross-runtime review chain in
+`.agents/review-chain.md`). Working-tree `.env` keys must be rotated (R0)
+before any session runs.
+
 Open backlog:
 - Tool-provider hardening: extract `transport/`, `workspace/`, and `artifacts/`
   to their proposed subsystem roots; add a fake-provider test that drives

@@ -1,8 +1,12 @@
 # Project Tasks
 
-**Status (2026-06-08):** MVP complete; no active implementation tasks.
-Structured logging and compact verify-report projection now have dedicated
-smoke coverage.
+**Status (2026-06-10):** Boilerplate refactor planned and scheduled (R1–R9).
+Review: [docs/reviews/2026-06-10-project-review.md](../docs/reviews/2026-06-10-project-review.md);
+spec: [docs/superpowers/specs/2026-06-10-boilerplate-refactor-design.md](../docs/superpowers/specs/2026-06-10-boilerplate-refactor-design.md);
+plan: [docs/superpowers/plans/2026-06-10-boilerplate-refactor.md](../docs/superpowers/plans/2026-06-10-boilerplate-refactor.md).
+Sessions run per [.agents/session-protocol.md](../.agents/session-protocol.md)
+(trigger `виконай сесію R<n>`); live state in
+[.agents/handoffs/STATE.md](../.agents/handoffs/STATE.md).
 
 Use this file for live work only. Current architecture and durable project
 context live in [.agent/memory.md](memory.md); engineering rules live in
@@ -10,12 +14,39 @@ context live in [.agent/memory.md](memory.md); engineering rules live in
 were removed from this tracker during the 2026-06-06 memory/tasks cleanup to keep
 future sessions focused on what still needs action.
 
-## Active Tasks
+## Active Tasks — Refactor Schedule (one session each)
 
-None.
+- [ ] R0 (owner, manual) Rotate the four leaked API keys in `.env`; set
+  `r0_keys_rotated: true` in `.agents/handoffs/STATE.md`. Blocks R1.
+- [ ] R1 Test foundation: vitest + characterization tests for pricing,
+  budget, routing, parsers; CI node matrix.
+- [ ] R2 Profile foundation: zod-validated profiles; role→model bindings
+  become data; call-site LLM options move into bindings.
+- [ ] R3 Provider seam: ChatProvider interface, direct LangChain transport,
+  OpenClaw legacy adapter, retry layer, new model pricing entries.
+- [ ] R4 Run kernel: runId, SqliteSaver checkpointer + `--resume`, per-node
+  cost/timing logs, RunSummary artifact on all termination paths.
+- [ ] R5 Structured outputs (main graph) with text-parser fallback;
+  profile-injected cascade prompts.
+- [ ] R6 Profile CLI surface + personal-dev / research-playground /
+  client-baseline example profiles; README.
+- [ ] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
+  smoke suite + fixtures; `npm run bench`.
+- [ ] R8 Offline e2e on a fake provider + security hardening (patch guards,
+  token fallback removal) + exact dependency pinning.
+- [ ] R9 Live MVP validation across all profiles; baseline bench report;
+  tag `v0.1.0-boilerplate`.
 
 ## Backlog
 
+- [ ] Langfuse (v5, OTel path) tracing integration behind the R4 callbacks
+  hook; self-hosted; custom DeepSeek pricing in its model table.
+- [ ] Declarative topology variants per profile (spec D3 deferral) — only
+  after the profile system proves itself in real use.
+- [ ] Swarm ReAct step decision → structured outputs (R5 covered the main
+  graph only).
+- [ ] Decide OpenClaw transport removal once direct-transport parity is
+  confirmed by R9 live runs (spec D1).
 - [x] RTK local exec optimization review: rejected RTK in the runtime verify path
   after critical review; implemented compact `verificationReport` serialization
   instead. Follow-up review moved the projection to `tools/result-reports`, kept
