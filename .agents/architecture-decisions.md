@@ -130,3 +130,88 @@ guard rules there, not in eslint, that turn an unlayered dir into a hard failure
   TypeScript (typecheck is green and uses them). Accepted as warn-level FPs; do
   not delete. If the orphan rule is promoted to error later, exempt these two
   paths with a dated note here.
+
+## ADR-002: Knip dead-code config and report-only baseline
+
+### Status
+
+Accepted - 2026-06-10 (session S7, Task 8). `knip.json` is comment-free JSON, so
+this entry is the canonical "why" for every config switch. Knip runs as the
+`dead-code` check in the `full` tier of `quality.json` in **report-only** mode:
+it never fails `./verify --full` (only `blocking` checks do), it prints the
+JSON-reporter finding set to the run log, and the committed snapshot lives at
+`quality-baselines/knip.json`. The runner does NOT diff baselines; the baseline
+is a human-read reference for future drift, not a gate.
+
+### Config decisions (`knip.json`)
+
+Tuning goal (plan language): "findings are real signal". A no-config knip 6.x run
+reported 2 unused files, 3 unused deps, 1 unused devDep, 107 unused exports, and
+69 unused types - the export/type counts being almost entirely barrel
+re-export noise. The tuned config reduces this to the real signal below.
+
+- `project: ["src/**/*.ts", "scripts/**/*.ts"]`. Scopes knip to first-party
+  source. WHY: the default project glob swept in `tools/verify-runner.mjs` - the
+  vendored quality-runner bundle, invoked by the `verify` bash shim, never
+  `import`ed - and flagged it as an unused file (a false positive on an
+  off-limits file we must not touch). Narrowing `project` drops it cleanly while
+  leaving `scripts/` in scope so `scripts/gateway-smoke.ts` stays a true finding.
+
+- `entry: ["src/main.ts", "src/index.ts", "src/**/index.ts"]`. The first two are
+  the plan-named application entries (also auto-detectable, but pinned for
+  clarity). `src/**/index.ts` is the BARREL-HANDLING switch and the core of the
+  tuning: marking the public `*/index.ts` barrels as entry surface tells knip
+  their re-exports are intentional public API, so the 162-ish barrel re-export
+  findings disappear WITHOUT blanket-ignoring whole directories. Real dead
+  exports in non-barrel files stay visible (see baseline). This is why, e.g.,
+  `getGatewayToken` is NOT a finding: it is alive (used in `src/tools/gateway.ts`
+  and imported deep by `scripts/websearch-smoke.ts`); only its barrel re-export
+  edge was unused, which is exactly the noise this switch removes. The same is
+  true for the `PROJECTED_*_USD` budget consts and `ModelProvider`, which have
+  real deep-path consumers.
+
+- Plan note vs. measured reality: the plan's draft Files list suggested
+  `scripts/*.ts` as an entry. That was deliberately NOT applied, because making
+  every script an entry would suppress `scripts/gateway-smoke.ts` - the one
+  unwired script the plan explicitly wants kept as a finding. Knip auto-detects
+  the six wired `smoke:*` scripts from `package.json`, so `gateway-smoke.ts`
+  (which has no npm-script wiring) remains the sole unused-file finding. This is
+  the plan's sanctioned "adjust from measured findings".
+
+- No dependency ignores. `openclaw` is flagged as an unused dependency because it
+  is consumed as a CLI binary outside npm scripts, not as an imported module; it
+  is KEPT as a baseline finding and MUST NOT be removed (owner-routed decision).
+  The three Task-7 devDeps (`dependency-cruiser`, `eslint-plugin-boundaries`,
+  `eslint-import-resolver-typescript`) are correctly detected as used via knip's
+  built-in eslint/dependency-cruiser plugins reading `eslint.config.js` and
+  `.dependency-cruiser.cjs`; no ignore or plugin override was needed.
+
+### Committed baseline findings (`quality-baselines/knip.json`)
+
+The tuned, deterministic finding set (stable across repeated runs):
+
+- 1 unused file: `scripts/gateway-smoke.ts` - TRUE positive (no `smoke:gateway`
+  npm script). Wire-it-or-delete-it is an owner decision, out of scope here.
+- 3 unused dependencies: `@langchain/anthropic`, `@langchain/openai` (TRUE
+  positives), `openclaw` (kept by design, see above).
+- 1 unused devDependency: `@types/ws` - TRUE positive.
+- 2 unused exports + 1 unused type: `readToolStatus` (`src/tools/results.ts`),
+  `normalizeLogValue` (`src/logging/fields.ts`), `CreateToolRegistryOptions`
+  (`src/tools/registry.ts`). Each is used inside its own file but its `export`
+  is consumed nowhere else - genuine "export keyword unnecessary" signal.
+
+A small number of exports that are ONLY re-exported through a barrel and have no
+deep-path consumer (e.g. `OpenClawRpcArgs`/`OpenClawRpcOptions`, the
+`NPM_RUN_*`/`TSC_NO_EMIT_COMMAND` consts) are absorbed by the barrel-as-entry
+switch and do not appear. This is an accepted, intentional trade: the plan's
+priority is killing the 162-finding barrel noise while keeping non-barrel dead
+exports visible, and these symbols are barrel surface. A future tightening pass
+(narrowing which barrels are entries, or moving to a barrel-specific switch) can
+recover them if desired.
+
+### Baseline stability caveat
+
+The verbatim JSON reporter output embeds `line`/`col`/`pos` positions for each
+finding. Because the runner does not diff baselines, this is harmless today, but
+a future baseline-diff feature should normalize away positional fields (or
+re-emit the baseline) to avoid churn when unrelated edits shift line numbers.

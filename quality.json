@@ -72,6 +72,12 @@
         "name": "secret-scan",
         "argv": ["./tools/run-gitleaks", "git", "--no-banner", "--redact"],
         "timeout_seconds": 60
+      },
+      {
+        "name": "dead-code",
+        "argv": ["./node_modules/.bin/knip", "--reporter", "json"],
+        "mode": "report-only",
+        "timeout_seconds": 60
       }
     ],
     "audit": []
