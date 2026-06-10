@@ -16,14 +16,21 @@ import type { LogRecord, LogSink } from "../src/types";
 const savedGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN;
 delete process.env.OPENCLAW_GATEWAY_TOKEN;
 assert.throws(getGatewayToken, /OPENCLAW_GATEWAY_TOKEN/, "D4: missing gateway token must throw");
-if (savedGatewayToken !== undefined) {
+/* Restore only a usable token. An empty (or otherwise falsy) original value is
+   treated as unset so the dummy below can install; getGatewayToken() rejects
+   empty strings, and restoring "" would resurrect the very failure D4 guards. */
+if (savedGatewayToken) {
     process.env.OPENCLAW_GATEWAY_TOKEN = savedGatewayToken;
 }
 
 /* The gateway transport is fully stubbed below, but auth-header construction now
-   requires OPENCLAW_GATEWAY_TOKEN to be present. Provide a dummy so the smoke
-   stays hermetic (no real token, no .env needed); the stubbed fetch ignores it. */
-process.env.OPENCLAW_GATEWAY_TOKEN ??= "smoke-dummy-token";
+   requires a non-empty OPENCLAW_GATEWAY_TOKEN. Provide a dummy whenever the env
+   value is absent OR empty so the smoke stays hermetic (no real token, no .env
+   needed); the stubbed fetch ignores it. A plain `??=` would leave a present
+   empty string untouched and trip getGatewayToken()'s reject-empty guard. */
+if (!process.env.OPENCLAW_GATEWAY_TOKEN) {
+    process.env.OPENCLAW_GATEWAY_TOKEN = "smoke-dummy-token";
+}
 
 type GatewayBody = { ok: boolean; result?: unknown; error?: { message?: string } };
 type Handler = (tool: string, args: Record<string, unknown>) => GatewayBody;
