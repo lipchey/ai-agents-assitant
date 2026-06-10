@@ -13,13 +13,13 @@ const parseBalancedJsonObjectAt = (text: string, start: number): unknown => {
                 escaped = false;
             } else if (char === "\\") {
                 escaped = true;
-            } else if (char === "\"") {
+            } else if (char === '"') {
                 inString = false;
             }
             continue;
         }
 
-        if (char === "\"") {
+        if (char === '"') {
             inString = true;
             continue;
         }
@@ -70,7 +70,5 @@ export const extractJsonObject = (text: string): unknown => {
 };
 
 export const asRecord = (value: unknown): Record<string, unknown> | null => {
-    return value && typeof value === "object" && !Array.isArray(value)
-        ? value as Record<string, unknown>
-        : null;
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 };

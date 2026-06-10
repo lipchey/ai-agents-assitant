@@ -1,11 +1,4 @@
-import {
-    DEFAULT_LOG_FORMAT,
-    DEFAULT_LOG_LEVEL,
-    EnvVar,
-    LogLevel,
-    isLogFormat,
-    isLogLevel,
-} from "../consts";
+import { DEFAULT_LOG_FORMAT, DEFAULT_LOG_LEVEL, EnvVar, LogLevel, isLogFormat, isLogLevel } from "../consts";
 import { readString } from "../shared";
 import type { LogFormat } from "../consts";
 import type {

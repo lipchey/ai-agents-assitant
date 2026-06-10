@@ -54,7 +54,9 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
                 `Subtask:\n${state.subtask}`,
                 state.escalationResponse ? `Escalation guidance:\n${state.escalationResponse}` : "",
                 `Heuristic suggestion: ${seededKind}`,
-            ].filter(Boolean).join("\n\n"),
+            ]
+                .filter(Boolean)
+                .join("\n\n"),
             { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
         );
         selectedKind = parseWorkerKind(result.content, seededKind);
@@ -76,12 +78,11 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
 };
 
 export const smeOracle = async (state: SwarmWorkerStateValue) => {
-    const result = await callLlm(
-        ModelRole.FRONTIER,
-        SystemPrompts.smeOracle,
-        state.escalationQuery,
-        { maxTokens: 900, reasoningEffort: ReasoningEffort.HIGH, thinking: ThinkingMode.ENABLED },
-    );
+    const result = await callLlm(ModelRole.FRONTIER, SystemPrompts.smeOracle, state.escalationQuery, {
+        maxTokens: 900,
+        reasoningEffort: ReasoningEffort.HIGH,
+        thinking: ThinkingMode.ENABLED,
+    });
     return {
         escalationResponse: result.content,
         escalationAttempts: (state.escalationAttempts ?? 0) + 1,
@@ -139,13 +140,15 @@ export const workerCompress = async (state: SwarmWorkerStateValue) => {
 
 export const blocked = (state: SwarmWorkerStateValue) => {
     const failure = state.failureType ?? FailureType.UNKNOWN;
-    const reason = state.escalationQuery
-        || state.escalationResponse
-        || (state.rawToolOutput ? truncate(state.rawToolOutput, MAX_BLOCKED_FALLBACK_CHARS) : "")
-        || "worker stopped without a recoverable result";
-    const response = state.status === WorkerStatus.BLOCKED && state.escalationResponse
-        ? state.escalationResponse
-        : `Worker blocked after ${state.escalationAttempts ?? 0} escalation attempt(s) (${failure}): ${reason}`;
+    const reason =
+        state.escalationQuery ||
+        state.escalationResponse ||
+        (state.rawToolOutput ? truncate(state.rawToolOutput, MAX_BLOCKED_FALLBACK_CHARS) : "") ||
+        "worker stopped without a recoverable result";
+    const response =
+        state.status === WorkerStatus.BLOCKED && state.escalationResponse
+            ? state.escalationResponse
+            : `Worker blocked after ${state.escalationAttempts ?? 0} escalation attempt(s) (${failure}): ${reason}`;
 
     return {
         status: WorkerStatus.BLOCKED,

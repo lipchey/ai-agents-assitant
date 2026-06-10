@@ -21,7 +21,11 @@ const run = async (): Promise<void> => {
     await startOpenClawGateway();
     console.log("READY: gateway became reachable.\n");
 
-    for (const endpoint of [OpenClawControl.READY_ENDPOINT, OpenClawControl.HEALTH_ENDPOINT, OpenClawControl.MODELS_ENDPOINT]) {
+    for (const endpoint of [
+        OpenClawControl.READY_ENDPOINT,
+        OpenClawControl.HEALTH_ENDPOINT,
+        OpenClawControl.MODELS_ENDPOINT,
+    ]) {
         console.log(`  GET ${endpoint} -> ${await probe(endpoint)}`);
     }
 };

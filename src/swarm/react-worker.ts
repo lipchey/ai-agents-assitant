@@ -18,7 +18,17 @@ import {
     WORKER_USAGE_KEY,
 } from "../consts";
 import { WORKER_PROMPTS } from "../prompts";
-import { errorMessage, readString, safeJson, stringifyPretty, truncate, emptyUsage, mergeUsage, usageFromLlm, type UsageStats } from "../shared";
+import {
+    errorMessage,
+    readString,
+    safeJson,
+    stringifyPretty,
+    truncate,
+    emptyUsage,
+    mergeUsage,
+    usageFromLlm,
+    type UsageStats,
+} from "../shared";
 import { callLlm, getDefaultToolRegistry, storeArtifact, unwrapToolResult, type LlmCallResult } from "../tools";
 import type { ToolCallRecord } from "../types/state";
 import type { ReactStep } from "../types/swarm";
@@ -29,25 +39,32 @@ import { classifyFailure, parseReactDecision, sanitizeToolArgs } from "./tool-va
 const buildWorkerContext = (state: SwarmWorkerStateValue, steps: ReactStep[], toolCatalog: string): string => {
     const guidance = readString(state.escalationResponse);
     const priorObservations = readString(state.rawToolOutput);
-    const transcript = steps.length === 0
-        ? "(no steps yet — choose your first action)"
-        : steps
-            .map((step, index) => [
-                `Step ${index + 1} thought: ${step.thought || "(none)"}`,
-                `Step ${index + 1} action: ${step.summary}`,
-                `Step ${index + 1} observation (${step.ok ? "ok" : "error"}):\n${step.observation}`,
-            ].join("\n"))
-            .join("\n\n");
+    const transcript =
+        steps.length === 0
+            ? "(no steps yet — choose your first action)"
+            : steps
+                  .map((step, index) =>
+                      [
+                          `Step ${index + 1} thought: ${step.thought || "(none)"}`,
+                          `Step ${index + 1} action: ${step.summary}`,
+                          `Step ${index + 1} observation (${step.ok ? "ok" : "error"}):\n${step.observation}`,
+                      ].join("\n"),
+                  )
+                  .join("\n\n");
 
     return [
         `SUBTASK:\n${state.subtask}`,
         guidance ? `ESCALATION GUIDANCE (apply this first):\n${guidance}` : "",
-        priorObservations ? `EARLIER ATTEMPT OBSERVATIONS:\n${truncate(priorObservations, MAX_PRIOR_TRANSCRIPT_CHARS)}` : "",
+        priorObservations
+            ? `EARLIER ATTEMPT OBSERVATIONS:\n${truncate(priorObservations, MAX_PRIOR_TRANSCRIPT_CHARS)}`
+            : "",
         toolCatalog,
         `STEP BUDGET: ${MAX_REACT_STEPS} total; used ${steps.length}.`,
         `PROGRESS THIS ATTEMPT:\n${transcript}`,
         "Decide the next single step. Respond with ONE JSON object only.",
-    ].filter(Boolean).join("\n\n");
+    ]
+        .filter(Boolean)
+        .join("\n\n");
 };
 
 const composeRaw = (rawOutputs: string[], finalSummary: string): string => {
@@ -142,9 +159,10 @@ export const runReactWorker = async (
 
             /* Non-zero shell exit is evidence to report, not a worker failure. */
             const exitCode = result.exitCode;
-            const observationNote = sanitized.alias === ToolName.SHELL_EXEC && exitCode !== undefined && exitCode !== 0
-                ? `[non-zero exit ${exitCode}]\n`
-                : "";
+            const observationNote =
+                sanitized.alias === ToolName.SHELL_EXEC && exitCode !== undefined && exitCode !== 0
+                    ? `[non-zero exit ${exitCode}]\n`
+                    : "";
             steps.push({
                 thought: decision.thought,
                 summary: actionSummary,
@@ -159,7 +177,12 @@ export const runReactWorker = async (
                 return escalate(FailureType.ENVIRONMENT, message);
             }
             toolFailures += 1;
-            steps.push({ thought: decision.thought, summary: actionSummary, observation: truncate(message, MAX_OBSERVATION_CHARS), ok: false });
+            steps.push({
+                thought: decision.thought,
+                summary: actionSummary,
+                observation: truncate(message, MAX_OBSERVATION_CHARS),
+                ok: false,
+            });
             toolCalls.push({ tool: sanitized.alias, ok: false, error: message });
             if (toolFailures >= MAX_REACT_TOOL_FAILURES) {
                 return escalate(FailureType.REASONING, message);

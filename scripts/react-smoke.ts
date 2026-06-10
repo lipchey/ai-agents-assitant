@@ -27,23 +27,33 @@ import { createLocalProvider } from "../src/tools/providers";
 import type { QualifiedToolId } from "../src";
 
 const run = async (): Promise<void> => {
-    const act = parseReactDecision(JSON.stringify({
-        thought: "look",
-        action: { tool: ToolName.GREP_CODE, args: { pattern: "callLlm" } },
-    }));
+    const act = parseReactDecision(
+        JSON.stringify({
+            thought: "look",
+            action: { tool: ToolName.GREP_CODE, args: { pattern: "callLlm" } },
+        }),
+    );
     assert.equal(act.kind, ReactDecisionKind.ACT);
     assert.equal(act.kind === ReactDecisionKind.ACT && act.tool, ToolName.GREP_CODE);
     assert.deepEqual(act.kind === ReactDecisionKind.ACT && act.args, { pattern: "callLlm" });
 
-    const trailingBrace = parseReactDecision(`${JSON.stringify({
-        thought: "look",
-        action: { tool: ToolName.GREP_CODE, args: { pattern: "GraphState" } },
-    })} trailing note with { brace`);
-    assert.equal(trailingBrace.kind, ReactDecisionKind.ACT, "parser must use the first balanced JSON object, not first-to-last brace slicing");
+    const trailingBrace = parseReactDecision(
+        `${JSON.stringify({
+            thought: "look",
+            action: { tool: ToolName.GREP_CODE, args: { pattern: "GraphState" } },
+        })} trailing note with { brace`,
+    );
+    assert.equal(
+        trailingBrace.kind,
+        ReactDecisionKind.ACT,
+        "parser must use the first balanced JSON object, not first-to-last brace slicing",
+    );
     assert.equal(trailingBrace.kind === ReactDecisionKind.ACT && trailingBrace.tool, ToolName.GREP_CODE);
     assert.deepEqual(trailingBrace.kind === ReactDecisionKind.ACT && trailingBrace.args, { pattern: "GraphState" });
 
-    const fenced = parseReactDecision(`\`\`\`json\n${JSON.stringify({ thought: "done", final: "found it in src/main.ts" })}\n\`\`\``);
+    const fenced = parseReactDecision(
+        `\`\`\`json\n${JSON.stringify({ thought: "done", final: "found it in src/main.ts" })}\n\`\`\``,
+    );
     assert.equal(fenced.kind, ReactDecisionKind.FINAL);
     assert.equal(fenced.kind === ReactDecisionKind.FINAL && fenced.final, "found it in src/main.ts");
 
@@ -83,7 +93,11 @@ const run = async (): Promise<void> => {
         [ToolName.FIND_FILES, ToolName.GREP_CODE, ToolName.AST_READ],
         "default registry must expose the code explorer aliases through policy",
     );
-    assert.match(registry.renderCatalog(WorkerKind.INFRA_OPS), /shell_exec/u, "rendered catalog must include policy-allowed tools");
+    assert.match(
+        registry.renderCatalog(WorkerKind.INFRA_OPS),
+        /shell_exec/u,
+        "rendered catalog must include policy-allowed tools",
+    );
     const rejects = async (
         alias: ToolName,
         args: ToolArgs,
@@ -94,15 +108,27 @@ const run = async (): Promise<void> => {
         await assert.rejects(
             () => registry.invoke(alias, args),
             (error: unknown) =>
-                error instanceof ToolError
-                && error.kind === kind
-                && error.provider === provider
-                && error.toolId === toolId,
+                error instanceof ToolError &&
+                error.kind === kind &&
+                error.provider === provider &&
+                error.toolId === toolId,
             `${alias} must reject with ${kind}`,
         );
     };
-    await rejects(ToolName.GREP_CODE, {}, ToolErrorKind.VALIDATION, ToolProviderName.LOCAL, BuiltInToolId.LOCAL_GREP_CODE);
-    await rejects(ToolName.AST_READ, {}, ToolErrorKind.VALIDATION, ToolProviderName.LOCAL, BuiltInToolId.LOCAL_AST_READ);
+    await rejects(
+        ToolName.GREP_CODE,
+        {},
+        ToolErrorKind.VALIDATION,
+        ToolProviderName.LOCAL,
+        BuiltInToolId.LOCAL_GREP_CODE,
+    );
+    await rejects(
+        ToolName.AST_READ,
+        {},
+        ToolErrorKind.VALIDATION,
+        ToolProviderName.LOCAL,
+        BuiltInToolId.LOCAL_AST_READ,
+    );
     await rejects(
         ToolName.SHELL_EXEC,
         { command: "rm -rf /" },
@@ -124,20 +150,22 @@ const run = async (): Promise<void> => {
 
     const webProvider = (name: string, id: QualifiedToolId, description: string): ToolProvider => ({
         name,
-        catalog: [{
-            id,
-            aliases: [ToolName.WEB_LOOKUP],
-            capabilities: [ToolCapability.EXTERNAL_NETWORK],
-            description,
-            validate: () => ({ ok: true, alias: ToolName.WEB_LOOKUP, args: { query: name } }),
-            invoke: async () => ({
-                status: ToolStatus.COMPLETED,
-                provider: name,
-                toolId: id,
-                alias: ToolName.WEB_LOOKUP,
-                raw: { provider: name },
-            }),
-        }],
+        catalog: [
+            {
+                id,
+                aliases: [ToolName.WEB_LOOKUP],
+                capabilities: [ToolCapability.EXTERNAL_NETWORK],
+                description,
+                validate: () => ({ ok: true, alias: ToolName.WEB_LOOKUP, args: { query: name } }),
+                invoke: async () => ({
+                    status: ToolStatus.COMPLETED,
+                    provider: name,
+                    toolId: id,
+                    alias: ToolName.WEB_LOOKUP,
+                    raw: { provider: name },
+                }),
+            },
+        ],
     });
     const replacementId: QualifiedToolId = "mock:web_lookup";
     const reboundRegistry = createToolRegistry({
@@ -150,25 +178,31 @@ const run = async (): Promise<void> => {
     });
     const reboundCatalog = reboundRegistry.renderCatalog(WorkerKind.WEB_RESEARCHER);
     assert.match(reboundCatalog, /rebound search backend/u, "catalog must describe the actively bound provider");
-    assert.doesNotMatch(reboundCatalog, /unbound search backend/u, "catalog must not describe unbound providers sharing the alias");
+    assert.doesNotMatch(
+        reboundCatalog,
+        /unbound search backend/u,
+        "catalog must not describe unbound providers sharing the alias",
+    );
 
     const duplicateProvider = (name: string): ToolProvider => ({
         name,
-        catalog: [{
-            id: BuiltInToolId.LOCAL_FIND_FILES,
-            aliases: [ToolName.FIND_FILES],
-            capabilities: [ToolCapability.READ_WORKSPACE],
-            suggestedKinds: [WorkerKind.CODE_EXPLORER],
-            description: '{"path":"."}: fake duplicate descriptor.',
-            validate: () => ({ ok: true, alias: ToolName.FIND_FILES, args: { path: "." } }),
-            invoke: async () => ({
-                status: ToolStatus.COMPLETED,
-                provider: ToolProviderName.LOCAL,
-                toolId: BuiltInToolId.LOCAL_FIND_FILES,
-                alias: ToolName.FIND_FILES,
-                raw: {},
-            }),
-        }],
+        catalog: [
+            {
+                id: BuiltInToolId.LOCAL_FIND_FILES,
+                aliases: [ToolName.FIND_FILES],
+                capabilities: [ToolCapability.READ_WORKSPACE],
+                suggestedKinds: [WorkerKind.CODE_EXPLORER],
+                description: '{"path":"."}: fake duplicate descriptor.',
+                validate: () => ({ ok: true, alias: ToolName.FIND_FILES, args: { path: "." } }),
+                invoke: async () => ({
+                    status: ToolStatus.COMPLETED,
+                    provider: ToolProviderName.LOCAL,
+                    toolId: BuiltInToolId.LOCAL_FIND_FILES,
+                    alias: ToolName.FIND_FILES,
+                    raw: {},
+                }),
+            },
+        ],
     });
     assert.throws(
         () => createToolRegistry({ providers: [duplicateProvider("duplicate-a"), duplicateProvider("duplicate-b")] }),

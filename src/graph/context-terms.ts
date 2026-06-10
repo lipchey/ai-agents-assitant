@@ -28,7 +28,9 @@ export const buildSwarmSubtask = (state: GraphStateValue): string => {
         const critiqueContext = [
             state.debateSummary ? `Debate summary:\n${state.debateSummary}` : "",
             latestCritique ? `Latest critique:\n${latestCritique}` : "",
-        ].filter(Boolean).join("\n\n");
+        ]
+            .filter(Boolean)
+            .join("\n\n");
         const searchTerms = extractContextSearchTerms(critiqueContext);
         return [
             "Targeted context request for repository inspection.",
@@ -37,7 +39,9 @@ export const buildSwarmSubtask = (state: GraphStateValue): string => {
             critiqueContext,
             searchTerms.length > 0 ? `Search focus terms: ${searchTerms.join(", ")}` : "",
             "Return only evidence that directly resolves this missing context. Avoid repeating broad repository inventory unless the critique requires it.",
-        ].filter(Boolean).join("\n\n");
+        ]
+            .filter(Boolean)
+            .join("\n\n");
     }
     return state.originalTask;
 };

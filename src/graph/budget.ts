@@ -1,8 +1,5 @@
 /* Soft USD guard is separate from the hard loop caps in routing.ts. */
-import {
-    COST_BUDGET_MIN_REMAINING_USD,
-    COST_BUDGET_SOFT_CEILING_RATIO,
-} from "../consts";
+import { COST_BUDGET_MIN_REMAINING_USD, COST_BUDGET_SOFT_CEILING_RATIO } from "../consts";
 import type { GraphStateValue } from "../types/graph";
 
 export {
@@ -15,9 +12,7 @@ export {
 
 const readCostBudgetUsd = (state: GraphStateValue): number => {
     const budget = state.costBudgetUsd;
-    return typeof budget === "number" && Number.isFinite(budget) && budget > 0
-        ? budget
-        : Number.POSITIVE_INFINITY;
+    return typeof budget === "number" && Number.isFinite(budget) && budget > 0 ? budget : Number.POSITIVE_INFINITY;
 };
 
 export const isCostBudgetNear = (state: GraphStateValue, projectedCostUsd = 0): boolean => {
@@ -27,8 +22,7 @@ export const isCostBudgetNear = (state: GraphStateValue, projectedCostUsd = 0): 
     }
     const actualCost = state.totalCost ?? 0;
     const softCeiling = budget * COST_BUDGET_SOFT_CEILING_RATIO;
-    return actualCost + projectedCostUsd >= softCeiling
-        || budget - actualCost <= COST_BUDGET_MIN_REMAINING_USD;
+    return actualCost + projectedCostUsd >= softCeiling || budget - actualCost <= COST_BUDGET_MIN_REMAINING_USD;
 };
 
 export const canSpendUsd = (state: GraphStateValue, projectedCostUsd: number): boolean =>

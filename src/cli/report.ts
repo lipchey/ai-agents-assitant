@@ -29,8 +29,12 @@ export const printReport = (
             stats.cachedInputTokens ? `${stats.cachedInputTokens} cached input` : "",
             stats.cacheMissInputTokens ? `${stats.cacheMissInputTokens} cache-miss input` : "",
             stats.cacheWriteInputTokens ? `${stats.cacheWriteInputTokens} cache-write input` : "",
-        ].filter(Boolean).join(", ");
-        output.line(`  - ${role}: ${stats.tokens} tokens, $${stats.cost.toFixed(6)}${cacheDetails ? ` (${cacheDetails})` : ""}`);
+        ]
+            .filter(Boolean)
+            .join(", ");
+        output.line(
+            `  - ${role}: ${stats.tokens} tokens, $${stats.cost.toFixed(6)}${cacheDetails ? ` (${cacheDetails})` : ""}`,
+        );
     }
     output.line("========================");
 };

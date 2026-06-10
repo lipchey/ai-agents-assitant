@@ -49,11 +49,14 @@ directory overwrite
         await assert.rejects(fs.readFile(path.join(process.cwd(), createdPath), "utf8"), /ENOENT/u);
         console.log("PASS: rollback restores pristine contents and removes created files");
 
-        const allSkipped = await applyPatchBlocks(parsePatchBlocks(`
+        const allSkipped = await applyPatchBlocks(
+            parsePatchBlocks(`
 <<<PATCH file=".git/config">>>
 still protected
 <<<END PATCH>>>
-`), new Set());
+`),
+            new Set(),
+        );
         assert.deepEqual(allSkipped.applied, []);
         assert.match(allSkipped.report, /No files applied/u);
         console.log("PASS: all-skipped patch pass reports no applied files");

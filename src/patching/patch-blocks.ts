@@ -6,9 +6,7 @@ import { resolveWorkspacePath } from "../tools";
 import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "../types/patching";
 
 const isProtectedPath = (relativePath: string): boolean => {
-    return relativePath
-        .split(/[\\/]/u)
-        .some((segment) => PROTECTED_SEGMENTS.has(segment));
+    return relativePath.split(/[\\/]/u).some((segment) => PROTECTED_SEGMENTS.has(segment));
 };
 
 /* Later blocks for the same path win; prose outside delimiters never touches disk. */
@@ -96,10 +94,7 @@ export const applyPatchBlocks = async (
 };
 
 /* Failed guarded runs must leave the workspace as they found it. */
-export const rollbackPatches = async (
-    backups: Record<string, string>,
-    created: string[],
-): Promise<string> => {
+export const rollbackPatches = async (backups: Record<string, string>, created: string[]): Promise<string> => {
     const restored: string[] = [];
     const removed: string[] = [];
     const errors: string[] = [];
@@ -128,5 +123,7 @@ export const rollbackPatches = async (
         restored.length > 0 ? `Restored ${restored.length} file(s): ${restored.join(", ")}.` : "",
         removed.length > 0 ? `Removed ${removed.length} created file(s): ${removed.join(", ")}.` : "",
         errors.length > 0 ? `Rollback errors: ${errors.join("; ")}.` : "",
-    ].filter(Boolean).join(" ");
+    ]
+        .filter(Boolean)
+        .join(" ");
 };

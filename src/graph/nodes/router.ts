@@ -6,12 +6,11 @@ import { parseRouterDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../types/graph";
 
 export const complexityRouter = async (state: GraphStateValue) => {
-    const result = await callLlm(
-        ModelRole.ROUTER,
-        SystemPrompts.complexityRouter,
-        state.originalTask,
-        { maxTokens: 160, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
-    );
+    const result = await callLlm(ModelRole.ROUTER, SystemPrompts.complexityRouter, state.originalTask, {
+        maxTokens: 160,
+        responseFormat: RESPONSE_FORMAT_JSON,
+        thinking: ThinkingMode.DISABLED,
+    });
     const decision = parseRouterDecision(result.content, state.originalTask);
 
     return {

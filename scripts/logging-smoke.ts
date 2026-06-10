@@ -60,7 +60,11 @@ const run = (): void => {
     assert.equal(sink.records.length, 2, "threshold should drop debug/info and keep warn/error");
     assert.equal(sink.records[0]?.fields?.module, "logging-smoke", "child context should be merged into fields");
     assert.equal(sink.records[0]?.fields?.shared, "call", "per-call fields should override child context");
-    assert.match(String(sink.records[0]?.fields?.query), /\[truncated/u, "high-cardinality string fields are truncated");
+    assert.match(
+        String(sink.records[0]?.fields?.query),
+        /\[truncated/u,
+        "high-cardinality string fields are truncated",
+    );
 
     getOutputWriter().line("plain answer");
     getOutputWriter().errorLine("plain error");
@@ -81,7 +85,9 @@ const run = (): void => {
         time: new Date("2026-06-08T12:00:00.000Z"),
         fields: { circular, count: 1n, error: new Error("json boom") },
     });
-    const parsed = JSON.parse(json) as { fields: { circular: { self: string }; count: string; error: { message: string } } };
+    const parsed = JSON.parse(json) as {
+        fields: { circular: { self: string }; count: string; error: { message: string } };
+    };
     assert.equal(parsed.fields.circular.self, "[Circular]", "json formatter tolerates circular fields");
     assert.equal(parsed.fields.count, "1", "json formatter tolerates bigint fields");
     assert.equal(parsed.fields.error.message, "json boom", "json formatter preserves Error messages");
@@ -102,7 +108,11 @@ const run = (): void => {
     });
     const parsedTagged = JSON.parse(tagged) as { fields: { error: { name: string; message: string; kind?: string } } };
     assert.equal(parsedTagged.fields.error.message, "nope", "structured error keeps its message");
-    assert.equal(parsedTagged.fields.error.kind, "provider_unavailable", "structured error props (e.g. kind) are preserved");
+    assert.equal(
+        parsedTagged.fields.error.kind,
+        "provider_unavailable",
+        "structured error props (e.g. kind) are preserved",
+    );
 
     const stderr = new CaptureStream();
     const streamSink = new StreamSink({ stderr, formatter: textFormatter });

@@ -80,7 +80,10 @@ const run = async (): Promise<void> => {
     );
     let res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "langgraph swarm" }, { maxRetries: 0 });
     assert.equal(res.searchProvider, PRIMARY_WEB_SEARCH_PROVIDER_LABEL, "A: Tavily should answer");
-    assert.ok(calls.some((c) => c.tool === WebGatewayToolName.TAVILY_SEARCH), "A: tavily_search called");
+    assert.ok(
+        calls.some((c) => c.tool === WebGatewayToolName.TAVILY_SEARCH),
+        "A: tavily_search called",
+    );
     assert.ok(!calls.some((c) => c.tool === WebGatewayToolName.WEB_SEARCH), "A: fallback must NOT be called");
     const tavilyArgs = calls.find((c) => c.tool === WebGatewayToolName.TAVILY_SEARCH)!.args;
     assert.equal(tavilyArgs.search_depth, TAVILY_SEARCH_DEPTH, "A: rich search_depth sent");
@@ -94,11 +97,17 @@ const run = async (): Promise<void> => {
     assert.ok(String(res.tavilyFallbackReason).includes("tavily 500"), "B: reason carries Tavily error");
 
     reset((tool) =>
-        tool === WebGatewayToolName.TAVILY_SEARCH ? { ok: true, result: toolResult({ results: [], answer: "" }) } : fallbackOk,
+        tool === WebGatewayToolName.TAVILY_SEARCH
+            ? { ok: true, result: toolResult({ results: [], answer: "" }) }
+            : fallbackOk,
     );
     res = await openclawRpc(ToolName.WEB_LOOKUP, { query: "x" }, { maxRetries: 0 });
     assert.equal(res.searchProvider, FALLBACK_PROVIDER_LABEL, "C: fallback on empty Tavily");
-    assert.equal(res.tavilyFallbackReason, `${PRIMARY_WEB_SEARCH_PROVIDER_LABEL} returned no results`, "C: empty-result reason");
+    assert.equal(
+        res.tavilyFallbackReason,
+        `${PRIMARY_WEB_SEARCH_PROVIDER_LABEL} returned no results`,
+        "C: empty-result reason",
+    );
 
     const loggingSink = new RecordingSink();
     configureLogging({ level: LogLevel.WARN, sink: loggingSink });
@@ -112,8 +121,16 @@ const run = async (): Promise<void> => {
     assert.equal(loggingSink.records.length, 1, "D: empty fallback emits one warning");
     assert.equal(loggingSink.records[0]?.level, LogLevel.WARN, "D: warning level is used");
     assert.equal(loggingSink.records[0]?.fields?.module, "web-search", "D: warning carries module context");
-    assert.equal(loggingSink.records[0]?.fields?.fallbackProvider, FALLBACK_PROVIDER_LABEL, "D: fallback provider is logged");
-    assert.equal(loggingSink.records[0]?.fields?.queryPreview, "empty fallback query", "D: bounded query preview is logged");
+    assert.equal(
+        loggingSink.records[0]?.fields?.fallbackProvider,
+        FALLBACK_PROVIDER_LABEL,
+        "D: fallback provider is logged",
+    );
+    assert.equal(
+        loggingSink.records[0]?.fields?.queryPreview,
+        "empty fallback query",
+        "D: bounded query preview is logged",
+    );
 
     reset(() => ({ ok: false, error: { message: "down" } }));
     await assert.rejects(

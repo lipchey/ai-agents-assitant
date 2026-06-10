@@ -49,13 +49,25 @@ const run = (): void => {
     assert.equal(details.signal, undefined, "normal signal:null noise must be omitted");
     assert.equal(asRecord(compact).raw, undefined, "raw payload must not be serialized");
     assert.match(stderrText, /diagnostic-1/u, "head diagnostics must be retained");
-    assert.match(stderrText, new RegExp(`diagnostic-${VERIFY_REPORT_OUTPUT_HEAD_LINES}`, "u"), "head cap must be retained");
-    assert.doesNotMatch(stderrText, new RegExp(`diagnostic-${VERIFY_REPORT_OUTPUT_HEAD_LINES + 1}`, "u"), "middle diagnostics must be omitted");
+    assert.match(
+        stderrText,
+        new RegExp(`diagnostic-${VERIFY_REPORT_OUTPUT_HEAD_LINES}`, "u"),
+        "head cap must be retained",
+    );
+    assert.doesNotMatch(
+        stderrText,
+        new RegExp(`diagnostic-${VERIFY_REPORT_OUTPUT_HEAD_LINES + 1}`, "u"),
+        "middle diagnostics must be omitted",
+    );
     assert.match(stderrText, new RegExp(`diagnostic-${lineCount}`, "u"), "tail diagnostics must be retained");
     assert.equal(stderrReport.headLines, VERIFY_REPORT_OUTPUT_HEAD_LINES);
     assert.equal(stderrReport.tailLines, VERIFY_REPORT_OUTPUT_TAIL_LINES);
     assert.equal(stderrReport.omittedLines, 5);
-    assert.deepEqual(details.failures, [{ message: "custom provider field" }], "unknown provider fields must survive when bounded");
+    assert.deepEqual(
+        details.failures,
+        [{ message: "custom provider field" }],
+        "unknown provider fields must survive when bounded",
+    );
     assert.match(longDetailText, /^start-/u, "long unknown strings must retain their start");
     assert.match(longDetailText, /-end$/u, "long unknown strings must retain their end");
     assert.ok(longDetailText.length <= VERIFY_REPORT_OUTPUT_MAX_CHARS, "long unknown strings must stay bounded");

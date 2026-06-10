@@ -23,7 +23,9 @@ export const frontierCritic = async (state: GraphStateValue) => {
             `Draft:\n${state.currentDraft}`,
             `Debate so far:\n${JSON.stringify(state.debateThread.slice(-RECENT_DEBATE_WINDOW))}`,
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
-        ].filter(Boolean).join("\n\n"),
+        ]
+            .filter(Boolean)
+            .join("\n\n"),
         {
             maxTokens: 1_400,
             reasoningEffort: ReasoningEffort.HIGH,
@@ -33,12 +35,14 @@ export const frontierCritic = async (state: GraphStateValue) => {
     );
     const decision = parseFrontierCriticDecision(result.content);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
-    const strongCriticRequired = Boolean(deterministicReason)
-        || decision.requiresStrongCritic
-        || decision.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
-    const criticEscalationReason = deterministicReason
-        ?? decision.escalationReason
-        ?? (strongCriticRequired ? "Frontier critic requested strong-model review." : "");
+    const strongCriticRequired =
+        Boolean(deterministicReason) ||
+        decision.requiresStrongCritic ||
+        decision.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
+    const criticEscalationReason =
+        deterministicReason ??
+        decision.escalationReason ??
+        (strongCriticRequired ? "Frontier critic requested strong-model review." : "");
 
     return {
         debateThread: [{ round: state.debateIterations, critique: `[frontier] ${decision.critique}` }],
@@ -64,7 +68,9 @@ export const openaiCritic = async (state: GraphStateValue) => {
             `Draft:\n${state.currentDraft}`,
             state.criticEscalationReason ? `Frontier critic escalation reason:\n${state.criticEscalationReason}` : "",
             `Debate so far:\n${JSON.stringify(state.debateThread.slice(-RECENT_DEBATE_WINDOW))}`,
-        ].filter(Boolean).join("\n\n"),
+        ]
+            .filter(Boolean)
+            .join("\n\n"),
         { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON },
     );
     const decision = parseCriticDecision(result.content);

@@ -52,12 +52,12 @@ export const classifyFailure = (error: unknown): FailureType => {
 
     const normalized = errorMessage(error).toLowerCase();
     if (
-        normalized.includes("not available")
-        || normalized.includes("not found")
-        || normalized.includes("unauthorized")
-        || normalized.includes("permission")
-        || normalized.includes("gateway")
-        || normalized.includes("timeout")
+        normalized.includes("not available") ||
+        normalized.includes("not found") ||
+        normalized.includes("unauthorized") ||
+        normalized.includes("permission") ||
+        normalized.includes("gateway") ||
+        normalized.includes("timeout")
     ) {
         return FailureType.ENVIRONMENT;
     }

@@ -11,10 +11,7 @@ import {
     PROJECTED_STRONG_ARCHITECT_USD,
     PROJECTED_STRONG_CRITIC_USD,
 } from "../consts";
-import {
-    canSpendUsd,
-    isCostBudgetNear,
-} from "./budget.ts";
+import { canSpendUsd, isCostBudgetNear } from "./budget.ts";
 import type { GraphStateValue } from "../types/graph";
 
 export const routeByComplexity = (state: GraphStateValue): string => {
@@ -36,7 +33,10 @@ export const routeAfterFrontierArchitect = (state: GraphStateValue): string => {
             ? MainNode.CLAUDE_ARCHITECT
             : MainNode.FINALIZE;
     }
-    if (state.strongEscalationRequired && canSpendUsd(state, PROJECTED_STRONG_ARCHITECT_USD + PROJECTED_CODER_REVIEW_CYCLE_USD)) {
+    if (
+        state.strongEscalationRequired &&
+        canSpendUsd(state, PROJECTED_STRONG_ARCHITECT_USD + PROJECTED_CODER_REVIEW_CYCLE_USD)
+    ) {
         return MainNode.CLAUDE_ARCHITECT;
     }
     return MainNode.CLAUDE_CODER;
@@ -52,9 +52,9 @@ export const routeDebate = (state: GraphStateValue): string => {
     }
     /* Hard cap stops a critic from creating an unbounded context-refetch loop. */
     if (
-        state.needsMoreContext
-        && (state.contextFetches ?? 0) < MAX_CONTEXT_FETCHES
-        && canSpendUsd(state, PROJECTED_CONTEXT_REFETCH_CYCLE_USD)
+        state.needsMoreContext &&
+        (state.contextFetches ?? 0) < MAX_CONTEXT_FETCHES &&
+        canSpendUsd(state, PROJECTED_CONTEXT_REFETCH_CYCLE_USD)
     ) {
         return MainNode.SWARM;
     }
@@ -75,7 +75,10 @@ export const routeAfterApplyPatches = (state: GraphStateValue): string => {
     if (!state.patchApplicationFailed) {
         return MainNode.VERIFY;
     }
-    if (isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD) || (state.patchFormatRetries ?? 0) >= MAX_PATCH_FORMAT_RETRIES) {
+    if (
+        isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD) ||
+        (state.patchFormatRetries ?? 0) >= MAX_PATCH_FORMAT_RETRIES
+    ) {
         return MainNode.FINALIZE;
     }
     return MainNode.CLAUDE_CODER;
@@ -89,9 +92,9 @@ export const routeAfterCoder = (state: GraphStateValue): string => {
 export const routeAfterVerify = (state: GraphStateValue): string => {
     /* Verified, over budget, or capped attempts all terminate the verify/fix loop. */
     if (
-        state.verificationPassed
-        || isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD)
-        || (state.verifyAttempts ?? 0) >= MAX_VERIFY_ATTEMPTS
+        state.verificationPassed ||
+        isCostBudgetNear(state, PROJECTED_CODER_REVIEW_CYCLE_USD) ||
+        (state.verifyAttempts ?? 0) >= MAX_VERIFY_ATTEMPTS
     ) {
         return MainNode.FINALIZE;
     }

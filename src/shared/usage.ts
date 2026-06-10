@@ -33,10 +33,7 @@ export const usageFromLlm = (result: LlmUsage): UsageBreakdown => ({
     cacheWriteInputTokens: result.cacheWriteInputTokens,
 });
 
-export const mergeUsageStats = (
-    left: UsageStats | undefined,
-    right: UsageStats | undefined,
-): UsageStats => {
+export const mergeUsageStats = (left: UsageStats | undefined, right: UsageStats | undefined): UsageStats => {
     const result: UsageStats = { ...(left ?? {}) };
     for (const [key, value] of Object.entries(right ?? {}) as Array<[UsageKey, UsageBreakdown]>) {
         const current = result[key];

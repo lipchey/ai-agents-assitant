@@ -21,7 +21,9 @@ export const frontierArchitect = async (state: GraphStateValue) => {
             `Task:\n${state.originalTask}`,
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
-        ].filter(Boolean).join("\n\n"),
+        ]
+            .filter(Boolean)
+            .join("\n\n"),
         {
             maxTokens: 2_400,
             reasoningEffort: ReasoningEffort.HIGH,
@@ -31,12 +33,14 @@ export const frontierArchitect = async (state: GraphStateValue) => {
     );
     const decision = parseFrontierArchitectureDecision(result.content);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
-    const strongEscalationRequired = Boolean(deterministicReason)
-        || decision.escalateToStrong
-        || decision.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
-    const strongEscalationReason = deterministicReason
-        ?? decision.escalationReason
-        ?? (strongEscalationRequired ? "Frontier architect requested strong-model escalation." : "");
+    const strongEscalationRequired =
+        Boolean(deterministicReason) ||
+        decision.escalateToStrong ||
+        decision.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
+    const strongEscalationReason =
+        deterministicReason ??
+        decision.escalationReason ??
+        (strongEscalationRequired ? "Frontier architect requested strong-model escalation." : "");
 
     return {
         architectureSpec: decision.architectureSpec,
@@ -60,7 +64,9 @@ export const claudeArchitect = async (state: GraphStateValue) => {
             state.strongEscalationReason ? `Escalation reason:\n${state.strongEscalationReason}` : "",
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
-        ].filter(Boolean).join("\n\n"),
+        ]
+            .filter(Boolean)
+            .join("\n\n"),
         { thinking: ThinkingMode.ADAPTIVE, reasoningEffort: ReasoningEffort.HIGH },
     );
 

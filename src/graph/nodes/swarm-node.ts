@@ -29,7 +29,9 @@ export const swarmNode = async (state: GraphStateValue, config?: LangGraphRunnab
         `Swarm finished with status: ${result.status ?? UNKNOWN_WORKER_STATUS_LABEL}.`,
         result.escalationQuery ? `Escalation query: ${result.escalationQuery}` : "",
         result.rawToolOutput ? "Raw output was captured in artifacts." : "",
-    ].filter(Boolean).join(" ");
+    ]
+        .filter(Boolean)
+        .join(" ");
 
     return {
         swarmSummary: result.workerSummary || result.rawToolOutput || fallbackSummary,

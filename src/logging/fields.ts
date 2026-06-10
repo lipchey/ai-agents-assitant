@@ -1,8 +1,4 @@
-import {
-    LOG_FIELD_MAX_ARRAY_ITEMS,
-    LOG_FIELD_MAX_DEPTH,
-    LOG_FIELD_STRING_MAX_CHARS,
-} from "../consts";
+import { LOG_FIELD_MAX_ARRAY_ITEMS, LOG_FIELD_MAX_DEPTH, LOG_FIELD_STRING_MAX_CHARS } from "../consts";
 import { errorMessage, stringifyError, truncate } from "../shared";
 import type { LogFields } from "../types/logging.ts";
 

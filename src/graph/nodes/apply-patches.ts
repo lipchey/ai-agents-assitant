@@ -10,7 +10,8 @@ export const applyPatches = async (state: GraphStateValue) => {
 
     const blocks = parsePatchBlocks(state.currentDraft || "");
     if (blocks.length === 0) {
-        const report = "Patch application enabled but the draft contained no structured <<<PATCH>>> blocks; verification was skipped because no repository files changed.";
+        const report =
+            "Patch application enabled but the draft contained no structured <<<PATCH>>> blocks; verification was skipped because no repository files changed.";
         return {
             patchApplicationFailed: true,
             verificationPassed: false,

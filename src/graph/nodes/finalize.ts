@@ -9,7 +9,8 @@ export const finalize = async (state: GraphStateValue) => {
         const rollbackReport = await rollbackPatches(state.patchBackups ?? {}, state.patchCreatedFiles ?? []);
         return {
             finalAnswer: answer,
-            patchReport: `${state.patchReport ?? ""}\nVerification failed; reverted applied changes. ${rollbackReport}`.trim(),
+            patchReport:
+                `${state.patchReport ?? ""}\nVerification failed; reverted applied changes. ${rollbackReport}`.trim(),
         };
     }
 
@@ -17,14 +18,16 @@ export const finalize = async (state: GraphStateValue) => {
         const kept = [...new Set(state.appliedFiles ?? [])];
         return {
             finalAnswer: answer,
-            patchReport: `${state.patchReport ?? ""}\nVerification passed; kept ${kept.length} applied file(s): ${kept.join(", ")}.`.trim(),
+            patchReport:
+                `${state.patchReport ?? ""}\nVerification passed; kept ${kept.length} applied file(s): ${kept.join(", ")}.`.trim(),
         };
     }
 
     if (state.patchApplicationFailed) {
         return {
             finalAnswer: answer,
-            patchReport: `${state.patchReport ?? ""}\nVerification did not run because patch application failed.`.trim(),
+            patchReport:
+                `${state.patchReport ?? ""}\nVerification did not run because patch application failed.`.trim(),
         };
     }
 

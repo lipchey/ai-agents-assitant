@@ -15,5 +15,4 @@ export type EnvVar = (typeof EnvVar)[keyof typeof EnvVar];
 
 const TRUTHY_ENV_PATTERN = /^(1|true|yes|on)$/iu;
 
-export const isTruthyEnv = (value: string | undefined): boolean =>
-    TRUTHY_ENV_PATTERN.test(value?.trim() ?? "");
+export const isTruthyEnv = (value: string | undefined): boolean => TRUTHY_ENV_PATTERN.test(value?.trim() ?? "");

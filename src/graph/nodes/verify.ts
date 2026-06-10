@@ -30,7 +30,8 @@ export const verify = async (state: GraphStateValue, config?: LangGraphRunnableC
             { command: VERIFY_TYPECHECK_COMMAND, timeout: VERIFY_TIMEOUT_S },
             { timeoutS: VERIFY_RPC_TIMEOUT_S, idempotencyKey: `verify-${state.debateIterations}`, maxRetries: 0 },
         );
-        const passed = report.status === ToolStatus.COMPLETED && (report.exitCode === undefined || report.exitCode === 0);
+        const passed =
+            report.status === ToolStatus.COMPLETED && (report.exitCode === undefined || report.exitCode === 0);
 
         return {
             verificationPassed: passed,

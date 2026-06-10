@@ -12,7 +12,9 @@ export const claudeCoder = async (state: GraphStateValue) => {
             `Spec:\n${state.architectureSpec}`,
             `Critiques to fix:\n${state.debateSummary || "None"}`,
             state.verificationReport ? `Verification feedback:\n${state.verificationReport}` : "",
-        ].filter(Boolean).join("\n\n"),
+        ]
+            .filter(Boolean)
+            .join("\n\n"),
     );
 
     return {

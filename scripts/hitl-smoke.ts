@@ -1,6 +1,13 @@
 import { END, MemorySaver, START, StateGraph } from "@langchain/langgraph";
 import assert from "node:assert/strict";
-import { FailureType, HitlInterruptKind, HitlResolutionAction, SwarmNode, WorkerKind, WorkerStatus } from "../src/consts";
+import {
+    FailureType,
+    HitlInterruptKind,
+    HitlResolutionAction,
+    SwarmNode,
+    WorkerKind,
+    WorkerStatus,
+} from "../src/consts";
 import {
     autoAbortResolver,
     driveSwarmWithHitl,
@@ -67,12 +74,9 @@ const asDrivable = (graph: ReturnType<typeof buildTestGraph>) =>
     graph as HitlDrivableGraph<typeof initialInput, WorkerState>;
 
 const run = async (): Promise<void> => {
-    const abortState = await driveSwarmWithHitl(
-        asDrivable(buildTestGraph()),
-        initialInput,
-        autoAbortResolver,
-        { threadId: "smoke-abort" },
-    );
+    const abortState = await driveSwarmWithHitl(asDrivable(buildTestGraph()), initialInput, autoAbortResolver, {
+        threadId: "smoke-abort",
+    });
     assert.equal(abortState.status, WorkerStatus.BLOCKED, "auto-abort must block gracefully");
     assert.match(abortState.escalationResponse ?? "", /command not found/u, "block must surface the failure detail");
     console.log("PASS: auto-abort → BLOCKED with failure detail propagated");
@@ -82,12 +86,9 @@ const run = async (): Promise<void> => {
         captured = request;
         return { action: HitlResolutionAction.RETRY, guidance: "installed ripgrep; please retry" };
     };
-    const retryState = await driveSwarmWithHitl(
-        asDrivable(buildTestGraph()),
-        initialInput,
-        retryResolver,
-        { threadId: "smoke-retry" },
-    );
+    const retryState = await driveSwarmWithHitl(asDrivable(buildTestGraph()), initialInput, retryResolver, {
+        threadId: "smoke-retry",
+    });
     assert.ok(captured, "resolver must receive the interrupt payload");
     assert.equal(captured?.kind, HitlInterruptKind.ENVIRONMENT_FAILURE);
     assert.equal(captured?.failureType, FailureType.ENVIRONMENT);

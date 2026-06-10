@@ -54,5 +54,4 @@ export const stringifyError = (value: unknown): string => {
     return safeJson(value);
 };
 
-export const errorMessage = (error: unknown): string =>
-    error instanceof Error ? error.message : String(error);
+export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));

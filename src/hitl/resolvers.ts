@@ -35,9 +35,11 @@ export const createStdinHitlResolver = (options: StdinHitlResolverOptions = {}):
             output.line(`Subtask:  ${request.subtask}`);
             output.line(`Error:    ${request.reason}`);
             output.line(`Attempt:  #${request.escalationAttempt}`);
-            const answer = (await rl.question(
-                "Resolve the issue out-of-band, then enter retry guidance — or leave blank to abort: ",
-            )).trim();
+            const answer = (
+                await rl.question(
+                    "Resolve the issue out-of-band, then enter retry guidance — or leave blank to abort: ",
+                )
+            ).trim();
             return answer
                 ? { action: HitlResolutionAction.RETRY, guidance: answer }
                 : { action: HitlResolutionAction.ABORT };
