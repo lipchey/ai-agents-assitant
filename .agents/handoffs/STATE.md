@@ -20,9 +20,10 @@ disagreement with this file; this file only adds in-flight sub-status a
 checkbox cannot express (`pending` / `ready_to_review`).
 
 Current pilot status (2026-06-10): the quality system is live since S6–S7 —
-see `project-facts.md` (Quality System) for the component inventory; CI
-bootstrap is pending (S7 Task 10). The legacy `.agent` dir was migrated into
-`.agents/` in S7 Task 9.
+see `project-facts.md` (Quality System) for the component inventory; CI is live
+(S7 Task 10): `quality.yml` runs `--fast` on PRs and `--full` on push +
+schedule with red-main tracking, validated by two green main runs. The legacy
+`.agent` dir was migrated into `.agents/` in S7 Task 9.
 
 The R1–R9 refactor has not started. Ordering rules: meta-repo Phase 2 closeout
 (S8) finishes before any R-session; R0 (owner key rotation) blocks R1; never
