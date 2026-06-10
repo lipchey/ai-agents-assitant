@@ -141,7 +141,10 @@ this entry is the canonical "why" for every config switch. Knip runs as the
 it never fails `./verify --full` (only `blocking` checks do), it prints the
 JSON-reporter finding set to the run log, and the committed snapshot lives at
 `quality-baselines/knip.json`. The runner does NOT diff baselines; the baseline
-is a human-read reference for future drift, not a gate.
+is a human-read reference for future drift, not a gate. Note that
+`quality.json`'s `policy.block_new_dead_code_only: true` is forward-looking and
+currently has no runtime effect on the `dead-code` check - the runner treats the
+check as unconditionally report-only regardless of that flag.
 
 ### Config decisions (`knip.json`)
 
@@ -157,12 +160,22 @@ re-export noise. The tuned config reduces this to the real signal below.
   off-limits file we must not touch). Narrowing `project` drops it cleanly while
   leaving `scripts/` in scope so `scripts/gateway-smoke.ts` stays a true finding.
 
-- `entry: ["src/main.ts", "src/index.ts", "src/**/index.ts"]`. The first two are
-  the plan-named application entries (also auto-detectable, but pinned for
-  clarity). `src/**/index.ts` is the BARREL-HANDLING switch and the core of the
-  tuning: marking the public `*/index.ts` barrels as entry surface tells knip
-  their re-exports are intentional public API, so the 162-ish barrel re-export
-  findings disappear WITHOUT blanket-ignoring whole directories. Real dead
+- `entry: ["src/main.ts", "src/index.ts", "src/*/index.ts", "src/types/*/index.ts"]`.
+  The first two are the plan-named application entries (also auto-detectable, but
+  pinned for clarity). The two `*/index.ts` globs are the BARREL-HANDLING switch
+  and the core of the tuning: marking the public layer barrels as entry surface
+  tells knip their re-exports are intentional public API, so the 162-ish barrel
+  re-export findings disappear WITHOUT blanket-ignoring whole directories. The
+  globs are deliberately layout-matching rather than the broad `src/**/index.ts`:
+  `src/*/index.ts` covers the 12 first-level layer barrels (including
+  `src/types/index.ts`) and `src/types/*/index.ts` covers the 6 type sub-barrels.
+  Deep, non-pure provider index files like `src/tools/providers/web/index.ts`
+  (and `src/tools/providers/index.ts`, `src/tools/providers/local/index.ts`,
+  `src/graph/nodes/index.ts`) are intentionally NOT entry surface, so their
+  exports are knip-visible like any other module rather than being auto-excused
+  as public API. This introduces no new findings today - the committed baseline
+  is byte-identical under the tightened globs (verified by regenerate + diff),
+  which proves those deep index files currently export nothing dead. Real dead
   exports in non-barrel files stay visible (see baseline). This is why, e.g.,
   `getGatewayToken` is NOT a finding: it is alive (used in `src/tools/gateway.ts`
   and imported deep by `scripts/websearch-smoke.ts`); only its barrel re-export
@@ -208,6 +221,15 @@ priority is killing the 162-finding barrel noise while keeping non-barrel dead
 exports visible, and these symbols are barrel surface. A future tightening pass
 (narrowing which barrels are entries, or moving to a barrel-specific switch) can
 recover them if desired.
+
+Maintainer refresh procedure: regenerate the committed baseline with
+`./node_modules/.bin/knip --reporter json > quality-baselines/knip.json`, then
+`prettier --write quality-baselines/knip.json` so it is formatted with the repo
+`.prettierrc.json` config (the committed file is `printWidth: 120` JSON; running
+prettier without the repo config defaults to `printWidth: 80` and will NOT
+reproduce it). Do this after any change that legitimately alters the finding set
+(new/removed dead code, config retuning), and review the diff before committing
+so unexpected findings or positional churn are caught.
 
 ### Baseline stability caveat
 
