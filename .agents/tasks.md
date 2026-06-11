@@ -92,8 +92,23 @@ future sessions focused on what still needs action.
       provider still legitimately requires the gateway; `--resume` recovers
       the original run's profile from its RunSummary, explicit conflicting
       selection honored with a warning), re-review both CLOSED, 0 new.
-- [ ] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
-      smoke suite + fixtures; `npm run bench`.
+- [x] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
+      smoke suite + fixtures; `npm run bench`. Done 2026-06-11. `src/app/`
+      (new L7 dir, ADR-001 amendment — the planned `src/run/` placement would
+      invert the DAG) owns `executeAgentRun` + public `runAgentTask`;
+      `src/main.ts` is a thin CLI over the same kernel. promptfoo 0.121.15
+      exact-pinned; `bench/` holds the custom provider (tsx-registered
+      in-process import of the src barrel), 6-task smoke suite, mini-ts-repo
+      fixture (one deliberate type error; per-run copies under gitignored
+      `bench/.work/`), tsc-based programmatic assert, and the `npm run bench`
+      runner → `reports/bench/<timestamp>/{results.json,summary.md}`;
+      `--offline` is a fail-fast guard until R8. Live: trivial filter on
+      research-playground 2/2 at $0.000110 with per-task cost/latency; a full
+      coding-task run validated the fixture→patch→tsc chain (failed honestly
+      on cascade quality — see Backlog). Codex review: 2 P2 confirmed-fixed
+      (`05bd335`: failed-RunSummary rows keep grading instead of becoming
+      promptfoo infra ERRORs; budgetUsd validated at the public boundary +
+      provider), re-review both CLOSED, 0 new; 1 P3 → Backlog needs-human.
 - [ ] R8 Offline e2e on a fake provider + security hardening (patch guards,
       token fallback removal) + exact dependency pinning.
 - [ ] R9 Live MVP validation across all profiles; baseline bench report;
@@ -107,12 +122,32 @@ future sessions focused on what still needs action.
       every prompt sent with `responseFormat: json_object` (router, frontier
       architect, both critics, leadDelegator) now says "Return ONLY this
       JSON: {…}" — contract braces and parsers unchanged.
+- [ ] (R7 review P3, needs-human) The ADR-001 R7 amendment states "`app` must
+      not import `cli`", but the executable mirrors don't enforce it: depcruise
+      has no `src/app/ -> src/cli/` rule (both are L7 siblings) and the eslint
+      boundaries mirror allows the whole L7 set for both. Add an explicit
+      depcruise error rule + advisory eslint mirror if the boundary should stay
+      enforceable; chain policy forbids auto-applying P3s.
 - [ ] (R6a review P3, needs-human) `.agents/memory.md` §1 "Project Goal" still
       says "frontier models do the first architecture/review pass" — after the
       R6a tier rename that contradicts ADR-003 vocabulary (first pass =
       reasoner role on the adviser tier; the frontier TIER runs only behind
       escalation gates). One-sentence rewording; chain policy forbids
       auto-applying P3s.
+- [ ] (R7.4 checkbox, blocked on R8) Wire `npm run bench -- --offline` to the
+      fake provider once R8 lands it: replace the fail-fast guard in
+      `bench/run-bench.mjs` with a fake-transport profile run of the same
+      suite (harness-plumbing validation in CI without credentials, spec
+      §3.5).
+- [ ] (R7 live finding, quality-optimization scope — NOT a harness bug) On
+      `research-playground`, the coding bench task `coding-fix-type-error`
+      fails: the coder rewrote `inventory.ts` from imagination (dropped
+      `totalCents`/`unitCount` exports, invented its own shape) instead of
+      minimally editing the fetched file — full-file patch discipline breaks
+      when the file content isn't reliably in the coder's context. Candidate
+      entry point for the post-refactor inter-model-quality effort; the bench
+      now measures it objectively ($0.0928, score 0.67, runId
+      87a4da01-06de-4864-8ca6-35006de62e78).
 - [ ] Langfuse (v5, OTel path) tracing integration behind the R4 callbacks
       hook; self-hosted; custom DeepSeek pricing in its model table.
 - [ ] Declarative topology variants per profile (spec D3 deferral) — only

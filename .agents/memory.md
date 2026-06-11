@@ -126,6 +126,34 @@ before. The default cascade:
   node accessor); role blocks are model-agnostic. Every json_object prompt
   mentions "JSON" (provider-side validation).
 
+Programmatic entrypoint + bench (R7): `src/app/` (new L7 dir beside `cli` —
+ADR-001 amendment; the plan's `src/run/` placement would invert the DAG since
+`graph` already consumes `run`) owns `executeAgentRun` — runtime startup
+(conditional gateway + tool registry) → run-kernel wiring → graph invoke →
+RunSummary on every termination path; it throws only on startup failure and
+otherwise resolves, returning a `status:"failed"` summary so callers keep
+cost/usage on dead runs — and the public `runAgentTask(task, { profile,
+budgetUsd, applyPatches, hitl:"off", workspaceDir? })` (root-barrel export;
+HITL pinned to `autoAbortResolver`; budget deliberately NOT env-overridable —
+deterministic for bench; `workspaceDir` reserved until the R8 workspace seam:
+only `process.cwd()` is accepted). `src/main.ts` is a thin CLI over
+`executeAgentRun` (argv/env/resume-profile selection, SIGINT failure-summary
+wiring via the `onRunReady` handle, report printing); `app` must not import
+`cli`. Bench (spec D7/§3.5): promptfoo 0.121.15 (exact devDep) + `bench/` —
+custom provider `agent-provider.mjs` (tsx esm `register()` → imports the src
+barrel in-process; maps RunSummary → output/cost/tokenUsage/metadata; profile
+precedence: test var > PROFILE > AGENT_PROFILE > default), 6-task smoke suite
+(`suites/smoke.yaml`: 2 trivial contains, 2 reasoning llm-rubric judged by
+`deepseek:deepseek-v4-flash`, 2 coding vs the `mini-ts-repo` fixture — one
+deliberate type error; copies reset under gitignored `bench/.work/` per call;
+`asserts/fixture-typecheck.mjs` requires a real diff + green `tsc --noEmit` in
+the copy), and the `npm run bench` runner (`run-bench.mjs`: dotenv, `-j 1`,
+`--no-cache`, `--filter` alias for `--filter-pattern`) writing
+`reports/bench/<timestamp>/{results.json,summary.md}`; `--offline` fails fast
+until the R8 fake provider. Repo gates never see the broken fixture: root
+tsconfig excludes `bench`, eslint ignores `bench/fixtures|.work`, knip got
+bench entries + `ignoreDependencies: ["promptfoo"]`.
+
 Run kernel (R4): every CLI run has a `RunContext` (`src/run/`, L3) — `runId`
 (crypto.randomUUID, validated lowercase-UUID), profile name, started-at, and an
 in-memory recorder of `NodeVisit`s + accumulated usage — threaded through
@@ -430,6 +458,25 @@ re-review both CLOSED, 0 new; 244 unit cases green. In parallel the owner
 raised the `quality.json` fast-tier budget to 240s and added `unit` +
 `prettier-code` checks there (`bd79aab`) — `./verify --fast` now runs the unit
 suite. Next is R7 (bench harness: `runAgentTask` entrypoint + promptfoo).
+
+Status update 2026-06-11 (R7 done): the bench harness + programmatic
+entrypoint landed — see §2 "Programmatic entrypoint + bench (R7)". Live
+validation: `PROFILE=research-playground npm run bench -- --filter trivial`
+passed 2/2 at $0.000110 total with per-task cost/latency in the report; a
+full coding-task run exercised the whole fixture→patch→tsc chain end-to-end
+and failed HONESTLY (score 0.67): the DeepSeek cascade rewrote
+`inventory.ts` from imagination, dropping the `totalCents`/`unitCount`
+exports — recorded in the backlog as a cascade-quality finding (bench did its
+job; quality optimization is explicitly out of refactor scope). Codex review:
+2 P2 confirmed-fixed (fix `05bd335`: a `status:"failed"` RunSummary no longer
+sets `ProviderResponse.error` — promptfoo would short-circuit to an
+infrastructure ERROR before grading, so the failure text moved to
+`metadata.error`; `budgetUsd` is validated finite-and-positive at the
+`runAgentTask` boundary AND in the provider — the graph treats non-finite/
+non-positive budgets as UNLIMITED), re-review both CLOSED, 0 new; 1 P3
+(`app`→`cli` ban not mirrored in depcruise/eslint) → backlog needs-human.
+256 unit cases. Next is R8 (fake provider + offline e2e + security
+hardening).
 
 Open backlog:
 

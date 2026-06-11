@@ -435,28 +435,52 @@ cheap run per at least one non-default profile.
 - Modify: `src/index.ts` (export `runAgentTask`), `package.json`
   (devDep `promptfoo`; script `"bench"`), `.gitignore` (`reports/bench/`)
 
-- [ ] **Step 7.1:** `runAgentTask(task, { profile, budgetUsd, applyPatches,
+- [x] **Step 7.1:** `runAgentTask(task, { profile, budgetUsd, applyPatches,
   hitl:"off", workspaceDir? }) → Promise<RunSummary>` — refactor `main.ts`
   to be a thin CLI over this function (no behavior change; smoke scripts
   keep importing the barrel).
-- [ ] **Step 7.2:** Consult current promptfoo docs for the custom JS
+  (Done with one pinned-path deviation: the entrypoint lives in
+  `src/app/run-agent-task.ts`, NOT `src/run/` — `run` is L3 and the
+  entrypoint composes graph (L6) + tools/hitl (L4), so the planned path
+  would invert the ADR-001 DAG. New L7 `src/app` dir recorded as an ADR-001
+  amendment; depcruise + eslint mirrors extended in-session per the standing
+  rule. `hitl` pinned to autoAbortResolver; `workspaceDir` accepts only
+  `process.cwd()` until the R8 workspace seam; failed runs RESOLVE with a
+  status:"failed" summary so bench keeps cost metadata.)
+- [x] **Step 7.2:** Consult current promptfoo docs for the custom JS
   provider API; implement `bench/agent-provider.mjs` calling `runAgentTask`
   (profile from test vars), returning output + `tokenUsage`/cost metadata
   from RunSummary.
-- [ ] **Step 7.3:** Smoke suite, 6 tasks: 2 trivial (assert `contains`),
+  (promptfoo 0.121.15 exact-pinned; provider is a default-export class with
+  `callApi`, loads the TS barrel in-process via tsx `register()`; profile
+  precedence: test var > PROFILE > AGENT_PROFILE > default.)
+- [x] **Step 7.3:** Smoke suite, 6 tasks: 2 trivial (assert `contains`),
   2 pure-reasoning (assert `llm-rubric` with a cheap judge model +
   `cost`/`latency` thresholds), 2 coding tasks against a copy of
   `bench/fixtures/mini-ts-repo` (javascript assert: patch applied and
   `npx tsc --noEmit` exits 0 in the fixture copy; fixture reset per run).
-- [ ] **Step 7.4:** `npm run bench` → `promptfoo eval` with config; results
+  (Judge: `deepseek:deepseek-v4-flash`. Fixture copies reset under
+  gitignored `bench/.work/`; root tsconfig excludes `bench`, eslint ignores
+  the deliberately-broken fixtures, knip got bench entries +
+  `ignoreDependencies: promptfoo`.)
+- [x] **Step 7.4:** `npm run bench` → `promptfoo eval` with config; results
   + a short generated markdown table land in `reports/bench/<timestamp>/`.
   Add an offline mode flag that runs the same suite against the fake
   provider (R8 dependency note: until R8 lands, offline mode may be a
   no-op guard — leave a backlog checkbox if so).
-- [ ] **Step 7.5:** Verify: `npm test` green; `PROFILE=research-playground
+  (`bench/run-bench.mjs`: dotenv, `-j 1`, `--no-cache`, `--filter` alias →
+  `--filter-pattern`, `summary.md` table generated from `results.json`;
+  `--offline` fails fast with an explanation — backlog checkbox added to
+  `.agents/tasks.md`.)
+- [x] **Step 7.5:** Verify: `npm test` green; `PROFILE=research-playground
   npm run bench -- --filter trivial` (or promptfoo's equivalent filter)
   completes live under $0.10 total.
-- [ ] **Step 7.6:** Commit: `feat: promptfoo bench harness + runAgentTask entrypoint + smoke suite`
+  (`npm test` + `./verify --fast` green — 251 unit cases. Live trivial
+  filter: 2/2 PASS, $0.000110 total, per-task cost/latency in the report.
+  Bonus full coding-task run validated the fixture→patch→tsc chain
+  end-to-end; it failed honestly on cascade quality — backlogged as a
+  quality-optimization finding, out of refactor scope.)
+- [x] **Step 7.6:** Commit: `feat: promptfoo bench harness + runAgentTask entrypoint + smoke suite`
 
 **Verification boundary:** `npm test` green; filtered live bench run
 produces a report with cost/latency per task.

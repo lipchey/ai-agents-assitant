@@ -6,9 +6,9 @@ active_task: ""
 active_status: ""
 baseline_sha: ""
 r0_keys_rotated: true
-updated_at: 2026-06-11T12:17:47Z
+updated_at: 2026-06-11T13:45:00Z
 updated_by: claude
-next_action: "R6 complete (feat 277c054, review-fix 79380bb; Codex 2 P2 confirmed-fixed, re-review both CLOSED, 0 new). Next: R7 via 'виконай сесію R7' — bench harness: runAgentTask programmatic entrypoint (main.ts becomes a thin CLI over it), promptfoo custom JS provider (consult CURRENT promptfoo docs for the provider API), bench/ config + 6-task smoke suite + mini-ts-repo fixture, npm run bench → reports/bench/<timestamp>/; offline-mode flag may be a no-op guard until R8 (leave a backlog checkbox if so). Mind: owner raised the quality.json fast tier to 240s and added unit+prettier-code checks (bd79aab) — ./verify --fast now runs the unit suite; tier budgets are NEGOTIABLE, propose raises to the owner (session-protocol.md); profile selection precedence is --profile flag > non-blank AGENT_PROFILE > default; --resume recovers the original profile from its RunSummary; gateway startup is conditional (effectiveTransports + ToolRegistry.requiresGateway)."
+next_action: "R7 complete (feat eb8322b, review-fix 05bd335; Codex 2 P2 confirmed-fixed, re-review both CLOSED, 0 new; 1 P3 → backlog needs-human). Next: R8 via 'виконай сесію R8' — fake provider (src/models/providers/fake.ts, deterministic scripted ChatProvider) + offline full-graph e2e (tests/e2e/offline-run.test.ts, three runAgentTask runs on a fake-transport profile) + security hardening (widen PROTECTED_SEGMENTS incl. the quality surface; VERIFY-not-redo the S6/D4 gateway-token fail-fast) + exact-pin openclaw/@langchain/*/typescript + wire an e2e check into the quality.json full tier (tier sum within budget; budgets negotiable — propose raises). Mind: runAgentTask/executeAgentRun live in src/app/ (L7; ADR-001 amendment — NOT src/run/ as the plan sketched); runAgentTask resolves with a status:'failed' RunSummary instead of rejecting (bench provider depends on that and must NOT map it to ProviderResponse.error — promptfoo short-circuits grading); budgetUsd is validated finite>0 at the boundary; workspaceDir is a reserved option accepting only process.cwd() — R8's temp-workspace e2e must land the real workspace seam AND mind that pricing/profile loading read from process.cwd() too; the bench --offline guard in bench/run-bench.mjs has a backlog checkbox to wire it to the fake provider once it exists."
 ---
 
 # Live refactor state
@@ -95,6 +95,26 @@ frontierArchitect/frontierCritic stay — FROZEN RunSummary §3.4).
 cascadeNote bytes unchanged; `DEFAULT_CASCADE_NOTE` reworded to tier
 vocabulary). Codex review: 2 P2 (test-strengthening) confirmed-fixed,
 re-review both CLOSED; 1 P3 (memory §1 wording) → backlog needs-human.
+R7 is complete (2026-06-11): the bench harness landed (feat `eb8322b`,
+review-fix `05bd335`; baseline `4b8a936`). `src/app/` (new L7 dir, ADR-001
+amendment — the plan's `src/run/` placement would invert the DAG) owns
+`executeAgentRun` + the public `runAgentTask` (root-barrel export; HITL
+pinned off; budget validated finite>0, NOT env-overridable; failed runs
+RESOLVE with a status:"failed" RunSummary so bench keeps cost metadata);
+`src/main.ts` is a thin CLI over the same kernel (SIGINT via the onRunReady
+handle). Bench: promptfoo 0.121.15 exact-pinned; bench/ holds the custom
+provider (tsx-registered in-process import of the src barrel; profile
+precedence test var > PROFILE > AGENT_PROFILE > default), the 6-task smoke
+suite (judge deepseek:deepseek-v4-flash), the mini-ts-repo fixture (one
+deliberate type error; per-run copies under gitignored bench/.work/), the
+tsc-based programmatic assert, and the `npm run bench` runner →
+reports/bench/<timestamp>/{results.json,summary.md}; --offline fails fast
+until R8. Repo gates exclude bench (tsconfig/eslint/knip). Live: trivial
+filter on research-playground 2/2 at $0.000110; a full coding-task run
+validated the fixture→patch→tsc chain and failed honestly on cascade
+quality (backlogged). Codex review: 2 P2 confirmed-fixed, re-review both
+CLOSED, 0 new; 1 P3 (app↛cli mirror rule) → backlog needs-human.
+
 R6 is complete (2026-06-11): the profile CLI surface landed (feat `277c054`,
 review-fix `79380bb`; baseline `6e8898f`). `--profile <name|path>` flag
 (precedence: flag > non-blank AGENT_PROFILE > default), `Profile:` line in
@@ -110,5 +130,5 @@ confirmed-fixed (conditional gateway startup via `effectiveTransports` +
 from its RunSummary), re-review both CLOSED, 0 new. In parallel the owner
 landed `bd79aab`: fast-tier budget 240s + unit/prettier-code checks, and the
 negotiable-budgets rule in session-protocol.md.
-Next R-session is R7 (bench harness). Ordering rules still hold: never run
-two sessions concurrently in this pilot.
+Next R-session is R8 (fake provider + offline e2e + security hardening).
+Ordering rules still hold: never run two sessions concurrently in this pilot.
