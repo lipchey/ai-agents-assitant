@@ -167,6 +167,105 @@ describe("calculateUsage", () => {
         expect(result.cacheWriteInputTokens).toBe(0);
     });
 
+    /* R3 direct-transport shapes: the direct provider feeds the raw SDK usage
+     * object straight into calculateUsage; one case per provider family pins
+     * the new bare-id pricing entries (claude-fable-5, gpt-5.5, deepseek-v4-*). */
+    it("prices a direct Anthropic response (claude-fable-5 rates)", () => {
+        const fablePricing: ModelPricing = {
+            inputPer1M: 10,
+            inputCacheHitPer1M: 1,
+            inputCacheMissPer1M: 10,
+            inputCacheWritePer1M: 12.5,
+            inputCacheWrite5mPer1M: 12.5,
+            inputCacheWrite1hPer1M: 20,
+            outputPer1M: 50,
+        };
+        const usage: ProviderUsage = {
+            input_tokens: 800,
+            output_tokens: 300,
+            cache_read_input_tokens: 1200,
+            cache_creation: { ephemeral_5m_input_tokens: 500 },
+        };
+
+        const result = calculateUsage(usage, fablePricing);
+
+        /*
+         * input_tokens (800) is cache-miss; read 1200; 5m write 500.
+         * inputTokens = 800 + 1200 + 500 = 2500; tokens = 2500 + 300 = 2800.
+         * inputCost = 800/1e6*10 (0.008) + 1200/1e6*1 (0.0012)
+         *           + 500/1e6*12.5 (0.00625) = 0.01545
+         * cost = inputCost + 300/1e6*50 (0.015) = 0.03045
+         */
+        expect(result.tokens).toBe(2800);
+        expect(result.inputTokens).toBe(2500);
+        expect(result.outputTokens).toBe(300);
+        expect(result.cachedInputTokens).toBe(1200);
+        expect(result.cacheMissInputTokens).toBe(800);
+        expect(result.cacheWriteInputTokens).toBe(500);
+        expect(result.cost).toBeCloseTo(0.03045, 10);
+    });
+
+    it("prices a direct OpenAI response (gpt-5.5 rates)", () => {
+        const gptDirectPricing: ModelPricing = {
+            inputPer1M: 5,
+            inputCacheHitPer1M: 0.5,
+            inputCacheMissPer1M: 5,
+            outputPer1M: 30,
+        };
+        const usage: ProviderUsage = {
+            prompt_tokens: 2000,
+            completion_tokens: 600,
+            total_tokens: 2600,
+            prompt_tokens_details: { cached_tokens: 1500 },
+        };
+
+        const result = calculateUsage(usage, gptDirectPricing);
+
+        /*
+         * cached 1500, miss 500.
+         * inputCost = 1500/1e6*0.5 (0.00075) + 500/1e6*5 (0.0025) = 0.00325
+         * cost = inputCost + 600/1e6*30 (0.018) = 0.02125
+         */
+        expect(result.tokens).toBe(2600);
+        expect(result.inputTokens).toBe(2000);
+        expect(result.outputTokens).toBe(600);
+        expect(result.cachedInputTokens).toBe(1500);
+        expect(result.cacheMissInputTokens).toBe(500);
+        expect(result.cacheWriteInputTokens).toBe(0);
+        expect(result.cost).toBeCloseTo(0.02125, 10);
+    });
+
+    it("prices a direct DeepSeek response (deepseek-v4-flash rates)", () => {
+        const flashDirectPricing: ModelPricing = {
+            inputPer1M: 0.14,
+            inputCacheHitPer1M: 0.0028,
+            inputCacheMissPer1M: 0.14,
+            outputPer1M: 0.28,
+        };
+        const usage: ProviderUsage = {
+            prompt_tokens: 1200,
+            completion_tokens: 400,
+            total_tokens: 1600,
+            prompt_cache_hit_tokens: 900,
+            prompt_cache_miss_tokens: 300,
+        };
+
+        const result = calculateUsage(usage, flashDirectPricing);
+
+        /*
+         * inputCost = 900/1e6*0.0028 (0.00000252) + 300/1e6*0.14 (0.000042)
+         *           = 0.00004452
+         * cost = inputCost + 400/1e6*0.28 (0.000112) = 0.00015652
+         */
+        expect(result.tokens).toBe(1600);
+        expect(result.inputTokens).toBe(1200);
+        expect(result.outputTokens).toBe(400);
+        expect(result.cachedInputTokens).toBe(900);
+        expect(result.cacheMissInputTokens).toBe(300);
+        expect(result.cacheWriteInputTokens).toBe(0);
+        expect(result.cost).toBeCloseTo(0.00015652, 10);
+    });
+
     it("falls back to zero cost while still normalizing tokens for an unknown model", () => {
         const usage: ProviderUsage = {
             prompt_tokens: 1000,

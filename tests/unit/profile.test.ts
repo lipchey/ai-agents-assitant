@@ -124,12 +124,23 @@ describe("readProfile validates configurable profiles", () => {
     });
 });
 
-describe("callLlm transport guard", () => {
-    it("rejects a binding that resolves to a transport other than openclaw", async () => {
-        const profile = parseProfile(validProfile({ transport: { default: "direct" } }));
-        await expect(callLlm(ModelRole.CODER, "system", "user", {}, { configurable: { profile } })).rejects.toThrow(
-            /transport/iu,
-        );
+describe("callLlm transport dispatch", () => {
+    it("routes a direct-transport binding to the direct provider, not the gateway", async () => {
+        /* R3 replaced the R2 fail-fast guard with real dispatch. Without an API
+           key the direct Anthropic model throws at construction — proof the call
+           reached the direct provider (the gateway path never needs that key). */
+        const previousKey = process.env.ANTHROPIC_API_KEY;
+        delete process.env.ANTHROPIC_API_KEY;
+        try {
+            const profile = parseProfile(validProfile({ transport: { default: "direct" } }));
+            await expect(callLlm(ModelRole.CODER, "system", "user", {}, { configurable: { profile } })).rejects.toThrow(
+                /Anthropic API key/iu,
+            );
+        } finally {
+            if (previousKey !== undefined) {
+                process.env.ANTHROPIC_API_KEY = previousKey;
+            }
+        }
     });
 });
 

@@ -1,10 +1,21 @@
 import type { ToolErrorKind } from "../consts";
 import type { QualifiedToolId } from "../types/tools";
 
+export type OpenClawErrorOptions = ErrorOptions & {
+    /* HTTP status of the failed gateway response; the retry layer classifies
+       transient failures (429/5xx) by this field. */
+    readonly status?: number;
+};
+
 export class OpenClawError extends Error {
-    constructor(message: string, options?: ErrorOptions) {
+    readonly status?: number;
+
+    constructor(message: string, options?: OpenClawErrorOptions) {
         super(message, options);
         this.name = "OpenClawError";
+        if (options?.status !== undefined) {
+            this.status = options.status;
+        }
     }
 }
 

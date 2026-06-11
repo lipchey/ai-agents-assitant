@@ -34,5 +34,59 @@
     "inputCacheHitPer1M": 0.0028,
     "inputCacheMissPer1M": 0.14,
     "outputPer1M": 0.28
+  },
+  "claude-fable-5": {
+    "inputPer1M": 10,
+    "inputCacheHitPer1M": 1,
+    "inputCacheMissPer1M": 10,
+    "inputCacheWritePer1M": 12.5,
+    "inputCacheWrite5mPer1M": 12.5,
+    "inputCacheWrite1hPer1M": 20,
+    "outputPer1M": 50
+  },
+  "claude-haiku-4-5": {
+    "inputPer1M": 1,
+    "inputCacheHitPer1M": 0.1,
+    "inputCacheMissPer1M": 1,
+    "inputCacheWritePer1M": 1.25,
+    "inputCacheWrite5mPer1M": 1.25,
+    "inputCacheWrite1hPer1M": 2,
+    "outputPer1M": 5
+  },
+  "claude-sonnet-4-6": {
+    "inputPer1M": 3,
+    "inputCacheHitPer1M": 0.3,
+    "inputCacheMissPer1M": 3,
+    "inputCacheWritePer1M": 3.75,
+    "inputCacheWrite5mPer1M": 3.75,
+    "inputCacheWrite1hPer1M": 6,
+    "outputPer1M": 15
+  },
+  "claude-opus-4-8": {
+    "inputPer1M": 5,
+    "inputCacheHitPer1M": 0.5,
+    "inputCacheMissPer1M": 5,
+    "inputCacheWritePer1M": 6.25,
+    "inputCacheWrite5mPer1M": 6.25,
+    "inputCacheWrite1hPer1M": 10,
+    "outputPer1M": 25
+  },
+  "gpt-5.5": {
+    "inputPer1M": 5,
+    "inputCacheHitPer1M": 0.5,
+    "inputCacheMissPer1M": 5,
+    "outputPer1M": 30
+  },
+  "deepseek-v4-pro": {
+    "inputPer1M": 0.435,
+    "inputCacheHitPer1M": 0.003625,
+    "inputCacheMissPer1M": 0.435,
+    "outputPer1M": 0.87
+  },
+  "deepseek-v4-flash": {
+    "inputPer1M": 0.14,
+    "inputCacheHitPer1M": 0.0028,
+    "inputCacheMissPer1M": 0.14,
+    "outputPer1M": 0.28
   }
 }

@@ -58,6 +58,14 @@ export type ThinkingMode = (typeof ThinkingMode)[keyof typeof ThinkingMode];
 
 export const RESPONSE_FORMAT_JSON = "json_object" as const;
 
+/* Current Anthropic API semantics for the direct transport: these models manage
+   sampling internally and reject an explicit temperature/top_p. Matched by id
+   prefix so dated snapshots (e.g. -20251001) are covered. */
+export const ANTHROPIC_FIXED_SAMPLING_MODEL_IDS = ["claude-fable-5", "claude-opus-4-8", "claude-opus-4-7"] as const;
+
+/* Fable 5 rejects an explicit thinking:"disabled"; the param must be omitted. */
+export const ANTHROPIC_ALWAYS_THINKING_MODEL_IDS = ["claude-fable-5"] as const;
+
 export const ModelTransport = {
     DIRECT: "direct",
     OPENCLAW: "openclaw",

@@ -31,7 +31,9 @@ export const jsonPost = async <T>(
     }
 
     if (!response.ok) {
-        throw new OpenClawError(`OpenClaw HTTP ${response.status} ${response.statusText}: ${stringifyError(payload)}`);
+        throw new OpenClawError(`OpenClaw HTTP ${response.status} ${response.statusText}: ${stringifyError(payload)}`, {
+            status: response.status,
+        });
     }
 
     return payload as T;

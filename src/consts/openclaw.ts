@@ -21,6 +21,9 @@ export const DEFAULT_GATEWAY_URL = "http://127.0.0.1:18789";
 /* OpenClaw RPC defaults are intentionally shorter than long verification calls. */
 export const DEFAULT_TIMEOUT_S = 30;
 
+/* Chat completions may run long thinking turns; far above the RPC default. */
+export const CHAT_COMPLETIONS_TIMEOUT_S = 180;
+
 /* Gateway startup captures enough logs to diagnose boot failures without flooding output. */
 export const STARTUP_TIMEOUT_MS = 45_000;
 export const GATEWAY_LOG_MAX_CHARS = 8_000;

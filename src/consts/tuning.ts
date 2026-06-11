@@ -63,6 +63,9 @@ export const TOOL_TIMEOUT_S = 45;
 /* Provider-layer retry default; consumed by the R3 retry layer and profile tuning. */
 export const DEFAULT_LLM_MAX_RETRIES = 2;
 
+/* Full-jitter backoff base: retry n sleeps uniform in [0, base * 2^n) ms. */
+export const LLM_RETRY_BASE_DELAY_MS = 500;
+
 /* Bounded retries keep SME/HITL escalation from cycling forever. */
 export const MAX_ESCALATION_ATTEMPTS = 2;
 

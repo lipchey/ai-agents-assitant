@@ -28,6 +28,8 @@ export {
     isLogLevel,
 } from "./logging.ts";
 export {
+    ANTHROPIC_ALWAYS_THINKING_MODEL_IDS,
+    ANTHROPIC_FIXED_SAMPLING_MODEL_IDS,
     ChatRole,
     DEFAULT_PROFILE_NAME,
     ModelProvider,
@@ -40,6 +42,7 @@ export {
     ThinkingMode,
 } from "./models.ts";
 export {
+    CHAT_COMPLETIONS_TIMEOUT_S,
     DEFAULT_GATEWAY_URL,
     DEFAULT_OPENCLAW_MODEL,
     DEFAULT_TIMEOUT_S,
@@ -82,6 +85,7 @@ export {
     DEFAULT_LLM_MAX_RETRIES,
     DEFAULT_MAX_HITL_ROUNDS,
     DEFAULT_COST_BUDGET_USD,
+    LLM_RETRY_BASE_DELAY_MS,
     MAIN_GRAPH_RECURSION_LIMIT,
     MAX_ACTION_SUMMARY_CHARS,
     MAX_BLOCKED_FALLBACK_CHARS,
