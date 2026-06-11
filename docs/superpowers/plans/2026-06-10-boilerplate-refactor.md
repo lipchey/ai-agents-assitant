@@ -88,32 +88,32 @@ R0 covers only the four provider keys.)
   (append `unit` check to the `full` tier)
 - No `src/` behavior changes in this session.
 
-- [ ] **Step 1.1:** Add `vitest` as a devDependency (exact pin). Create
+- [x] **Step 1.1:** Add `vitest` as a devDependency (exact pin). Create
   `vitest.config.ts` (node environment, `tests/**/*.test.ts`, ESM — verify
   vitest resolves the repo's explicit-`.ts`-extension imports; if needed set
   the documented vitest/esbuild option rather than changing tsconfig).
-- [ ] **Step 1.2:** `tests/unit/pricing.test.ts` — characterization tests for
+- [x] **Step 1.2:** `tests/unit/pricing.test.ts` — characterization tests for
   `calculateUsage` (`src/tools/pricing.ts`): one case per provider family
   present in `model-pricing.json` (DeepSeek/OpenAI/Anthropic), covering
   cache-token normalization, zero-usage, and unknown-model behavior. Derive
   expected numbers by hand from the pricing JSON — these tests pin today's
   math exactly.
-- [ ] **Step 1.3:** `tests/unit/budget.test.ts` — `isCostBudgetNear` /
+- [x] **Step 1.3:** `tests/unit/budget.test.ts` — `isCostBudgetNear` /
   `canSpendUsd` (`src/graph/budget.ts`): below/at/above soft ceiling,
   projected-cost edge, zero/unset budget.
-- [ ] **Step 1.4:** `tests/unit/graph-routing.test.ts` — every `routeAfter*`
+- [x] **Step 1.4:** `tests/unit/graph-routing.test.ts` — every `routeAfter*`
   + `routeByComplexity` + `routeDebate` in `src/graph/routing.ts`: one test
   per branch (budget-near, escalation, retry caps, consensus, refetch). Build
   minimal `GraphState` fixtures; assert returned node names against the
   `MainNode` consts.
-- [ ] **Step 1.5:** `tests/unit/swarm-routing.test.ts` — `delegateToWorker`,
+- [x] **Step 1.5:** `tests/unit/swarm-routing.test.ts` — `delegateToWorker`,
   `routeAfterWorker`, `routeAfterSme`, `routeAfterHuman`
   (`src/swarm/routing.ts`) incl. escalation-cap and failure-type branches.
-- [ ] **Step 1.6:** `tests/unit/parsers.test.ts` — `extractJsonObject`
+- [x] **Step 1.6:** `tests/unit/parsers.test.ts` — `extractJsonObject`
   fallback ladder, `parseRouterDecision` heuristic fallback,
   `parseCriticDecision` regex fallback, `parseReactDecision` prose→FINAL
   convergence; valid/malformed/fenced/prose-wrapped inputs.
-- [ ] **Step 1.7:** Wire scripts: `"test:unit": "vitest run"`, and change
+- [x] **Step 1.7:** Wire scripts: `"test:unit": "vitest run"`, and change
   `"test"` to `npm run typecheck && npm run lint && npm run test:unit && npm run smoke`.
   Append a `unit` check (`npm run test:unit`) to the `quality.json` `full`
   tier with a measured timeout, keeping the tier sum within budget (see the
@@ -122,8 +122,8 @@ R0 covers only the four provider keys.)
   decision: a multi-Node version matrix (22/24/latest engines) would now
   live in `quality.yml`, which is generated and SHA-pinned - propose it
   through the quality-system change process, not inline.
-- [ ] **Step 1.8:** Verify: `npx vitest run` → all pass; `npm test` → green.
-- [ ] **Step 1.9:** Commit: `test: add vitest characterization suite for pricing, budget, routing, parsers`
+- [x] **Step 1.8:** Verify: `npx vitest run` → all pass; `npm test` → green.
+- [x] **Step 1.9:** Commit: `test: add vitest characterization suite for pricing, budget, routing, parsers`
 
 **Verification boundary:** `npm test` green with the new unit stage; zero
 `src/` diffs (`git diff --stat -- src/` empty).
