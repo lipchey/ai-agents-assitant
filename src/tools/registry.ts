@@ -151,6 +151,10 @@ class DefaultToolRegistry implements ToolRegistry {
         return this.policy.renderCatalog(kind, this.policyCatalog());
     }
 
+    requiresGateway(): boolean {
+        return this.providers.some((provider) => provider.requiresGateway === true);
+    }
+
     async start(): Promise<void> {
         for (const provider of this.providers) {
             await provider.start?.();

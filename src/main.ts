@@ -10,6 +10,7 @@ import {
     printRunArtifacts,
     readCostBudgetUsd,
     readPatchApplicationEnabled,
+    resolveResumeProfile,
     USAGE_TEXT,
 } from "./cli";
 import type { CliArgs } from "./cli";
@@ -17,6 +18,7 @@ import {
     CHECKPOINT_DB_PATH,
     HITL_RESOLVER_CONFIG_KEY,
     MAIN_GRAPH_RECURSION_LIMIT,
+    ModelTransport,
     PROFILE_CONFIG_KEY,
     RUN_CONTEXT_CONFIG_KEY,
     RunStatus,
@@ -25,6 +27,8 @@ import {
 } from "./consts";
 import { buildMainGraph, isCostBudgetNear } from "./graph";
 import { getLogger, getOutputWriter } from "./logging";
+import { effectiveTransports } from "./models";
+import type { Profile } from "./models";
 import { buildRunSummary, createRunContext, isRunId, writeRunSummary } from "./run";
 import type { RunContext } from "./run";
 import { asRecord, errorMessage } from "./shared";
@@ -67,13 +71,50 @@ const run = async (): Promise<void> => {
     /* One shared registry: the same instance the compatibility seams and DI fallbacks resolve to. */
     const tools = getDefaultToolRegistry();
 
-    logger.info("Ensuring OpenClaw Gateway is running.");
+    /* Resolve the active profile BEFORE touching the gateway: a resumed run must
+       re-enter under its original profile (recovered from the run summary), and the
+       gateway is only started when an LLM binding or a registered tool needs it. */
+    let profile: Profile;
+    let gatewayStarted = false;
     try {
-        await startOpenClawGateway();
+        if (resumeRunId !== undefined) {
+            const resolution = resolveResumeProfile(resumeRunId, args.profile);
+            profile = resolution.profile;
+            if (resolution.source === "recovered") {
+                logger.info("Resume: recovered the original run's profile.", {
+                    runId: resumeRunId,
+                    profile: profile.name,
+                });
+            } else if (resolution.source === "fallback") {
+                logger.warn("Resume: no readable run summary; using the default profile.", { runId: resumeRunId });
+            } else if (resolution.recordedName !== undefined && resolution.recordedName !== profile.name) {
+                logger.warn(
+                    "Resume: honoring an explicitly selected profile that differs from the original run; mid-run bindings/budget may change.",
+                    { runId: resumeRunId, recorded: resolution.recordedName, selected: profile.name },
+                );
+            }
+        } else {
+            profile = loadActiveProfile(args.profile);
+        }
+
+        /* The gateway is also the web-search backend, so it is required when any
+           tool provider routes through it — not only when an LLM binding does. */
+        const needsGateway = effectiveTransports(profile).has(ModelTransport.OPENCLAW) || tools.requiresGateway();
+        if (needsGateway) {
+            logger.info("Ensuring OpenClaw Gateway is running.");
+            await startOpenClawGateway();
+            gatewayStarted = true;
+        } else {
+            logger.info("Direct transport and no gateway-backed tool in use; skipping OpenClaw Gateway startup.");
+        }
         await tools.start();
-        logger.info("Gateway ready. Starting agent.", { taskPreview: task });
+        logger.info("Runtime ready. Starting agent.", { taskPreview: task, gateway: gatewayStarted });
     } catch (error) {
-        logger.error("Failed to start OpenClaw Gateway.", { error });
+        logger.error("Failed to start the agent runtime.", { error });
+        if (gatewayStarted) {
+            await stopOpenClawGateway();
+        }
+        await tools.stop();
         process.exit(1);
     }
 
@@ -114,7 +155,6 @@ const run = async (): Promise<void> => {
     };
 
     try {
-        const profile = loadActiveProfile(args.profile);
         const costBudgetUsd = readCostBudgetUsd(profile.budget?.costBudgetUsd);
         const patchApplicationEnabled = readPatchApplicationEnabled();
         if (patchApplicationEnabled) {
@@ -188,7 +228,9 @@ const run = async (): Promise<void> => {
     } finally {
         process.removeListener("SIGINT", onSigint);
         await tools.stop();
-        await stopOpenClawGateway();
+        if (gatewayStarted) {
+            await stopOpenClawGateway();
+        }
     }
 };
 

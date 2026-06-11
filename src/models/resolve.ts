@@ -12,6 +12,7 @@ import {
     MAX_VERIFY_ATTEMPTS,
     ModelRole,
     ModelTier,
+    type ModelTransport,
     PROFILE_CONFIG_KEY,
 } from "../consts";
 import {
@@ -68,6 +69,19 @@ export const resolveBinding = (role: ModelRole, profile: Profile): ModelBinding 
     /* Omit `params` entirely when neither side contributes one (exactOptionalPropertyTypes:
        a params-less tier binding must not resolve to a spurious empty `params: {}`). */
     return Object.keys(params).length > 0 ? { ...base, params } : { ...base };
+};
+
+/* The set of transports actually exercised by a profile: the effective transport
+   (binding.transport ?? profile.transport.default) of every role's RESOLVED binding.
+   A tier no role resolves to is intentionally excluded, so the entry point can skip
+   the gateway when no role's effective binding uses the openclaw transport. */
+export const effectiveTransports = (profile: Profile): Set<ModelTransport> => {
+    const transports = new Set<ModelTransport>();
+    for (const role of Object.values(ModelRole)) {
+        const binding = resolveBinding(role, profile);
+        transports.add(binding.transport ?? profile.transport.default);
+    }
+    return transports;
 };
 
 export type ResolvedTuning = {

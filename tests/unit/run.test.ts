@@ -4,7 +4,7 @@
  * temp-dir write in the summary suite.
  */
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
@@ -13,7 +13,7 @@ import { RUN_CONTEXT_CONFIG_KEY, RunStatus } from "../../src/consts";
 import { wrapNode } from "../../src/run/node-lifecycle.ts";
 import { createRunContext, isRunId, readRunContext } from "../../src/run/run-context.ts";
 import type { RunContext } from "../../src/run/run-context.ts";
-import { buildRunSummary, writeRunSummary } from "../../src/run/run-summary.ts";
+import { buildRunSummary, readRunSummary, writeRunSummary } from "../../src/run/run-summary.ts";
 import type { RunSummary } from "../../src/run/run-summary.ts";
 
 const configWith = (runContext: RunContext): LangGraphRunnableConfig => ({
@@ -222,5 +222,44 @@ describe("writeRunSummary", () => {
         };
 
         expect(() => writeRunSummary(traversing, dir)).toThrow(/invalid runId/u);
+    });
+});
+
+describe("readRunSummary", () => {
+    it("round-trips the profileName written by writeRunSummary", () => {
+        const dir = mkdtempSync(join(tmpdir(), "run-summary-read-"));
+        const ctx = createRunContext({ profileName: "personal-dev" });
+        const summary = buildRunSummary({
+            runContext: ctx,
+            task: "t",
+            status: RunStatus.COMPLETED,
+            answer: "a",
+            totalCostUsd: 0,
+            totalTokens: 0,
+            usageStats: {},
+        });
+        writeRunSummary(summary, dir);
+
+        expect(readRunSummary(ctx.runId, dir)?.profileName).toBe("personal-dev");
+    });
+
+    it("returns undefined when the summary file is absent (reports/ may not exist)", () => {
+        const dir = mkdtempSync(join(tmpdir(), "run-summary-read-"));
+        expect(readRunSummary(randomUUID(), dir)).toBeUndefined();
+    });
+
+    it("returns undefined for a malformed runId rather than touching the filesystem", () => {
+        expect(readRunSummary("../../package")).toBeUndefined();
+    });
+
+    it("returns undefined when the file is present but unparseable or lacks a profileName", () => {
+        const dir = mkdtempSync(join(tmpdir(), "run-summary-read-"));
+        const badJson = randomUUID();
+        writeFileSync(join(dir, `${badJson}.json`), "{ not json");
+        expect(readRunSummary(badJson, dir)).toBeUndefined();
+
+        const noProfile = randomUUID();
+        writeFileSync(join(dir, `${noProfile}.json`), JSON.stringify({ runId: noProfile, task: "t" }));
+        expect(readRunSummary(noProfile, dir)).toBeUndefined();
     });
 });

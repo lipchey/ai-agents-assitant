@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { RUN_REPORTS_DIR } from "../consts";
 import type { RunStatus } from "../consts";
+import { asRecord } from "../shared";
 import type { UsageStats } from "../shared";
 import { isRunId } from "./run-context.ts";
 import type { NodeVisit, RunContext } from "./run-context.ts";
@@ -59,4 +60,27 @@ export const writeRunSummary = (summary: RunSummary, baseDir: string = RUN_REPOR
     const path = join(baseDir, `${summary.runId}.json`);
     writeFileSync(path, `${JSON.stringify(summary, null, 2)}\n`);
     return path;
+};
+
+/* Best-effort read of a prior run's summary, used at resume time to recover the
+   original run's profileName. Returns undefined when the runId is malformed, the
+   file is absent (reports/ is gitignored and may not exist), the JSON is
+   unparseable, or it lacks a string profileName — every case the caller treats as
+   "no recoverable profile" and falls back without crashing. */
+export const readRunSummary = (runId: string, baseDir: string = RUN_REPORTS_DIR): RunSummary | undefined => {
+    if (!isRunId(runId)) {
+        return undefined;
+    }
+    const path = join(baseDir, `${runId}.json`);
+    if (!existsSync(path)) {
+        return undefined;
+    }
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(readFileSync(path, "utf8"));
+    } catch {
+        return undefined;
+    }
+    const record = asRecord(parsed);
+    return record && typeof record.profileName === "string" ? (parsed as RunSummary) : undefined;
 };

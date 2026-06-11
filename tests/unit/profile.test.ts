@@ -9,9 +9,15 @@
  */
 import { describe, expect, it } from "vitest";
 import { loadProfile, parseProfile, type ModelBinding } from "../../src/models/profile.ts";
-import { DEFAULT_ROLE_TIER, readProfile, resolveBinding, resolveTuning } from "../../src/models/resolve.ts";
+import {
+    DEFAULT_ROLE_TIER,
+    effectiveTransports,
+    readProfile,
+    resolveBinding,
+    resolveTuning,
+} from "../../src/models/resolve.ts";
 import { callLlm } from "../../src/tools/llm.ts";
-import { ModelRole, ModelTier } from "../../src/consts/models.ts";
+import { ModelRole, ModelTier, ModelTransport } from "../../src/consts/models.ts";
 import {
     CONFIDENCE_ESCALATION_THRESHOLD,
     DEFAULT_LLM_MAX_RETRIES,
@@ -353,5 +359,42 @@ describe("resolveTuning", () => {
         expect(tuning.maxDebateIterations).toBe(9);
         expect(tuning.maxVerifyAttempts).toBe(MAX_VERIFY_ATTEMPTS);
         expect(tuning.confidenceEscalationThreshold).toBe(CONFIDENCE_ESCALATION_THRESHOLD);
+    });
+});
+
+/* effectiveTransports drives the entry point's gateway-skip decision: it must
+   report exactly the transports some role actually resolves to. */
+describe("effectiveTransports", () => {
+    it("reports only openclaw for the default openclaw profile", () => {
+        expect([...effectiveTransports(parseProfile(validProfile()))]).toEqual([ModelTransport.OPENCLAW]);
+    });
+
+    it("reports only direct for an all-direct profile", () => {
+        const profile = parseProfile(validProfile({ transport: { default: "direct" }, tiers: bareTiers() }));
+        expect([...effectiveTransports(profile)]).toEqual([ModelTransport.DIRECT]);
+    });
+
+    it("reports both when a USED tier overrides the default transport to openclaw", () => {
+        const tiers = bareTiers();
+        /* coder resolves to skilled, so this openclaw override is effective. */
+        tiers.skilled = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "openclaw" };
+        const transports = effectiveTransports(parseProfile(validProfile({ transport: { default: "direct" }, tiers })));
+        expect(transports.has(ModelTransport.DIRECT)).toBe(true);
+        expect(transports.has(ModelTransport.OPENCLAW)).toBe(true);
+    });
+
+    it("excludes the transport of a tier no role resolves to", () => {
+        const tiers = bareTiers();
+        /* Make frontier openclaw, then move its only consumer (sme) off it with a
+           direct full-binding override: frontier is now unused, so no role is openclaw. */
+        tiers.frontier = { provider: "anthropic", model: "anthropic/claude-opus-4-8", transport: "openclaw" };
+        const profile = parseProfile(
+            validProfile({
+                transport: { default: "direct" },
+                tiers,
+                roles: { sme: { provider: "anthropic", model: "claude-sonnet-4-6" } },
+            }),
+        );
+        expect([...effectiveTransports(profile)]).toEqual([ModelTransport.DIRECT]);
     });
 });

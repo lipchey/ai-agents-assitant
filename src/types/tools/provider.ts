@@ -32,6 +32,10 @@ export type ToolDescriptor = {
 export type ToolProvider = {
     readonly name: string;
     readonly catalog: readonly ToolDescriptor[];
+    /* True when this provider's tools route through the OpenClaw gateway (e.g. the
+       gateway-backed web search), so the entry point must keep the gateway running
+       even on an all-direct LLM profile. Absent/false = self-contained (local). */
+    readonly requiresGateway?: boolean;
     start?(): Promise<void>;
     stop?(): Promise<void>;
 };
@@ -46,6 +50,8 @@ export type ToolRegistry = {
     validate(kind: WorkerKind, alias: string, args: ToolArgs): SanitizedAction;
     allowedAliases(kind: WorkerKind): readonly ToolAlias[];
     renderCatalog(kind: WorkerKind): string;
+    /* True when any registered provider routes through the OpenClaw gateway. */
+    requiresGateway(): boolean;
     start(): Promise<void>;
     stop(): Promise<void>;
 };
