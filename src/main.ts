@@ -114,7 +114,7 @@ const run = async (): Promise<void> => {
     };
 
     try {
-        const profile = loadActiveProfile();
+        const profile = loadActiveProfile(args.profile);
         const costBudgetUsd = readCostBudgetUsd(profile.budget?.costBudgetUsd);
         const patchApplicationEnabled = readPatchApplicationEnabled();
         if (patchApplicationEnabled) {
@@ -178,7 +178,7 @@ const run = async (): Promise<void> => {
         const path = writeRunSummary(summary);
         summaryWritten = true;
 
-        printReport(finalState, costBudgetUsd, output);
+        printReport(finalState, costBudgetUsd, profile.name, output);
         printRunArtifacts(runContext.runId, path, output);
         logger.info("Run summary written.", { runId: runContext.runId, path, status });
     } catch (error) {

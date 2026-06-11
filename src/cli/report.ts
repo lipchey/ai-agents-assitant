@@ -5,6 +5,7 @@ import type { OutputWriter } from "../types/logging.ts";
 export const printReport = (
     finalState: GraphStateValue,
     costBudgetUsd: number,
+    profileName: string,
     output: OutputWriter = getOutputWriter(),
 ): void => {
     output.line("=== FINAL ANSWER ===");
@@ -19,6 +20,7 @@ export const printReport = (
     const spent = finalState.totalCost || 0;
 
     output.line("\n=== TELEMETRY REPORT ===");
+    output.line(`Profile: ${profileName}`);
     output.line(`Total Tokens: ${finalState.totalTokens}`);
     output.line(`Total Cost: $${spent.toFixed(6)}`);
     output.line(`Cost Budget: $${budget.toFixed(2)}`);

@@ -1,0 +1,40 @@
+{
+  // Quality-first personal development profile on the direct transport (spec §7,
+  // model-tiers design). Claude Sonnet does the day-to-day architecture, review,
+  // and coding; Claude Haiku routes and compresses; Claude Fable 5 (frontier tier)
+  // runs ONLY behind escalation gates. A cross-family GPT critic guards against
+  // single-family blind spots. Direct bindings use bare provider-native ids.
+  name: "personal-dev",
+  description: "Quality-first personal dev; Fable 5 behind escalation gates.",
+  transport: { default: "direct" },
+  tiers: {
+    // frontier: escalation oracle (sme tiebreaker) — the top model, gated.
+    frontier: {
+      provider: "anthropic",
+      model: "claude-fable-5",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+    // adviser: first-pass architecture/review (reasoner / architect / critic).
+    adviser: {
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      params: { thinking: "adaptive" },
+    },
+    // skilled: implementation (coder).
+    skilled: {
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      params: { thinking: "adaptive" },
+    },
+    // worker: routing/compression/ReAct planning (router / firewall / worker).
+    worker: { provider: "anthropic", model: "claude-haiku-4-5" },
+  },
+  roles: {
+    // Cross-family critique: GPT reviews what the Anthropic family produced.
+    critic: { provider: "openai", model: "gpt-5.5" },
+  },
+  budget: { costBudgetUsd: 2 },
+  prompts: {
+    cascadeNote: "Claude Haiku routes and compresses; Claude Sonnet architects, codes, and reviews; GPT-5.5 gives the cross-family critique; Claude Fable 5 (the frontier tier) runs ONLY behind escalation gates.",
+  },
+}

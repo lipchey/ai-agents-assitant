@@ -3,9 +3,13 @@ import { autoAbortResolver, createStdinHitlResolver } from "../hitl";
 import { loadProfile, type Profile } from "../models";
 import type { HitlResolver } from "../types/hitl";
 
-/* AGENT_PROFILE selects profiles/<name>.json5 (or a path); defaults to the
-   byte-stable default profile. Loaded once at startup, threaded via configurable. */
-export const loadActiveProfile = (): Profile => loadProfile(process.env[EnvVar.PROFILE] ?? DEFAULT_PROFILE_NAME);
+/* Profile precedence: explicit --profile flag > AGENT_PROFILE env > "default".
+   An empty/blank env value (e.g. an unset PROFILE passthrough in run-task.sh)
+   falls back to the default. Loaded once at startup, threaded via configurable. */
+export const loadActiveProfile = (cliProfile?: string): Profile => {
+    const envProfile = process.env[EnvVar.PROFILE]?.trim();
+    return loadProfile(cliProfile ?? (envProfile || DEFAULT_PROFILE_NAME));
+};
 
 /* fallbackUsd is the active profile's budget; AGENT_COST_BUDGET_USD still wins. */
 export const readCostBudgetUsd = (fallbackUsd: number = DEFAULT_COST_BUDGET_USD): number => {

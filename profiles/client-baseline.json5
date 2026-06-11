@@ -1,0 +1,39 @@
+{
+  // Conservative client-work cascade on the direct transport (spec §7, model-tiers
+  // design): DeepSeek Flash routes and compresses, Claude Sonnet implements, Claude
+  // Opus advises and arbitrates. Tiers only — no cross-family critic, no overrides —
+  // and a tight budget keep behavior predictable.
+  name: "client-baseline",
+  description: "Cheap predictable client cascade: Sonnet coder, Opus adviser/SME, $0.50 budget.",
+  transport: { default: "direct" },
+  tiers: {
+    // worker: cheap deterministic routing/compression (router / firewall / worker).
+    worker: {
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+      params: { temperature: 0, thinking: "disabled" },
+    },
+    // skilled: implementation (coder).
+    skilled: {
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      params: { temperature: 0.2 },
+    },
+    // adviser: architecture/review (reasoner / architect / critic).
+    adviser: {
+      provider: "anthropic",
+      model: "claude-opus-4-8",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+    // frontier: escalation oracle (sme tiebreaker), gated by budget + escalation.
+    frontier: {
+      provider: "anthropic",
+      model: "claude-opus-4-8",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+  },
+  budget: { costBudgetUsd: 0.5 },
+  prompts: {
+    cascadeNote: "DeepSeek Flash routes and compresses; Claude Opus does architecture and review; Claude Sonnet implements; escalation stays on Claude Opus behind escalation gates and a tight budget.",
+  },
+}

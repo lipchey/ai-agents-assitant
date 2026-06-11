@@ -1,0 +1,49 @@
+{
+  // The default DeepSeek-heavy cascade moved onto the direct transport (spec §7,
+  // model-tiers design): the cheap experimentation baseline. Tiers only, plus the
+  // default profile's low-cost reasoner override; critique resolves through the
+  // adviser tier (no cross-family critic). The experimentation loop this profile
+  // exists for: copy the file, edit the four tier lines, run.
+  name: "research-playground",
+  description: "DeepSeek-heavy default cascade on the direct transport for cheap experimentation.",
+  transport: { default: "direct" },
+  tiers: {
+    // worker: cheap deterministic routing/compression (router / firewall / worker).
+    worker: {
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+      params: { temperature: 0, thinking: "disabled" },
+    },
+    // skilled: implementation (coder).
+    skilled: {
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      params: { temperature: 0.2 },
+    },
+    // adviser: strong architecture/review behind the cheap first pass.
+    adviser: {
+      provider: "anthropic",
+      model: "claude-opus-4-8",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+    // frontier: escalation oracle (sme tiebreaker), gated.
+    frontier: {
+      provider: "anthropic",
+      model: "claude-opus-4-8",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+  },
+  roles: {
+    // First-pass architecture/critique stays on the cheap DeepSeek reasoner, as in
+    // the default profile.
+    reasoner: {
+      provider: "deepseek",
+      model: "deepseek-v4-pro",
+      params: { temperature: 0.2, thinking: "enabled", reasoningEffort: "high" },
+    },
+  },
+  budget: { costBudgetUsd: 1 },
+  prompts: {
+    cascadeNote: "Cheap models (DeepSeek Flash) route and compress; a low-cost reasoner (DeepSeek V4 Pro) does first-pass architecture and critique; strong models (Claude Opus, Claude Sonnet) run ONLY when high-risk or low-confidence signals demand them.",
+  },
+}

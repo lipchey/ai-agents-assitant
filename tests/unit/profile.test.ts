@@ -146,6 +146,23 @@ describe("loadProfile (default)", () => {
     });
 });
 
+describe("shipped profiles load and validate (R6)", () => {
+    /* Every profile shipped under profiles/ must pass the loader's fail-fast
+       guards (schema, pricing entries, direct-id form) and resolve all 8 roles,
+       so a broken example profile is caught in CI, not at first live use. */
+    const SHIPPED_PROFILES = ["default", "personal-dev", "research-playground", "client-baseline"];
+    for (const name of SHIPPED_PROFILES) {
+        it(`loads "${name}" and resolves a binding for every role`, () => {
+            const profile = loadProfile(name);
+            expect(profile.name).toBe(name);
+            for (const role of Object.values(ModelRole)) {
+                const binding = resolveBinding(role, profile);
+                expect(binding.model.length).toBeGreaterThan(0);
+            }
+        });
+    }
+});
+
 describe("resolveBinding reproduces the pre-refactor switch", () => {
     const profile = loadProfile("default");
     for (const role of Object.values(ModelRole)) {
