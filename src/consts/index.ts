@@ -29,9 +29,12 @@ export {
 } from "./logging.ts";
 export {
     ChatRole,
+    DEFAULT_PROFILE_NAME,
     ModelProvider,
     ModelRef,
     ModelRole,
+    ModelTransport,
+    PROFILE_CONFIG_KEY,
     ReasoningEffort,
     RESPONSE_FORMAT_JSON,
     ThinkingMode,
@@ -76,6 +79,7 @@ export {
     CONFIDENCE_ESCALATION_THRESHOLD,
     COST_BUDGET_MIN_REMAINING_USD,
     COST_BUDGET_SOFT_CEILING_RATIO,
+    DEFAULT_LLM_MAX_RETRIES,
     DEFAULT_MAX_HITL_ROUNDS,
     DEFAULT_COST_BUDGET_USD,
     MAIN_GRAPH_RECURSION_LIMIT,

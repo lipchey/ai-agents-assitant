@@ -1,0 +1,57 @@
+{
+  // Default profile: a byte-stable replica of the pre-R2 modelForRole switch on the
+  // OpenClaw transport. `tuning` is intentionally omitted so every cap defaults to
+  // src/consts/tuning.ts. Selecting a different profile is what changes behavior;
+  // this one must not. `model` strings double as the model-pricing.json cost keys.
+  name: "default",
+  description: "Byte-stable replica of the pre-profile model cascade on the OpenClaw transport.",
+  transport: { default: "openclaw" },
+  roles: {
+    // Cheap, deterministic planning: DeepSeek V4 Flash, temperature 0, thinking off.
+    router: {
+      provider: "deepseek",
+      model: "deepseek/deepseek-v4-flash",
+      params: { temperature: 0, thinking: "disabled" },
+    },
+    firewall: {
+      provider: "deepseek",
+      model: "deepseek/deepseek-v4-flash",
+      params: { temperature: 0, thinking: "disabled" },
+    },
+    worker: {
+      provider: "deepseek",
+      model: "deepseek/deepseek-v4-flash",
+      params: { temperature: 0, thinking: "disabled" },
+    },
+    // First-pass architecture/review: DeepSeek V4 Pro with thinking enabled.
+    frontier: {
+      provider: "deepseek",
+      model: "deepseek/deepseek-v4-pro",
+      params: { temperature: 0.2, thinking: "enabled", reasoningEffort: "high" },
+    },
+    // Strong escalation: Claude Opus omits temperature alongside adaptive thinking.
+    architect: {
+      provider: "anthropic",
+      model: "anthropic/claude-opus-4-8",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+    sme: {
+      provider: "anthropic",
+      model: "anthropic/claude-opus-4-8",
+      params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+    // Implementation: Claude Sonnet, temperature 0.2.
+    coder: {
+      provider: "anthropic",
+      model: "anthropic/claude-sonnet-4-6",
+      params: { temperature: 0.2 },
+    },
+    // Cross-family review: GPT, temperature 0.1.
+    critic: {
+      provider: "openai",
+      model: "openai/gpt-5.5",
+      params: { temperature: 0.1 },
+    },
+  },
+  budget: { costBudgetUsd: 1 },
+}

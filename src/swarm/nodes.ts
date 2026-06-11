@@ -6,11 +6,9 @@ import {
     HitlInterruptKind,
     HitlResolutionAction,
     MAX_BLOCKED_FALLBACK_CHARS,
-    ReasoningEffort,
     UsageKey,
     WorkerKind,
     WorkerStatus,
-    ThinkingMode,
 } from "../consts";
 import { SystemPrompts } from "../prompts";
 import { asRecord, extractJsonObject, safeJson, truncate, emptyUsage, usageFromLlm } from "../shared";
@@ -57,7 +55,7 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
             ]
                 .filter(Boolean)
                 .join("\n\n"),
-            { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
+            { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON },
         );
         selectedKind = parseWorkerKind(result.content, seededKind);
         usage = usageFromLlm(result);
@@ -80,8 +78,6 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
 export const smeOracle = async (state: SwarmWorkerStateValue) => {
     const result = await callLlm(ModelRole.FRONTIER, SystemPrompts.smeOracle, state.escalationQuery, {
         maxTokens: 900,
-        reasoningEffort: ReasoningEffort.HIGH,
-        thinking: ThinkingMode.ENABLED,
     });
     return {
         escalationResponse: result.content,
@@ -128,7 +124,7 @@ export const workerCompress = async (state: SwarmWorkerStateValue) => {
         ModelRole.FIREWALL,
         SystemPrompts.workerCompress,
         state.rawToolOutput || safeJson(state.toolCalls),
-        { maxTokens: 1_200, responseFormat: RESPONSE_FORMAT_JSON, thinking: ThinkingMode.DISABLED },
+        { maxTokens: 1_200, responseFormat: RESPONSE_FORMAT_JSON },
     );
     return {
         workerSummary: result.content,

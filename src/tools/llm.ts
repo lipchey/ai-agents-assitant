@@ -1,3 +1,4 @@
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import {
     ChatRole,
     DEFAULT_OPENCLAW_MODEL,
@@ -6,10 +7,11 @@ import {
     STRONG_REASONING_AGENT_ID,
     ThinkingMode,
 } from "../consts";
+import { readProfile, resolveBinding } from "../models";
 import { OpenClawError } from "./errors.ts";
 import { jsonPost } from "./http.ts";
-import { modelForRole } from "./models.ts";
 import { calculateUsage, loadPricing } from "./pricing.ts";
+import type { ModelParams } from "../models";
 import type { ModelRole } from "../consts";
 import type { ChatCompletionResponse, LlmCallOptions, LlmCallResult } from "../types/tools";
 import type { JsonObject } from "../types/tools";
@@ -42,11 +44,16 @@ export const callLlm = async (
     system: string,
     user: string,
     options: LlmCallOptions = {},
+    config?: LangGraphRunnableConfig,
 ): Promise<LlmCallResult> => {
-    const { modelRef, provider, temperature } = modelForRole(role);
+    const binding = resolveBinding(role, readProfile(config));
+    const { provider, model: modelRef } = binding;
+    /* binding.params carries the role/model-tied tuning (temperature, thinking,
+       effort); per-call options (maxTokens, responseFormat) override per request. */
+    const merged: ModelParams = { ...binding.params, ...options };
     /* Adaptive Anthropic thinking requires the strong-reasoning OpenClaw agent. */
     const agentId =
-        provider === ModelProvider.ANTHROPIC && options.thinking === ThinkingMode.ADAPTIVE
+        provider === ModelProvider.ANTHROPIC && merged.thinking === ThinkingMode.ADAPTIVE
             ? STRONG_REASONING_AGENT_ID
             : undefined;
     const body: JsonObject = {
@@ -59,35 +66,35 @@ export const callLlm = async (
         user: `ai-agents-assitant:${role}`,
     };
 
-    if (temperature !== undefined) {
-        body.temperature = temperature;
+    if (merged.temperature !== undefined) {
+        body.temperature = merged.temperature;
     }
-    if (options.maxTokens !== undefined) {
-        body.max_tokens = options.maxTokens;
+    if (merged.maxTokens !== undefined) {
+        body.max_tokens = merged.maxTokens;
     }
-    if (options.responseFormat !== undefined) {
-        body.response_format = { type: options.responseFormat };
+    if (merged.responseFormat !== undefined) {
+        body.response_format = { type: merged.responseFormat };
     }
 
     if (provider === ModelProvider.ANTHROPIC) {
         /* Anthropic uses thinking + output_config.effort, not reasoning_effort. */
-        if (options.thinking !== undefined) {
-            body.thinking = { type: options.thinking };
+        if (merged.thinking !== undefined) {
+            body.thinking = { type: merged.thinking };
         }
         if (
-            options.thinking !== undefined &&
-            options.thinking !== ThinkingMode.DISABLED &&
-            options.reasoningEffort !== undefined
+            merged.thinking !== undefined &&
+            merged.thinking !== ThinkingMode.DISABLED &&
+            merged.reasoningEffort !== undefined
         ) {
-            body.output_config = { effort: options.reasoningEffort };
+            body.output_config = { effort: merged.reasoningEffort };
         }
     } else {
-        if (options.reasoningEffort !== undefined) {
-            body.reasoning_effort = options.reasoningEffort;
+        if (merged.reasoningEffort !== undefined) {
+            body.reasoning_effort = merged.reasoningEffort;
         }
-        if (options.thinking !== undefined) {
+        if (merged.thinking !== undefined) {
             body.thinking = {
-                type: options.thinking === ThinkingMode.ADAPTIVE ? ThinkingMode.ENABLED : options.thinking,
+                type: merged.thinking === ThinkingMode.ADAPTIVE ? ThinkingMode.ENABLED : merged.thinking,
             };
         }
     }

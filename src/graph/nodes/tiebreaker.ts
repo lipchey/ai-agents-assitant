@@ -1,10 +1,11 @@
-import { ModelRole, ReasoningEffort, ThinkingMode, UsageKey } from "../../consts";
+import { ModelRole, UsageKey } from "../../consts";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import type { GraphStateValue } from "../../state";
 
-export const smeTiebreaker = async (state: GraphStateValue) => {
+export const smeTiebreaker = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.SME,
         SystemPrompts.smeTiebreaker,
@@ -13,7 +14,8 @@ export const smeTiebreaker = async (state: GraphStateValue) => {
             `Current draft:\n${state.currentDraft}`,
             `Debate summary:\n${state.debateSummary}`,
         ].join("\n\n"),
-        { thinking: ThinkingMode.ADAPTIVE, reasoningEffort: ReasoningEffort.HIGH },
+        {},
+        config,
     );
     return {
         currentDraft: result.content,

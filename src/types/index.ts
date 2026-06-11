@@ -28,8 +28,6 @@ export type {
     LlmCallOptions,
     LlmCallResult,
     ModelPricing,
-    ModelProvider,
-    ModelRouting,
     OpenClawRpcArgs,
     OpenClawRpcOptions,
     ProviderUsage,

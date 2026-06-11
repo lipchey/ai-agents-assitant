@@ -1,6 +1,17 @@
 import "dotenv/config";
-import { buildHitlResolver, readCostBudgetUsd, readPatchApplicationEnabled, printReport } from "./cli";
-import { HITL_RESOLVER_CONFIG_KEY, MAIN_GRAPH_RECURSION_LIMIT, TOOL_REGISTRY_CONFIG_KEY } from "./consts";
+import {
+    buildHitlResolver,
+    loadActiveProfile,
+    readCostBudgetUsd,
+    readPatchApplicationEnabled,
+    printReport,
+} from "./cli";
+import {
+    HITL_RESOLVER_CONFIG_KEY,
+    MAIN_GRAPH_RECURSION_LIMIT,
+    PROFILE_CONFIG_KEY,
+    TOOL_REGISTRY_CONFIG_KEY,
+} from "./consts";
 import { buildMainGraph } from "./graph";
 import { getLogger, getOutputWriter } from "./logging";
 import { getDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
@@ -29,19 +40,22 @@ const run = async (): Promise<void> => {
 
     try {
         const graph = buildMainGraph();
-        const costBudgetUsd = readCostBudgetUsd();
+        const profile = loadActiveProfile();
+        const costBudgetUsd = readCostBudgetUsd(profile.budget?.costBudgetUsd);
         const patchApplicationEnabled = readPatchApplicationEnabled();
         if (patchApplicationEnabled) {
             logger.info("Patch application enabled; verified changes will be written to the repository.");
         }
+        logger.info("Active profile resolved.", { profile: profile.name, costBudgetUsd });
         const finalState = await graph.invoke(
             { originalTask: task, costBudgetUsd, patchApplicationEnabled },
-            /* Keep the non-serializable HITL resolver out of checkpointed graph state. */
+            /* Keep the non-serializable HITL resolver and profile out of checkpointed graph state. */
             {
                 recursionLimit: MAIN_GRAPH_RECURSION_LIMIT,
                 configurable: {
                     [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver(),
                     [TOOL_REGISTRY_CONFIG_KEY]: tools,
+                    [PROFILE_CONFIG_KEY]: profile,
                 },
             },
         );

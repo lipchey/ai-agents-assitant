@@ -41,6 +41,7 @@ const boundariesElements = [
     { type: "consts", mode: "full", pattern: "src/consts/**/*" },
     { type: "types", mode: "full", pattern: "src/types/**/*" },
     { type: "shared", mode: "full", pattern: "src/shared/**/*" },
+    { type: "models", mode: "full", pattern: "src/models/**/*" },
     { type: "state", mode: "full", pattern: "src/state/**/*" },
     { type: "logging", mode: "full", pattern: "src/logging/**/*" },
     { type: "prompts", mode: "full", pattern: "src/prompts/**/*" },
@@ -55,7 +56,7 @@ const boundariesElements = [
 
 const L0 = ["consts"];
 const L1 = [...L0, "types"];
-const L2 = [...L1, "shared"];
+const L2 = [...L1, "shared", "models"];
 const L3 = [...L2, "state", "logging", "prompts"];
 const L4 = [...L3, "tools", "hitl"];
 const L5 = [...L4, "patching"];
@@ -103,7 +104,7 @@ export default tseslint.config(
                     rules: [
                         { from: ["consts"], allow: L0 },
                         { from: ["types"], allow: L1 },
-                        { from: ["shared"], allow: L2 },
+                        { from: ["shared", "models"], allow: L2 },
                         { from: ["state", "logging", "prompts"], allow: L3 },
                         { from: ["tools", "hitl"], allow: L4 },
                         { from: ["patching"], allow: L5 },

@@ -10,7 +10,7 @@
  *
  *   L0 consts
  *   L1 types
- *   L2 shared
+ *   L2 shared, models
  *   L3 state, logging, prompts
  *   L4 tools, hitl
  *   L5 patching
@@ -22,12 +22,12 @@
  * edges (types -> state, types -> prompts) were fixed in source - see ADR-001.
  */
 
-/* The closed set of known src/ modules: the 12 layer directories plus the two
+/* The closed set of known src/ modules: the 13 layer directories plus the two
  * top-level entry files. The catch-all guard rules below derive their "unlayered"
  * predicate from this ONE constant so a new dir cannot slip past either direction.
  * Adding a new top-level src/ dir requires updating, together: ADR-001's table,
  * the layer regexes in this file, and the eslint mirror in eslint.config.js. */
-const LAYER_DIRS = "consts|types|shared|state|logging|prompts|tools|hitl|patching|swarm|graph|cli";
+const LAYER_DIRS = "consts|types|shared|models|state|logging|prompts|tools|hitl|patching|swarm|graph|cli";
 const ENTRY_FILES = "^src/(main|index)\\.ts$";
 /* The known src/ set is exactly the 12 layer dirs plus the two entry files;
  * UNLAYERED_SRC is its complement under src/ (a new dir matches neither). */
@@ -36,8 +36,8 @@ const UNLAYERED_SRC = "^src/(?!(" + LAYER_DIRS + ")/)(?!(main|index)\\.ts$)";
 /* Forbidden import targets for each "from" layer = the union of all STRICTLY
  * higher layers, expressed as one path regex (directory unions plus the two
  * top-level entry files main.ts / index.ts). */
-const aboveL0 = "^src/(types|shared|state|logging|prompts|tools|hitl|patching|swarm|graph|cli)/|" + ENTRY_FILES;
-const aboveL1 = "^src/(shared|state|logging|prompts|tools|hitl|patching|swarm|graph|cli)/|" + ENTRY_FILES;
+const aboveL0 = "^src/(types|shared|models|state|logging|prompts|tools|hitl|patching|swarm|graph|cli)/|" + ENTRY_FILES;
+const aboveL1 = "^src/(shared|models|state|logging|prompts|tools|hitl|patching|swarm|graph|cli)/|" + ENTRY_FILES;
 const aboveL2 = "^src/(state|logging|prompts|tools|hitl|patching|swarm|graph|cli)/|" + ENTRY_FILES;
 const aboveL3 = "^src/(tools|hitl|patching|swarm|graph|cli)/|" + ENTRY_FILES;
 const aboveL4 = "^src/(patching|swarm|graph|cli)/|" + ENTRY_FILES;
@@ -91,8 +91,8 @@ module.exports = {
         {
             name: "layer-L2-shared",
             severity: "error",
-            comment: "L2 shared may import only from L0-L1.",
-            from: { path: "^src/shared/" },
+            comment: "L2 (shared, models) may import only from L0-L1 (and L2 siblings).",
+            from: { path: "^src/(shared|models)/" },
             to: { path: aboveL2 },
         },
         {

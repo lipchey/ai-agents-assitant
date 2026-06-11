@@ -10,7 +10,6 @@ import {
     MAX_REACT_TOOL_FAILURES,
     ReactDecisionKind,
     SHELL_EXEC_TIMEOUT_S,
-    ThinkingMode,
     TOOL_TIMEOUT_S,
     ToolName,
     type WorkerKind,
@@ -114,7 +113,6 @@ export const runReactWorker = async (
             planResult = await callLlm(ModelRole.WORKER, system, buildWorkerContext(state, steps, toolCatalog), {
                 maxTokens: 700,
                 responseFormat: RESPONSE_FORMAT_JSON,
-                thinking: ThinkingMode.DISABLED,
             });
         } catch (error) {
             /* Planner gateway/timeout failures are environment issues, not graph crashes. */

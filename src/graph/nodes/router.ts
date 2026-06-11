@@ -1,16 +1,19 @@
-import { ModelRole, RESPONSE_FORMAT_JSON, DEFAULT_COST_BUDGET_USD, ThinkingMode, UsageKey } from "../../consts";
+import { ModelRole, RESPONSE_FORMAT_JSON, DEFAULT_COST_BUDGET_USD, UsageKey } from "../../consts";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import { parseRouterDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../state";
 
-export const complexityRouter = async (state: GraphStateValue) => {
-    const result = await callLlm(ModelRole.ROUTER, SystemPrompts.complexityRouter, state.originalTask, {
-        maxTokens: 160,
-        responseFormat: RESPONSE_FORMAT_JSON,
-        thinking: ThinkingMode.DISABLED,
-    });
+export const complexityRouter = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
+    const result = await callLlm(
+        ModelRole.ROUTER,
+        SystemPrompts.complexityRouter,
+        state.originalTask,
+        { maxTokens: 160, responseFormat: RESPONSE_FORMAT_JSON },
+        config,
+    );
     const decision = parseRouterDecision(result.content, state.originalTask);
 
     return {

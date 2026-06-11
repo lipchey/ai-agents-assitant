@@ -1,11 +1,6 @@
-import {
-    ModelRole,
-    RESPONSE_FORMAT_JSON,
-    CONFIDENCE_ESCALATION_THRESHOLD,
-    ReasoningEffort,
-    ThinkingMode,
-    UsageKey,
-} from "../../consts";
+import { ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../../consts";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { readProfile, resolveTuning } from "../../models";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -13,7 +8,7 @@ import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseFrontierArchitectureDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../state";
 
-export const frontierArchitect = async (state: GraphStateValue) => {
+export const frontierArchitect = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.FRONTIER,
         SystemPrompts.frontierArchitect,
@@ -24,19 +19,15 @@ export const frontierArchitect = async (state: GraphStateValue) => {
         ]
             .filter(Boolean)
             .join("\n\n"),
-        {
-            maxTokens: 2_400,
-            reasoningEffort: ReasoningEffort.HIGH,
-            responseFormat: RESPONSE_FORMAT_JSON,
-            thinking: ThinkingMode.ENABLED,
-        },
+        { maxTokens: 2_400, responseFormat: RESPONSE_FORMAT_JSON },
+        config,
     );
     const decision = parseFrontierArchitectureDecision(result.content);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
     const strongEscalationRequired =
         Boolean(deterministicReason) ||
         decision.escalateToStrong ||
-        decision.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
+        decision.confidence < resolveTuning(readProfile(config)).confidenceEscalationThreshold;
     const strongEscalationReason =
         deterministicReason ??
         decision.escalationReason ??
@@ -54,7 +45,7 @@ export const frontierArchitect = async (state: GraphStateValue) => {
     };
 };
 
-export const claudeArchitect = async (state: GraphStateValue) => {
+export const claudeArchitect = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.ARCHITECT,
         SystemPrompts.claudeArchitect,
@@ -67,7 +58,8 @@ export const claudeArchitect = async (state: GraphStateValue) => {
         ]
             .filter(Boolean)
             .join("\n\n"),
-        { thinking: ThinkingMode.ADAPTIVE, reasoningEffort: ReasoningEffort.HIGH },
+        {},
+        config,
     );
 
     return {

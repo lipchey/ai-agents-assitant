@@ -1,12 +1,6 @@
-import {
-    ModelRole,
-    RESPONSE_FORMAT_JSON,
-    CONFIDENCE_ESCALATION_THRESHOLD,
-    RECENT_DEBATE_WINDOW,
-    ReasoningEffort,
-    ThinkingMode,
-    UsageKey,
-} from "../../consts";
+import { ModelRole, RESPONSE_FORMAT_JSON, RECENT_DEBATE_WINDOW, UsageKey } from "../../consts";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
+import { readProfile, resolveTuning } from "../../models";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
@@ -14,7 +8,7 @@ import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseCriticDecision, parseFrontierCriticDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../state";
 
-export const frontierCritic = async (state: GraphStateValue) => {
+export const frontierCritic = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.FRONTIER,
         SystemPrompts.frontierCritic,
@@ -26,19 +20,15 @@ export const frontierCritic = async (state: GraphStateValue) => {
         ]
             .filter(Boolean)
             .join("\n\n"),
-        {
-            maxTokens: 1_400,
-            reasoningEffort: ReasoningEffort.HIGH,
-            responseFormat: RESPONSE_FORMAT_JSON,
-            thinking: ThinkingMode.ENABLED,
-        },
+        { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON },
+        config,
     );
     const decision = parseFrontierCriticDecision(result.content);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
     const strongCriticRequired =
         Boolean(deterministicReason) ||
         decision.requiresStrongCritic ||
-        decision.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
+        decision.confidence < resolveTuning(readProfile(config)).confidenceEscalationThreshold;
     const criticEscalationReason =
         deterministicReason ??
         decision.escalationReason ??
@@ -59,7 +49,7 @@ export const frontierCritic = async (state: GraphStateValue) => {
     };
 };
 
-export const openaiCritic = async (state: GraphStateValue) => {
+export const openaiCritic = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.CRITIC,
         SystemPrompts.openaiCritic,
@@ -72,6 +62,7 @@ export const openaiCritic = async (state: GraphStateValue) => {
             .filter(Boolean)
             .join("\n\n"),
         { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON },
+        config,
     );
     const decision = parseCriticDecision(result.content);
     /* Frontier critic already counted this escalated round. */

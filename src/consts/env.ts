@@ -9,6 +9,7 @@ export const EnvVar = {
     STATE_DIR: "OPENCLAW_STATE_DIR",
     LOG_LEVEL: "AGENT_LOG_LEVEL",
     LOG_FORMAT: "AGENT_LOG_FORMAT",
+    PROFILE: "AGENT_PROFILE",
 } as const;
 
 export type EnvVar = (typeof EnvVar)[keyof typeof EnvVar];

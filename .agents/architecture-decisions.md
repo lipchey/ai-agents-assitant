@@ -23,7 +23,7 @@ packages. The one intra-layer rule is inside L6: `graph -> swarm` is allowed,
 | ----- | ----------------------------------------- | ------------------------------------------------------- |
 | L0    | `src/consts`                              | (nothing in `src/`) - the universal sink                |
 | L1    | `src/types`                               | L0                                                      |
-| L2    | `src/shared`                              | L0-L1                                                   |
+| L2    | `src/shared`, `src/models`                | L0-L1 (+ L2 siblings)                                   |
 | L3    | `src/state`, `src/logging`, `src/prompts` | L0-L2 (+ L3 siblings)                                   |
 | L4    | `src/tools`, `src/hitl`                   | L0-L3 (+ L4 siblings)                                   |
 | L5    | `src/patching`                            | L0-L4                                                   |
@@ -130,6 +130,21 @@ guard rules there, not in eslint, that turn an unlayered dir into a hard failure
   TypeScript (typecheck is green and uses them). Accepted as warn-level FPs; do
   not delete. If the orphan rule is promoted to error later, exempt these two
   paths with a dated note here.
+
+### Amendment 2026-06-11 (R2): `src/models` added at L2
+
+Session R2 introduced the profile subsystem `src/models` (Profile/ModelBinding
+zod schema + loader, binding/tuning resolution). It sits at L2 beside `src/shared`
+because it imports only L0 (`consts`) and external packages (`zod`, `json5`,
+`@langchain/langgraph` types) - never a higher layer. Per the closed-enumeration
+rule above, this was added together to all three sources in the same session: this
+table (L2 row), `.dependency-cruiser.cjs` (`LAYER_DIRS`, `aboveL0`/`aboveL1`, and
+the `layer-L2-shared` rule now matching `^src/(shared|models)/`), and the
+`eslint.config.js` mirror (`boundariesElements`, `L2`, and the `shared`/`models`
+allow rule). `./verify --fast` (depcruise) stays green: `src/tools` and
+`src/graph` consume `src/models` as a legal downward L4/L6 -> L2 edge. The old
+`src/tools/models.ts` (`modelForRole` switch) was deleted; its bindings now live in
+`profiles/*.json5` resolved through `src/models`.
 
 ## ADR-002: Knip dead-code config and report-only baseline
 

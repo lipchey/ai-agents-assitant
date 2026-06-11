@@ -1,10 +1,11 @@
 import { ModelRole, UsageKey } from "../../consts";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { SystemPrompts } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import type { GraphStateValue } from "../../state";
 
-export const claudeCoder = async (state: GraphStateValue) => {
+export const claudeCoder = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.CODER,
         SystemPrompts.claudeCoder,
@@ -15,6 +16,8 @@ export const claudeCoder = async (state: GraphStateValue) => {
         ]
             .filter(Boolean)
             .join("\n\n"),
+        {},
+        config,
     );
 
     return {

@@ -17,7 +17,6 @@ export {
 export { invokeGatewayTool, jsonPost } from "./http.ts";
 export { callLlm } from "./llm.ts";
 export { runLocalPseudoTool } from "./local-tools.ts";
-export { modelForRole, providerForModel } from "./models.ts";
 export { calculateUsage, loadPricing } from "./pricing.ts";
 export { createDefaultToolRegistry, createToolRegistry, getDefaultToolRegistry } from "./registry.ts";
 export { createDefaultToolAccessPolicy } from "./policy.ts";
@@ -28,7 +27,6 @@ export { openclawRpc } from "./rpc.ts";
 export { runWebLookupWithFallback } from "./web-search.ts";
 export { resolveWorkspacePath } from "./workspace.ts";
 export type { LlmCallOptions, LlmCallResult } from "./llm.ts";
-export type { ModelProvider, ModelRouting } from "./models.ts";
 export type {
     JsonObject,
     OpenClawRpcArgs,

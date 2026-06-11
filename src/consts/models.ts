@@ -57,3 +57,17 @@ export const ThinkingMode = {
 export type ThinkingMode = (typeof ThinkingMode)[keyof typeof ThinkingMode];
 
 export const RESPONSE_FORMAT_JSON = "json_object" as const;
+
+export const ModelTransport = {
+    DIRECT: "direct",
+    OPENCLAW: "openclaw",
+} as const;
+
+export type ModelTransport = (typeof ModelTransport)[keyof typeof ModelTransport];
+
+/* Active-profile key threaded through LangGraph `configurable`, beside
+   TOOL_REGISTRY_CONFIG_KEY / HITL_RESOLVER_CONFIG_KEY. */
+export const PROFILE_CONFIG_KEY = "profile";
+
+/* Profile loaded when none is selected; byte-replicates the pre-profile bindings. */
+export const DEFAULT_PROFILE_NAME = "default";
