@@ -23,8 +23,14 @@ future sessions focused on what still needs action.
       budget, routing, parsers; CI node matrix. Done 2026-06-11 (commits
       `fcaf6fd` + review-fix `0c317ee`); 107+2 cases; `unit` check wired into
       `quality.json` `full` tier. Node-matrix deferred to Backlog (owner decision).
-- [ ] R2 Profile foundation: zod-validated profiles; role→model bindings
-      become data; call-site LLM options move into bindings.
+- [x] R2 Profile foundation: zod-validated profiles; role→model bindings
+      become data; call-site LLM options move into bindings. Done 2026-06-11
+      (commits `983b9a4` + review-fix `7fc6f01`). Added `src/models/` (L2);
+      `profiles/default.json5` byte-replicates the cascade on the openclaw
+      transport; `callLlm` resolves bindings and merges `binding.params`
+      (model-tied temperature/thinking/effort) under per-call options
+      (maxTokens/responseFormat); routing caps + escalation threshold are
+      profile-resolved. Codex review: 2 P2 confirmed-fixed.
 - [ ] R3 Provider seam: ChatProvider interface, direct LangChain transport,
       OpenClaw legacy adapter, retry layer, new model pricing entries.
 - [ ] R4 Run kernel: runId, SqliteSaver checkpointer + `--resume`, per-node
@@ -68,6 +74,14 @@ future sessions focused on what still needs action.
       `ToolError.kind`, not substring matching.
 - [ ] Main-graph HITL: wire `interrupt()`-based approval/escalation for the
       reasoning layer. Current HITL is swarm-only.
+- [ ] (R2 deferred) Swarm profile propagation: thread the active profile into the
+      swarm sub-graph `configurable` (via `swarmNode` + the swarm driver) so swarm
+      `callLlm` bindings and `tuning.maxReactSteps` follow a non-default profile.
+      R2 left swarm call sites on `callLlm`'s default-profile fallback (byte-stable
+      for the default profile only); `maxReactSteps`/`llmMaxRetries` are in the
+      profile schema + `resolveTuning` but not yet consumed (react-worker still
+      reads the `MAX_REACT_STEPS` const; `llmMaxRetries` lands with the R3 retry
+      layer).
 - [x] Structured logging: implement the consolidated `Logger` design in
       [logging-plan.md](logging-plan.md) (pluggable `LogSink`, child context,
       level/format env config). Closes the empty-DuckDuckGo-fallback warning so

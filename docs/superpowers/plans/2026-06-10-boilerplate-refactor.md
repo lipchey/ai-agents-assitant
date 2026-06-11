@@ -142,7 +142,7 @@ R0 covers only the four provider keys.)
   `src/main.ts` + `src/tools/config.ts`-style DI (new configurable key),
   `src/consts/` (new env var `AGENT_PROFILE`, config key const), `package.json` (dep `json5`, `zod`)
 
-- [ ] **Step 2.1:** Define `ModelBinding` (`provider`, `model`, optional
+- [x] **Step 2.1:** Define `ModelBinding` (`provider`, `model`, optional
   `transport`, `params` per spec §3.3 options subset) and `Profile` (spec
   §3.2: `name`, `description?`, `transport.default`, `roles` keyed by the
   real `ModelRole` union — exhaustive, `budget`, `tuning` all-optional with
@@ -150,14 +150,14 @@ R0 covers only the four provider keys.)
   schema + `loadProfile(nameOrPath)`: resolves `profiles/<name>.json5` or a
   path; fails fast on missing role, unknown provider, or `model` without a
   `model-pricing.json` entry.
-- [ ] **Step 2.2:** Write `profiles/default.json5` that byte-replicates
+- [x] **Step 2.2:** Write `profiles/default.json5` that byte-replicates
   today's bindings (`modelForRole` switch: same ModelRef strings, same
   temperatures, `transport: { default: "openclaw" }`) and today's tuning
   values. This profile keeps behavior identical until others are selected.
-- [ ] **Step 2.3:** Thread the active profile through LangGraph
+- [x] **Step 2.3:** Thread the active profile through LangGraph
   `configurable` exactly like `toolRegistry`/`hitlResolver` (new config key
   const + accessor with a module-default fallback to `loadProfile("default")`).
-- [ ] **Step 2.4:** Replace the `modelForRole` switch with
+- [x] **Step 2.4:** Replace the `modelForRole` switch with
   `resolveBinding(role, profile)` (`src/models/resolve.ts`). `callLlm` keeps
   its public signature; per-role options (temperature, thinking, effort,
   maxTokens) now come from `binding.params` — delete the inlined option
@@ -165,18 +165,18 @@ R0 covers only the four provider keys.)
   `tiebreaker.ts`, `coder.ts`, `direct.ts`, `router.ts`, swarm nodes,
   `react-worker.ts`), preserving today's effective values inside
   `default.json5`.
-- [ ] **Step 2.5:** Replace hardcoded tuning-const reads on the
+- [x] **Step 2.5:** Replace hardcoded tuning-const reads on the
   routing/budget paths (`MAX_*`, escalation threshold, projected costs) with
   profile-resolved values defaulting to the existing consts; the consts stay
   as the single source of default values.
-- [ ] **Step 2.6:** `tests/unit/profile.test.ts` — loader happy path,
+- [x] **Step 2.6:** `tests/unit/profile.test.ts` — loader happy path,
   missing-role failure, unknown-provider failure, missing-pricing failure,
   tuning default merge; plus a regression test asserting
   `resolveBinding(role, defaultProfile)` reproduces the pre-refactor
   switch's bindings for all roles.
-- [ ] **Step 2.7:** Verify: `npm test` green (R1 suites must pass
+- [x] **Step 2.7:** Verify: `npm test` green (R1 suites must pass
   unchanged — they pin behavior).
-- [ ] **Step 2.8:** Commit: `feat: introduce zod-validated model profiles; role bindings become data`
+- [x] **Step 2.8:** Commit: `feat: introduce zod-validated model profiles; role bindings become data`
 
 **Verification boundary:** `npm test` green; `npm start -- "2+2?"` (cheap
 trivial route, budget default) behaves as before with `default.json5`.

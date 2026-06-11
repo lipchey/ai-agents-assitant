@@ -40,7 +40,16 @@ Topology in `src/graph/build.ts`:
   failed patch formatting/guarded skips route back to `claudeCoder` until the
   patch-format retry cap, then finalize.
 
-Model cascade in `src/tools/models.ts`:
+Model cascade (R2: bindings are now profile DATA, not a switch). The
+`src/models/` subsystem (L2) defines a zod-validated `Profile`
+(role→`ModelBinding`, `transport`, `budget`, `tuning`) loaded from
+`profiles/<name>.json5` and threaded through LangGraph `configurable`
+(`PROFILE_CONFIG_KEY`, module-default fallback `loadProfile("default")`).
+`profiles/default.json5` byte-replicates the prior `modelForRole` switch on the
+openclaw transport; `src/tools/models.ts` was deleted. `callLlm` resolves the
+binding (`resolveBinding`) and merges `binding.params` (model-tied
+temperature/thinking/effort) under per-call options (maxTokens/responseFormat),
+then builds the same OpenClaw request as before. The default cascade:
 
 - `router`, `directResponder`, `firewall`, and worker planners use
   DeepSeek V4 Flash through `ModelRole.ROUTER`/`FIREWALL`/`WORKER`.
@@ -49,7 +58,11 @@ Model cascade in `src/tools/models.ts`:
 - Strong escalation uses Claude Opus for `claudeArchitect`/`smeTiebreaker`,
   Claude Sonnet for `claudeCoder`, and GPT for `openaiCritic`.
 - Claude Opus adaptive thinking routes through the `strong-reasoning` OpenClaw
-  agent; Anthropic payloads omit temperature when adaptive thinking is enabled.
+  agent; Anthropic payloads omit temperature when adaptive thinking is enabled
+  (the default profile's Opus bindings omit temperature to preserve this).
+- Routing loop caps + the escalation threshold are profile-resolved
+  (`resolveTuning`), defaulting to `src/consts/tuning.ts`. Only the openclaw
+  transport is wired in R2; `callLlm` fails fast on a `direct` transport (R3).
 
 Routing guards in `src/graph/routing.ts` and `src/graph/budget.ts`:
 
@@ -255,6 +268,19 @@ now runs `typecheck → lint → test:unit → smoke`, and the `quality.json` `f
 tier gained a `unit` check (45s; CI exercises it via `./verify --full`). No `src/`
 changes in R1 (test-only). R0 provider-key rotation is owner-confirmed. Next is R2
 (profile foundation, introduces the `src/models/` subsystem).
+
+Status update 2026-06-11 (R2 done): the profile foundation landed (commits
+`983b9a4` + review-fix `7fc6f01`). `src/models/` (L2) holds the zod Profile schema +
+loader and `resolveBinding`/`readProfile`/`resolveTuning`; `profiles/default.json5`
+byte-replicates the cascade on the openclaw transport (R1 characterization suite
+green unchanged). The `modelForRole` switch (`src/tools/models.ts`) was deleted;
+`callLlm` resolves bindings from the active profile (threaded via `configurable`,
+validated at the DI boundary) and fails fast on a non-openclaw transport.
+ADR-001/.dependency-cruiser.cjs/eslint extended for the new L2 dir; `json5`+`zod`
+exact-pinned. Swarm call sites use the default-profile fallback (full swarm
+propagation + `maxReactSteps`/`llmMaxRetries` consumption deferred — see tasks.md
+backlog). Next is R3 (Provider seam: ChatProvider, direct LangChain transport,
+retry layer).
 
 Open backlog:
 
