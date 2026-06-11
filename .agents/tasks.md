@@ -66,11 +66,18 @@ future sessions focused on what still needs action.
       json_object prompts now mention "JSON" (closes the R4 backlog 400).
       Live: pure-reasoning direct-Haiku run + native-parsed probe. Codex
       review: 0 P1/P2/P3 — no fix pass needed.
-- [ ] R6a Model tier layer (added 2026-06-11, runs BEFORE R6): profiles gain
+- [x] R6a Model tier layer (added 2026-06-11, runs BEFORE R6): profiles gain
       a required `tiers` block (frontier/adviser/skilled/worker) with `roles`
       as optional per-role overrides; rename `ModelRole.FRONTIER` →
       `REASONER`; `default.json5` migrated byte-equivalently. Spec:
       [docs/superpowers/specs/2026-06-11-model-tiers-design.md](../docs/superpowers/specs/2026-06-11-model-tiers-design.md).
+      Done 2026-06-11 (commits `4af2809` + review-fix `41f18ad`). Schema v2
+      (strict two-shape override union), `DEFAULT_ROLE_TIER` +
+      `resolveBinding` precedence in `src/models/`, ADR-003; default profile
+      resolves byte-equivalently (equivalence + precedence + loader-failure
+      tests, 217 unit cases green). Codex review: 2 P2 confirmed-fixed
+      (full-binding equivalence pinning; DEFAULT_ROLE_TIER contract tests),
+      re-review both CLOSED; 1 P3 routed to backlog.
 - [ ] R6 Profile CLI surface + personal-dev / research-playground /
       client-baseline example profiles (tier format per R6a); README.
 - [ ] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
@@ -88,6 +95,12 @@ future sessions focused on what still needs action.
       every prompt sent with `responseFormat: json_object` (router, frontier
       architect, both critics, leadDelegator) now says "Return ONLY this
       JSON: {…}" — contract braces and parsers unchanged.
+- [ ] (R6a review P3, needs-human) `.agents/memory.md` §1 "Project Goal" still
+      says "frontier models do the first architecture/review pass" — after the
+      R6a tier rename that contradicts ADR-003 vocabulary (first pass =
+      reasoner role on the adviser tier; the frontier TIER runs only behind
+      escalation gates). One-sentence rewording; chain policy forbids
+      auto-applying P3s.
 - [ ] Langfuse (v5, OTel path) tracing integration behind the R4 callbacks
       hook; self-hosted; custom DeepSeek pricing in its model table.
 - [ ] Declarative topology variants per profile (spec D3 deferral) — only

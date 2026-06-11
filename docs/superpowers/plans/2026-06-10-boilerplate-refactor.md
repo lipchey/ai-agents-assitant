@@ -343,34 +343,34 @@ Swarm ReAct-step structured migration is OUT of scope (backlog).
   `frontier` role key, `.agents/architecture-decisions.md` (new ADR-003),
   `.agents/memory.md` (architecture note)
 
-- [ ] **Step 6a.1:** Rename `ModelRole.FRONTIER` → `ModelRole.REASONER`
+- [x] **Step 6a.1:** Rename `ModelRole.FRONTIER` → `ModelRole.REASONER`
   (enum value `"frontier"` → `"reasoner"`) across src + tests +
   `default.json5`. Graph node names (`frontierArchitect`, `frontierCritic`)
   stay — RunSummary §3.4 is FROZEN.
-- [ ] **Step 6a.2:** Profile schema v2 (tier-spec §2): required `tiers`
+- [x] **Step 6a.2:** Profile schema v2 (tier-spec §2): required `tiers`
   object (4 keys, existing `ModelBinding` values); `roles` → optional
   override map with the strict two-shape union (full binding | `{ tier,
   params? }`); extend the loader's pricing + direct-transport-id checks to
   tier bindings and full-binding overrides.
-- [ ] **Step 6a.3:** `DEFAULT_ROLE_TIER` map (tier-spec §3) +
+- [x] **Step 6a.3:** `DEFAULT_ROLE_TIER` map (tier-spec §3) +
   `resolveBinding` precedence: full override > tier reassignment > default
   tier; role params merge over tier params (tier-spec §4). Return type stays
   `ModelBinding` — `callLlm`/providers untouched.
-- [ ] **Step 6a.4:** Migrate `profiles/default.json5` to tier format per the
+- [x] **Step 6a.4:** Migrate `profiles/default.json5` to tier format per the
   tier-spec §6 table (reasoner + critic as full overrides); `cascadeNote`
   bytes unchanged; `DEFAULT_CASCADE_NOTE` fallback reworded to tier
   vocabulary.
-- [ ] **Step 6a.5:** Tests: default-profile equivalence pinning (8 roles =
+- [x] **Step 6a.5:** Tests: default-profile equivalence pinning (8 roles =
   exact pre-R6a bindings); resolution precedence + params-merge cases;
   loader failures (missing tier key, mixed override shape, missing pricing
   on a tier binding, gateway-prefixed id on a direct tier binding). R1
   characterization suite green with only the role-key rename.
-- [ ] **Step 6a.6:** Docs: ADR-003 (tier indirection) in
+- [x] **Step 6a.6:** Docs: ADR-003 (tier indirection) in
   `.agents/architecture-decisions.md`; `.agents/memory.md` architecture
   note. No new top-level `src/` dir → no layer-DAG change.
-- [ ] **Step 6a.7:** Verify: `npm test` + `./verify --fast` green. No live
+- [x] **Step 6a.7:** Verify: `npm test` + `./verify --fast` green. No live
   run required (behavior-neutral refactor pinned by the equivalence tests).
-- [ ] **Step 6a.8:** Commit: `feat: model tier layer — role→tier→model indirection with per-role overrides; rename frontier role to reasoner`
+- [x] **Step 6a.8:** Commit: `feat: model tier layer — role→tier→model indirection with per-role overrides; rename frontier role to reasoner`
 
 **Verification boundary:** `npm test` + `./verify --fast` green;
 default-profile equivalence tests prove byte-identical resolved bindings.

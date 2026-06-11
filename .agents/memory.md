@@ -385,6 +385,20 @@ scope (backlog): swarm ReAct structured migration, swarm profile propagation.
 smeTiebreaker/claudeArchitect/claudeCoder have no JSON contract — no schema by
 design. Next is R6 (profiles + CLI surface + example profiles).
 
+Status update 2026-06-11 (R6a done): the model tier layer landed (feat
+`4af2809`, review-fix `41f18ad` — tests only; baseline `ba70405`). Profiles
+now bind four required tiers (`frontier`/`adviser`/`skilled`/`worker`,
+`ModelTier` in `src/consts/models.ts`) with `roles` as an optional strict
+override map (full binding | `{ tier, params? }`); `DEFAULT_ROLE_TIER` +
+precedence resolution live in `src/models/resolve.ts` (see §2 Model cascade;
+decision record ADR-003). `ModelRole.FRONTIER` → `REASONER`; graph node names
+stay (FROZEN RunSummary). `profiles/default.json5` migrated byte-equivalently
+(cascadeNote bytes unchanged; `DEFAULT_CASCADE_NOTE` fallback reworded to tier
+vocabulary). Codex review: 2 P2 (test-strengthening: full-binding equivalence
+pinning, DEFAULT_ROLE_TIER contract) confirmed-fixed, re-review both CLOSED;
+1 P3 (memory §1 goal wording) → backlog. Unit suite 217 cases. Next is R6
+(profile CLI surface + example profiles in tier format).
+
 Open backlog:
 
 - Tool-provider hardening: extract `transport/`, `workspace/`, and `artifacts/`

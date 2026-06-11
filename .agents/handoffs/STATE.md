@@ -6,9 +6,9 @@ active_task: ""
 active_status: ""
 baseline_sha: ""
 r0_keys_rotated: true
-updated_at: 2026-06-11T12:00:00Z
+updated_at: 2026-06-11T11:13:21Z
 updated_by: claude
-next_action: "R5 complete (feat 67bc12c; Codex verdict 0/0/0, no fix pass). NEW (2026-06-11, owner decision): session R6a inserted BEFORE R6 — model tier layer (role→tier→model indirection). Profiles gain required tiers block (frontier/adviser/skilled/worker), roles becomes optional override map (full binding | {tier, params}), ModelRole.FRONTIER renamed REASONER, default.json5 migrated byte-equivalently (characterization suite must stay green). Spec: docs/superpowers/specs/2026-06-11-model-tiers-design.md (amends R-spec §3.2); plan Task R6a added between R5 and R6. Next: R6a via 'виконай сесію R6a'. Read STATE.md, plan Task R6a + Standing rules, tier spec §2-§6 (contract, DEFAULT_ROLE_TIER, resolution precedence, migration table); mind: graph node names frontierArchitect/frontierCritic stay (RunSummary §3.4 FROZEN), default.json5 cascadeNote bytes unchanged, only DEFAULT_CASCADE_NOTE fallback reworded. After R6a: R6 — Profiles + CLI surface + example profiles in TIER format (personal-dev/research-playground/client-baseline.json5, --profile CLI polish, README); mind: AGENT_PROFILE env selection already exists in src/cli/config.ts (loadActiveProfile), profiles need pricing entries for every model id, direct bindings need bare ids, and profiles may pin prompts.cascadeNote."
+next_action: "R6a complete (feat 4af2809, review-fix 41f18ad; Codex 2 P2 confirmed-fixed, re-review CLOSED; 1 P3 → backlog). Next: R6 via 'виконай сесію R6' — Profiles + CLI surface + example profiles in TIER format per docs/superpowers/specs/2026-06-11-model-tiers-design.md §7 (personal-dev/research-playground/client-baseline.json5, --profile CLI polish, run-task.sh PROFILE passthrough, .env.example, README). Mind: AGENT_PROFILE env selection already exists in src/cli/config.ts (loadActiveProfile); profiles need pricing entries for every model id; direct bindings need bare ids; profiles may pin prompts.cascadeNote; profile contract is now tiers (4 required) + optional role overrides (strict full-binding | {tier, params} union, ADR-003)."
 ---
 
 # Live refactor state
@@ -82,5 +82,19 @@ OpenAI strict; DeepSeek text-fallback per D6); parse sites prefer
 `result.parsed` over the verbatim text ladder; cascade prose is now profile
 data (`prompts.cascadeNote`, memoized composition, `promptsForConfig`);
 json_object prompts all mention "JSON" (closes the R4 live-400 finding).
-Next R-session is R6 (Profiles + CLI surface). Ordering rules still hold:
-never run two sessions concurrently in this pilot.
+
+R6a is complete (2026-06-11): the model tier layer landed (feat `4af2809`,
+review-fix `41f18ad` — tests only; baseline `ba70405`). Profile contract v2:
+required `tiers` (frontier/adviser/skilled/worker → `ModelBinding`), `roles`
+an optional STRICT override map (full binding | `{ tier, params? }`);
+`DEFAULT_ROLE_TIER` + precedence (full override > tier reassign > default
+tier, params merge key-by-key) in `src/models/resolve.ts`; ADR-003 records the
+decision. `ModelRole.FRONTIER` → `REASONER` (graph node names
+frontierArchitect/frontierCritic stay — FROZEN RunSummary §3.4).
+`default.json5` migrated byte-equivalently (equivalence pinned by tests;
+cascadeNote bytes unchanged; `DEFAULT_CASCADE_NOTE` reworded to tier
+vocabulary). Codex review: 2 P2 (test-strengthening) confirmed-fixed,
+re-review both CLOSED; 1 P3 (memory §1 wording) → backlog needs-human.
+Next R-session is R6 (Profiles + CLI surface, example profiles in tier
+format). Ordering rules still hold: never run two sessions concurrently in
+this pilot.
