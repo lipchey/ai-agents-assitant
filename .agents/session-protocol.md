@@ -42,6 +42,13 @@ affirmative line in the same message.
   branches/PRs; never push without an explicit line.
 - Out-of-scope findings: record in `.agents/tasks.md` § Backlog with one
   line of context; do not fix inline.
+- Tier time budgets (`quality.json` `budgets`) are NEGOTIABLE, not a wall to
+  design around (owner decision, 2026-06-11). If a session sees a change with
+  a clear quality payoff that breaks a tier budget — a new check, a
+  slower-but-stronger gate — it must PROPOSE it to the owner (one line: what,
+  time cost, payoff) instead of silently parking the check in `full` or
+  dropping the idea. Approved raises are recorded per the D2 convention in
+  the meta repo's `docs/quality-baseline.md`.
 - Memory automation (`.agents/guidelines.md`) applies: update
   `.agents/memory.md` when architecture changed; tick the plan checkboxes
   and the `R<n>` line in `.agents/tasks.md`.

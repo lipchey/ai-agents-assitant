@@ -3,7 +3,7 @@
   "repo": "ai-agents-assitant",
   "stack": "node-service",
   "scheduler_class": "github-actions-push-and-schedule",
-  "budgets": { "staged_seconds": 40, "fast_seconds": 180, "full_seconds": 720, "audit_seconds": 900 },
+  "budgets": { "staged_seconds": 40, "fast_seconds": 240, "full_seconds": 720, "audit_seconds": 900 },
   "policy": {
     "mutates_by_default": false,
     "format_fix_staged_allowed": false,
@@ -52,6 +52,12 @@
     "fast": [
       { "name": "typecheck", "argv": ["npm", "run", "typecheck"], "timeout_seconds": 45 },
       { "name": "lint", "argv": ["npm", "run", "lint"], "timeout_seconds": 30 },
+      { "name": "unit", "argv": ["npm", "run", "test:unit"], "timeout_seconds": 45 },
+      {
+        "name": "prettier-code",
+        "argv": ["./node_modules/.bin/prettier", "--check", "--ignore-unknown", "src", "scripts", "tests"],
+        "timeout_seconds": 10
+      },
       { "name": "smoke-offline", "argv": ["npm", "run", "smoke:offline"], "timeout_seconds": 15 },
       {
         "name": "secret-scan",
