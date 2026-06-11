@@ -61,8 +61,23 @@ then builds the same OpenClaw request as before. The default cascade:
   agent; Anthropic payloads omit temperature when adaptive thinking is enabled
   (the default profile's Opus bindings omit temperature to preserve this).
 - Routing loop caps + the escalation threshold are profile-resolved
-  (`resolveTuning`), defaulting to `src/consts/tuning.ts`. Only the openclaw
-  transport is wired in R2; `callLlm` fails fast on a `direct` transport (R3).
+  (`resolveTuning`), defaulting to `src/consts/tuning.ts`.
+- Transports (R3): all LLM traffic flows through the `ChatProvider` seam
+  (`src/models/provider.ts`). `callLlm` is a thin shim — resolve binding,
+  dispatch by `binding.transport ?? profile.transport.default`, price the raw
+  provider usage against `ChatResult.pricingKey` in one place. The `openclaw`
+  provider replicates the pre-R3 gateway request byte-for-byte (HTTP client
+  injected from L4 — models is L2); the `direct` provider builds
+  ChatAnthropic/ChatOpenAI/ChatDeepSeek per call (adaptive thinking +
+  `output_config.effort` native; no temperature on Fable 5/Opus 4.8/4.7;
+  thinking omitted entirely when unset — the lib default would send explicit
+  disabled, which Fable 5 rejects; LangChain internal retries disabled via
+  `maxRetries: 0`). Provider-layer retries: `src/models/retry.ts`, exponential
+  backoff + full jitter on 408/429/5xx/timeout/network, budget =
+  `tuning.llmMaxRetries` (default 2). Direct bindings must use bare API ids
+  (`claude-haiku-4-5`); gateway-prefixed ids on a direct binding fail at
+  profile load. Bare-id pricing entries live beside the legacy prefixed keys
+  in `model-pricing.json`.
 
 Routing guards in `src/graph/routing.ts` and `src/graph/budget.ts`:
 
@@ -281,6 +296,19 @@ exact-pinned. Swarm call sites use the default-profile fallback (full swarm
 propagation + `maxReactSteps`/`llmMaxRetries` consumption deferred — see tasks.md
 backlog). Next is R3 (Provider seam: ChatProvider, direct LangChain transport,
 retry layer).
+
+Status update 2026-06-11 (R3 done): the provider seam landed (commits `e7b260d` +
+review-fix `638dec2`). `src/models/` gained the spec-§3.3 `ChatProvider` contract
+(`provider.ts`), the injected-transport openclaw adapter and the direct LangChain
+provider (`providers/`), and the retry layer (`retry.ts`); `src/tools/llm.ts` is
+now a thin dispatch shim (see §2 Transports). `@langchain/deepseek` added;
+`@langchain/anthropic|openai` are load-bearing. Bare direct API ids
+(claude-fable-5 $10/$50, claude-haiku-4-5 $1/$5, sonnet/opus/gpt/deepseek mirrors)
+joined `model-pricing.json`; the loader rejects gateway-prefixed ids on
+effective-direct bindings (review finding). Live direct spot check: all-roles
+Haiku profile answered with $0.001058 accounted. Codex review 2 P2
+confirmed-fixed, re-review CLOSED. Next is R4 (run kernel: runId, SqliteSaver
+checkpointer, per-node cost/timing, RunSummary).
 
 Open backlog:
 

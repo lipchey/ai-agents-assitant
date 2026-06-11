@@ -6,9 +6,9 @@ active_task: ""
 active_status: ""
 baseline_sha: ""
 r0_keys_rotated: true
-updated_at: 2026-06-11T06:59:13Z
+updated_at: 2026-06-11T08:35:00Z
 updated_by: claude
-next_action: "R2 complete (feat 983b9a4 profile foundation + review-fix 7fc6f01; baseline 708a701). Codex review → 2 P2 confirmed-fixed → re-review both CLOSED, no new issues. ./verify --fast green (typecheck/lint/smoke-offline/secret-scan/architecture); 128 unit tests, R1 characterization suite unchanged. Next: R3 — Provider seam, via 'виконай сесію R3'. Read STATE.md, plan Task R3 (Steps 3.1-3.8) + Standing rules, spec §3.3 ChatProvider/ChatCallOptions/ChatResult + §3.1 module map. R3 adds src/models/provider.ts + providers/{direct,openclaw}.ts + retry.ts and makes callLlm a thin shim that dispatches by binding.transport (the R2 fail-fast transport guard in callLlm is the natural dispatch point to replace); adds claude-fable-5 + claude-haiku-4-5 pricing entries; @langchain/anthropic|openai become load-bearing + add @langchain/deepseek. Consider wiring the deferred swarm profile-propagation (tasks.md backlog) while in callLlm."
+next_action: "R3 complete (feat e7b260d provider seam + review-fix 638dec2; baseline 7a66bf7). Codex review → 2 P2 confirmed-fixed (gateway-prefixed ids rejected on direct bindings; HTTP 408 retried) → re-review both CLOSED, no new issues. ./verify --fast green; 165 unit tests; live direct spot check (all-roles claude-haiku-4-5 profile) answered with $0.001058 accounted. Next: R4 — Run kernel, via 'виконай сесію R4'. Read STATE.md, plan Task R4 (Steps 4.1-4.7) + Standing rules, spec §3.4 RunSummary + D4/D5/D9. R4 creates src/run/ (run-context, node-lifecycle, run-summary) — a NEW top-level src dir, so extend ADR-001 + .dependency-cruiser.cjs + eslint.config.js in the same session (run sits ABOVE models: run-context threads the profile ref; spec says 'L3' in its own numbering — pick the ADR band that satisfies run→models and graph→run edges). Adds @langchain/langgraph-checkpoint-sqlite (SqliteSaver, thread_id=runId, --resume), wraps main-graph nodes with timing/cost-delta logging, writes reports/runs/<runId>.json on success/budget-stop/failure (gitignore reports/)."
 ---
 
 # Live refactor state
@@ -44,5 +44,19 @@ non-openclaw transport. ADR-001 + `.dependency-cruiser.cjs` + `eslint.config.js`
 extended for the new L2 dir; `json5`+`zod` exact-pinned. Codex review found 2 P2
 (profile-injection validation gap; `direct` transport ignored), both fixed and
 re-review-CLOSED. Swarm profile-propagation + `maxReactSteps`/`llmMaxRetries`
-consumption are deferred to the backlog. Next R-session is R3 (Provider seam).
-Ordering rules still hold: never run two sessions concurrently in this pilot.
+consumption were deferred to the backlog.
+
+R3 is complete (2026-06-11): the provider seam landed (feat `e7b260d`,
+review-fix `638dec2`; baseline `7a66bf7`). `src/models/` now owns the spec-§3.3
+`ChatProvider` contract, the openclaw adapter (gateway HTTP client injected from
+the L4 shim — models stays L2), the direct LangChain provider
+(ChatAnthropic/ChatOpenAI/ChatDeepSeek; adaptive thinking + output_config.effort
+native; no temperature on Fable 5/Opus 4.8/4.7; thinking suppressed via
+invocationKwargs when unset; LangChain internal retries off), and the retry layer
+(full jitter, 408/429/5xx/timeout/network, budget = tuning.llmMaxRetries).
+`callLlm` dispatches by transport and prices raw usage in one place. Bare direct
+API ids joined model-pricing.json; the loader rejects gateway-prefixed ids on
+effective-direct bindings. Live direct Haiku spot check passed ($0.001058
+accounted). Codex review: 2 P2 confirmed-fixed, re-review CLOSED. Next R-session
+is R4 (Run kernel). Ordering rules still hold: never run two sessions
+concurrently in this pilot.

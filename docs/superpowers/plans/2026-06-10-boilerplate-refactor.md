@@ -196,15 +196,15 @@ trivial route, budget default) behaves as before with `default.json5`.
   (add `@langchain/deepseek`; `@langchain/anthropic`/`@langchain/openai`
   become load-bearing)
 
-- [ ] **Step 3.1:** Pin the `ChatProvider`/`ChatCallOptions`/`ChatResult`
+- [x] **Step 3.1:** Pin the `ChatProvider`/`ChatCallOptions`/`ChatResult`
   interfaces exactly as spec §3.3, aligning the message shape with the
   current `callLlm` internals (system + user strings) so call sites stay
   untouched.
-- [ ] **Step 3.2:** `providers/openclaw.ts`: extract the existing request
+- [x] **Step 3.2:** `providers/openclaw.ts`: extract the existing request
   construction from `src/tools/llm.ts` verbatim (body model, headers,
   `strong-reasoning` agent special-case, JSON response_format), preserving
   behavior for `transport: "openclaw"` bindings.
-- [ ] **Step 3.3:** `providers/direct.ts`: LangChain `initChatModel` per
+- [x] **Step 3.3:** `providers/direct.ts`: LangChain `initChatModel` per
   provider prefix (`anthropic:`/`openai:`/`deepseek:`); map
   `ChatCallOptions` honoring current Anthropic API semantics — adaptive
   thinking via `thinking: {type:"adaptive"}`, effort via
@@ -213,23 +213,23 @@ trivial route, budget default) behaves as before with `default.json5`.
   `cache_control` breakpoint when `cacheSystemPrompt` is set. Normalize each
   provider's usage fields into the existing `LlmUsage` shape (extend the R1
   pricing fixtures with one direct-shape case per provider).
-- [ ] **Step 3.4:** `retry.ts`: exponential backoff + full jitter, default 2
+- [x] **Step 3.4:** `retry.ts`: exponential backoff + full jitter, default 2
   retries (profile `tuning.llmMaxRetries`), retry-on: HTTP 429/5xx/timeouts/
   network errors; never retry 4xx validation errors. Providers call through
   it. Unit-test with a stubbed failing function (no network).
-- [ ] **Step 3.5:** Wire `callLlm` shim: resolve binding → pick provider by
+- [x] **Step 3.5:** Wire `callLlm` shim: resolve binding → pick provider by
   `binding.transport ?? profile.transport.default` → `provider.call(...)` →
   existing cost/usage accounting against `ChatResult.pricingKey` (unchanged
   math — R1 tests must stay green).
-- [ ] **Step 3.6:** `tests/unit/providers.test.ts` — option-mapping table
+- [x] **Step 3.6:** `tests/unit/providers.test.ts` — option-mapping table
   tests for `direct.ts` (built request params per binding/params combo,
   using the model classes' invocation params without network) + an
   openclaw-adapter request-shape test mirroring the pre-refactor body.
-- [ ] **Step 3.7:** Verify: `npm test` green. Manual spot check (requires
+- [x] **Step 3.7:** Verify: `npm test` green. Manual spot check (requires
   rotated keys): `BUDGET=0.03 scripts/run-task.sh "What is 2+2?"` with a
   temporary profile whose `direct` role binds `claude-haiku-4-5` — confirm a
   live direct-transport answer + cost line.
-- [ ] **Step 3.8:** Commit: `feat: ChatProvider seam — direct LangChain transport, openclaw adapter, retry layer`
+- [x] **Step 3.8:** Commit: `feat: ChatProvider seam — direct LangChain transport, openclaw adapter, retry layer`
 
 **Verification boundary:** `npm test` green; live haiku spot-check answered
 through the direct provider with non-zero cost accounting.

@@ -31,8 +31,16 @@ future sessions focused on what still needs action.
       (model-tied temperature/thinking/effort) under per-call options
       (maxTokens/responseFormat); routing caps + escalation threshold are
       profile-resolved. Codex review: 2 P2 confirmed-fixed.
-- [ ] R3 Provider seam: ChatProvider interface, direct LangChain transport,
-      OpenClaw legacy adapter, retry layer, new model pricing entries.
+- [x] R3 Provider seam: ChatProvider interface, direct LangChain transport,
+      OpenClaw legacy adapter, retry layer, new model pricing entries. Done
+      2026-06-11 (commits `e7b260d` + review-fix `638dec2`). `src/models/` gained
+      `provider.ts` (seam contract), `providers/{openclaw,direct}.ts`, `retry.ts`
+      (backoff + full jitter, 408/429/5xx/timeout/network transient set);
+      `callLlm` dispatches by `binding.transport ?? profile.transport.default`
+      and keeps cost accounting in one place; bare direct API ids added to
+      `model-pricing.json`; loader rejects gateway-prefixed ids on direct
+      bindings. Live direct Haiku spot check: answer + $0.001058 accounted.
+      Codex review: 2 P2 confirmed-fixed, re-review CLOSED.
 - [ ] R4 Run kernel: runId, SqliteSaver checkpointer + `--resume`, per-node
       cost/timing logs, RunSummary artifact on all termination paths.
 - [ ] R5 Structured outputs (main graph) with text-parser fallback;
@@ -78,10 +86,10 @@ future sessions focused on what still needs action.
       swarm sub-graph `configurable` (via `swarmNode` + the swarm driver) so swarm
       `callLlm` bindings and `tuning.maxReactSteps` follow a non-default profile.
       R2 left swarm call sites on `callLlm`'s default-profile fallback (byte-stable
-      for the default profile only); `maxReactSteps`/`llmMaxRetries` are in the
-      profile schema + `resolveTuning` but not yet consumed (react-worker still
-      reads the `MAX_REACT_STEPS` const; `llmMaxRetries` lands with the R3 retry
-      layer).
+      for the default profile only); `tuning.maxReactSteps` is in the profile
+      schema + `resolveTuning` but still unconsumed (react-worker reads the
+      `MAX_REACT_STEPS` const). `llmMaxRetries` IS consumed since R3: `callLlm`
+      threads `resolveTuning(profile).llmMaxRetries` into every provider call.
 - [x] Structured logging: implement the consolidated `Logger` design in
       [logging-plan.md](logging-plan.md) (pluggable `LogSink`, child context,
       level/format env config). Closes the empty-DuckDuckGo-fallback warning so
