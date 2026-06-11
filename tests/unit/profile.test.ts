@@ -8,8 +8,8 @@
  * table below is the byte-stability contract for profiles/default.json5.
  */
 import { describe, expect, it } from "vitest";
-import { loadProfile, parseProfile } from "../../src/models/profile.ts";
-import { readProfile, resolveBinding, resolveTuning } from "../../src/models/resolve.ts";
+import { loadProfile, parseProfile, type ModelBinding } from "../../src/models/profile.ts";
+import { DEFAULT_ROLE_TIER, readProfile, resolveBinding, resolveTuning } from "../../src/models/resolve.ts";
 import { callLlm } from "../../src/tools/llm.ts";
 import { ModelRole, ModelTier } from "../../src/consts/models.ts";
 import {
@@ -22,25 +22,51 @@ import {
     MAX_VERIFY_ATTEMPTS,
 } from "../../src/consts/tuning.ts";
 
-/* Mirrors the modelForRole switch + the model-tied call-site options it replaced. */
-const EXPECTED_BINDINGS: Record<ModelRole, { model: string; params: Record<string, unknown> }> = {
-    [ModelRole.ROUTER]: { model: "deepseek/deepseek-v4-flash", params: { temperature: 0, thinking: "disabled" } },
-    [ModelRole.FIREWALL]: { model: "deepseek/deepseek-v4-flash", params: { temperature: 0, thinking: "disabled" } },
-    [ModelRole.WORKER]: { model: "deepseek/deepseek-v4-flash", params: { temperature: 0, thinking: "disabled" } },
+/* The full resolved binding for every role in profiles/default.json5 — mirrors the
+   pre-refactor modelForRole switch plus the provider/transport the byte-equivalent
+   migration must preserve. resolveBinding(role, default) must deep-equal these, so a
+   changed provider or an added per-binding transport is caught, not just model/params. */
+const EXPECTED_BINDINGS: Record<ModelRole, ModelBinding> = {
+    [ModelRole.ROUTER]: {
+        provider: "deepseek",
+        model: "deepseek/deepseek-v4-flash",
+        params: { temperature: 0, thinking: "disabled" },
+    },
+    [ModelRole.FIREWALL]: {
+        provider: "deepseek",
+        model: "deepseek/deepseek-v4-flash",
+        params: { temperature: 0, thinking: "disabled" },
+    },
+    [ModelRole.WORKER]: {
+        provider: "deepseek",
+        model: "deepseek/deepseek-v4-flash",
+        params: { temperature: 0, thinking: "disabled" },
+    },
     [ModelRole.REASONER]: {
+        provider: "deepseek",
         model: "deepseek/deepseek-v4-pro",
         params: { temperature: 0.2, thinking: "enabled", reasoningEffort: "high" },
     },
     [ModelRole.ARCHITECT]: {
+        provider: "anthropic",
         model: "anthropic/claude-opus-4-8",
         params: { thinking: "adaptive", reasoningEffort: "high" },
     },
     [ModelRole.SME]: {
+        provider: "anthropic",
         model: "anthropic/claude-opus-4-8",
         params: { thinking: "adaptive", reasoningEffort: "high" },
     },
-    [ModelRole.CODER]: { model: "anthropic/claude-sonnet-4-6", params: { temperature: 0.2 } },
-    [ModelRole.CRITIC]: { model: "openai/gpt-5.5", params: { temperature: 0.1 } },
+    [ModelRole.CODER]: {
+        provider: "anthropic",
+        model: "anthropic/claude-sonnet-4-6",
+        params: { temperature: 0.2 },
+    },
+    [ModelRole.CRITIC]: {
+        provider: "openai",
+        model: "openai/gpt-5.5",
+        params: { temperature: 0.1 },
+    },
 };
 
 type RawBinding = { provider: string; model: string; transport?: string; params?: Record<string, unknown> };
@@ -74,6 +100,31 @@ const bareTiers = (): Record<string, RawBinding> => ({
     frontier: { provider: "anthropic", model: "claude-opus-4-8" },
 });
 
+/* Four DISTINCT, priced, gateway-prefixed tier bindings: each tier resolves to a
+   different model, so every role→tier mapping is observable. The default profile
+   masks this — reasoner/critic use full overrides and its frontier tier is
+   byte-identical to adviser — so a wrong DEFAULT_ROLE_TIER entry hides there. */
+const distinctTiers = (): Record<ModelTier, RawBinding> => ({
+    [ModelTier.WORKER]: { provider: "deepseek", model: "deepseek/deepseek-v4-flash" },
+    [ModelTier.SKILLED]: { provider: "anthropic", model: "anthropic/claude-sonnet-4-6" },
+    [ModelTier.ADVISER]: { provider: "openai", model: "openai/gpt-5.5" },
+    [ModelTier.FRONTIER]: { provider: "anthropic", model: "anthropic/claude-opus-4-8" },
+});
+
+/* The normative role→tier map (design §3). The single source of truth in this
+   suite: it pins DEFAULT_ROLE_TIER directly and drives the distinct-tier
+   resolution check below, independent of the implementation under test. */
+const SPEC_ROLE_TIER: Record<ModelRole, ModelTier> = {
+    [ModelRole.ROUTER]: ModelTier.WORKER,
+    [ModelRole.FIREWALL]: ModelTier.WORKER,
+    [ModelRole.WORKER]: ModelTier.WORKER,
+    [ModelRole.CODER]: ModelTier.SKILLED,
+    [ModelRole.REASONER]: ModelTier.ADVISER,
+    [ModelRole.ARCHITECT]: ModelTier.ADVISER,
+    [ModelRole.CRITIC]: ModelTier.ADVISER,
+    [ModelRole.SME]: ModelTier.FRONTIER,
+};
+
 const validProfile = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
     name: "test",
     transport: { default: "openclaw" },
@@ -98,12 +149,24 @@ describe("loadProfile (default)", () => {
 describe("resolveBinding reproduces the pre-refactor switch", () => {
     const profile = loadProfile("default");
     for (const role of Object.values(ModelRole)) {
-        it(`binds role "${role}" to today's model and params`, () => {
-            const binding = resolveBinding(role, profile);
-            expect(binding.model).toBe(EXPECTED_BINDINGS[role].model);
-            expect(binding.params).toEqual(EXPECTED_BINDINGS[role].params);
+        it(`binds role "${role}" to today's full binding (provider, model, transport, params)`, () => {
+            expect(resolveBinding(role, profile)).toEqual(EXPECTED_BINDINGS[role]);
         });
     }
+});
+
+describe("DEFAULT_ROLE_TIER contract (design §3)", () => {
+    it("maps every role to its normative spec-§3 tier", () => {
+        expect(DEFAULT_ROLE_TIER).toEqual(SPEC_ROLE_TIER);
+    });
+
+    it("resolves every no-override role through its spec tier", () => {
+        const tiers = distinctTiers();
+        const profile = parseProfile(validProfile({ tiers }));
+        for (const role of Object.values(ModelRole)) {
+            expect(resolveBinding(role, profile).model).toBe(tiers[SPEC_ROLE_TIER[role]].model);
+        }
+    });
 });
 
 describe("resolveBinding tier precedence", () => {
