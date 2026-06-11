@@ -16,10 +16,13 @@ future sessions focused on what still needs action.
 
 ## Active Tasks — Refactor Schedule (one session each)
 
-- [ ] R0 (owner, manual) Rotate the four leaked API keys in `.env`; set
+- [x] R0 (owner, manual) Rotate the four leaked API keys in `.env`; set
       `r0_keys_rotated: true` in `.agents/handoffs/STATE.md`. Blocks R1.
-- [ ] R1 Test foundation: vitest + characterization tests for pricing,
-      budget, routing, parsers; CI node matrix.
+      Owner-confirmed rotated 2026-06-11.
+- [x] R1 Test foundation: vitest + characterization tests for pricing,
+      budget, routing, parsers; CI node matrix. Done 2026-06-11 (commits
+      `fcaf6fd` + review-fix `0c317ee`); 107+2 cases; `unit` check wired into
+      `quality.json` `full` tier. Node-matrix deferred to Backlog (owner decision).
 - [ ] R2 Profile foundation: zod-validated profiles; role→model bindings
       become data; call-site LLM options move into bindings.
 - [ ] R3 Provider seam: ChatProvider interface, direct LangChain transport,
@@ -89,3 +92,23 @@ future sessions focused on what still needs action.
       patch format, guarded workspace bounds apply, and the numeric result enables
       cross-model comparison across the cascade. Closes part of the "full live e2e
       still needs credentials/Gateway" gap in [.agents/memory.md](memory.md) section 6.
+- [ ] (R1 Step 1.7, owner decision) Multi-Node version matrix for the unit
+      tests (engines 22/24/latest): it would live in `quality.yml`, which is
+      generated and SHA-pinned — route it through the quality-system change
+      process, not an inline edit. The `unit` check currently runs single-Node via
+      the `quality.json` `full` tier.
+- [ ] (R1 finding) Add a `model-pricing.json` validation guard so an Anthropic
+      entry missing `inputCacheHitPer1M` cannot silently bill cache-reads at the
+      full `inputPer1M` rate (~10x over-bill). Also add a characterization case for
+      the `anthropicRawInputIncludesCacheRead` subtraction branch in
+      `src/tools/pricing.ts`, which the R1 suite does not yet cover.
+- [ ] (R1 pinned quirks — confirm intended, else fix during R2-R8 with the
+      matching test) The R1 characterization suite deliberately locks current
+      behavior including: swarm `routeAfterHuman` re-delegating a DONE worker back
+      to its worker node instead of short-circuiting to `WORKER_COMPRESS` (unlike
+      `routeAfterWorker`); `extractJsonObject` unwrapping a top-level JSON array to
+      its first inner object; and several dead/dormant defensive branches (budget
+      `readCostBudgetUsd` number-guard + min-remaining clause dormant at the default
+      budget; `routeAfterFrontierArchitect` pure-reasoning ternary false-side
+      unreachable; `delegateToWorker`/escalation `??` defaults unreachable under
+      current types).

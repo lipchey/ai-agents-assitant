@@ -1,14 +1,14 @@
 ---
 phase: "R"
-phase_status: planned
+phase_status: in_progress
 plan_path: docs/superpowers/plans/2026-06-10-boilerplate-refactor.md
 active_task: ""
 active_status: ""
 baseline_sha: ""
-r0_keys_rotated: false
-updated_at: 2026-06-10T18:00:00Z
+r0_keys_rotated: true
+updated_at: 2026-06-11T05:49:07Z
 updated_by: claude
-next_action: "Sequence: meta-repo Phase 2 closeout (S8, meta-repo-only) finishes first; then owner runs R0 (rotate the four provider keys in .env, set r0_keys_rotated: true) and starts R1 via 'виконай сесію R1'."
+next_action: "R1 complete (commit fcaf6fd characterization suite + 0c317ee review-chain fixes; Codex review green, all four P2 closed). Owner confirmed R0 (keys rotated) and S8 closeout before this session. Next: R2 — Profile foundation, via 'виконай сесію R2'. Read STATE.md, plan Task R2 (Steps 2.1-2.8) + Standing rules, spec §3.2 Profile contract + §3.3 ChatProvider; R2 adds the src/models/ subsystem, so it must extend ADR-001 + .dependency-cruiser.cjs in the same session and keep ./verify --fast green."
 ---
 
 # Live refactor state
@@ -25,6 +25,11 @@ see `project-facts.md` (Quality System) for the component inventory; CI is live
 schedule with red-main tracking, validated by two green main runs. The legacy
 `.agent` dir was migrated into `.agents/` in S7 Task 9.
 
-The R1–R9 refactor has not started. Ordering rules: meta-repo Phase 2 closeout
-(S8) finishes before any R-session; R0 (owner key rotation) blocks R1; never
-run two sessions concurrently in this pilot.
+R1 is complete (2026-06-11): the vitest characterization suite landed (commit
+`fcaf6fd`, 107 cases over pricing/budget/graph-routing/swarm-routing/parsers),
+and the cross-runtime review chain (Codex → Opus fix → Codex re-review) closed
+all four P2 findings (fix commit `0c317ee`; two added cases — routeDebate
+unaffordable-refetch and unset-budget). Owner confirmed R0 (four provider keys
+rotated, `r0_keys_rotated: true`) and the meta-repo Phase 2 (S8) closeout before
+this session. Next R-session is R2 (Profile foundation). Ordering rules still
+hold: never run two sessions concurrently in this pilot.

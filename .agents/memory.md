@@ -247,6 +247,15 @@ lives in `.agents/session-protocol.md` (cross-runtime review chain in
 `.agents/review-chain.md`). Working-tree `.env` keys must be rotated (R0)
 before any session runs.
 
+Status update 2026-06-11 (R1 done): the boilerplate refactor has started. R1
+landed the test foundation — a vitest characterization suite (`tests/unit/*.test.ts`,
+107+2 cases) pinning current pricing, budget, graph/swarm routing, and parser
+behavior before the R2-R9 refactor. `vitest` is an exact-pinned devDep; `npm test`
+now runs `typecheck → lint → test:unit → smoke`, and the `quality.json` `full`
+tier gained a `unit` check (45s; CI exercises it via `./verify --full`). No `src/`
+changes in R1 (test-only). R0 provider-key rotation is owner-confirmed. Next is R2
+(profile foundation, introduces the `src/models/` subsystem).
+
 Open backlog:
 
 - Tool-provider hardening: extract `transport/`, `workspace/`, and `artifacts/`
