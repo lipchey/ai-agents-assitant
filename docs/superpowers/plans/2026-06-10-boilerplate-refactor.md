@@ -294,29 +294,29 @@ through the direct provider with non-zero cost accounting.
   `src/prompts/reasoning-prompts.ts` (cascade prose → profile-injected note),
   `src/models/providers/direct.ts` (withStructuredOutput path)
 
-- [ ] **Step 5.1:** Write zod schemas mirroring the JSON shapes the existing
+- [x] **Step 5.1:** Write zod schemas mirroring the JSON shapes the existing
   parsers expect (router decision, architect decision incl. confidence,
   critic decision, tiebreaker, worker-kind selection). Source of truth = the
   current parser expectations + prompt contracts; do not change field names
   (prompt copy and parsers stay aligned — `.agents/code-guidelines.md` §6).
-- [ ] **Step 5.2:** Direct provider: when `structuredSchema` is set, use the
+- [x] **Step 5.2:** Direct provider: when `structuredSchema` is set, use the
   model's `withStructuredOutput(schema)` (native json_schema where
   supported; DeepSeek strict may need its beta endpoint — feature-flag per
   provider and fall back to JSON mode + text parsing when unsupported).
   OpenClaw transport ignores `structuredSchema` (text path).
-- [ ] **Step 5.3:** Node call sites pass the schema; each parse site first
+- [x] **Step 5.3:** Node call sites pass the schema; each parse site first
   uses `ChatResult.parsed` when present, else the existing text parser —
   the fallback ladder is preserved verbatim (R1 parser tests unchanged).
-- [ ] **Step 5.4:** Replace hardcoded model-cascade prose in prompts with
+- [x] **Step 5.4:** Replace hardcoded model-cascade prose in prompts with
   the profile's `prompts.cascadeNote` (byte-stable per profile — prompt
   cache anchors remain deterministic for a given profile). Verify no parser
   contract text changed.
-- [ ] **Step 5.5:** `tests/unit/structured.test.ts` — schemas accept the
+- [x] **Step 5.5:** `tests/unit/structured.test.ts` — schemas accept the
   fixtures used by R1 parser tests; parse-site precedence (parsed > text
   fallback) with stubbed `ChatResult`s.
-- [ ] **Step 5.6:** Verify: `npm test` green; live spot check on a
+- [x] **Step 5.6:** Verify: `npm test` green; live spot check on a
   pure-reasoning task with a direct-transport profile.
-- [ ] **Step 5.7:** Commit: `feat: native structured outputs with text fallback; profile-injected cascade prompts`
+- [x] **Step 5.7:** Commit: `feat: native structured outputs with text fallback; profile-injected cascade prompts`
 
 **Verification boundary:** `npm test` green; reasoning route live check OK.
 Swarm ReAct-step structured migration is OUT of scope (backlog).

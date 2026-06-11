@@ -53,8 +53,19 @@ future sessions focused on what still needs action.
       kill → failed summary with partial cost; resume re-entered the thread and
       completed ($0.111/0.25). Codex review: 1 P1 (resume runId path traversal) + 1 P2 (resumed failure summary lost task) confirmed-fixed, re-review
       both CLOSED.
-- [ ] R5 Structured outputs (main graph) with text-parser fallback;
-      profile-injected cascade prompts.
+- [x] R5 Structured outputs (main graph) with text-parser fallback;
+      profile-injected cascade prompts. Done 2026-06-11 (commit `67bc12c`).
+      `src/types/graph/decisions.ts` zod schemas mirror the existing parser
+      contracts; direct transport honors `structuredSchema` via LangChain
+      `withStructuredOutput(…, { method: "jsonSchema", includeRaw: true })`
+      (Anthropic native output_format — composes with thinking; OpenAI
+      strict; DeepSeek deliberately on the text fallback per D6); parse sites
+      prefer `result.parsed` with the text ladder verbatim (R1 tests
+      unchanged). Cascade prose is profile-injected (`prompts.cascadeNote`,
+      memoized per note; default profile replicates the pre-R5 prose). All
+      json_object prompts now mention "JSON" (closes the R4 backlog 400).
+      Live: pure-reasoning direct-Haiku run + native-parsed probe. Codex
+      review: 0 P1/P2/P3 — no fix pass needed.
 - [ ] R6 Profile CLI surface + personal-dev / research-playground /
       client-baseline example profiles; README.
 - [ ] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
@@ -66,16 +77,12 @@ future sessions focused on what still needs action.
 
 ## Backlog
 
-- [ ] (R4 finding) Default-profile live runs fail at `complexityRouter` with
+- [x] (R4 finding) Default-profile live runs fail at `complexityRouter` with
       HTTP 400 "Prompt must contain the word 'json' in some form to use
-      'response_format' of type 'json_object'" — the DeepSeek/OpenAI-style
-      json_object validation rejects the router/firewall prompts on the
-      openclaw transport. Pre-existing (R4 touched no prompts/LLM paths; the
-      R3 live check used a direct all-Haiku profile). Fix candidates: add a
-      "json" mention to the router/firewall prompt contracts (cache-anchor +
-      parser alignment per code-guidelines §6) or drop `responseFormat` for
-      those roles; natural home is R5 (structured outputs touches these
-      prompts anyway).
+      'response_format' of type 'json_object'". Fixed in R5 (`67bc12c`):
+      every prompt sent with `responseFormat: json_object` (router, frontier
+      architect, both critics, leadDelegator) now says "Return ONLY this
+      JSON: {…}" — contract braces and parsers unchanged.
 - [ ] Langfuse (v5, OTel path) tracing integration behind the R4 callbacks
       hook; self-hosted; custom DeepSeek pricing in its model table.
 - [ ] Declarative topology variants per profile (spec D3 deferral) — only

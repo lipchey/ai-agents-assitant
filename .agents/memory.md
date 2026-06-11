@@ -78,6 +78,23 @@ then builds the same OpenClaw request as before. The default cascade:
   (`claude-haiku-4-5`); gateway-prefixed ids on a direct binding fail at
   profile load. Bare-id pricing entries live beside the legacy prefixed keys
   in `model-pricing.json`.
+- Structured outputs (R5, spec D6): decision-shaped calls (router, frontier
+  architect, both critics, swarm leadDelegator) pass a zod schema from
+  `src/types/graph/decisions.ts` via `LlmCallOptions.structuredSchema`. On the
+  direct transport, Anthropic and OpenAI honor it through LangChain
+  `withStructuredOutput(schema, { includeRaw: true, method: "jsonSchema" })` —
+  the provider-NATIVE json_schema output format (no forced tool_choice, so it
+  composes with thinking; OpenAI adds `strict: true`); `responseFormat` is
+  dropped on that path (would collide at the wire). DeepSeek and the openclaw
+  transport ignore the schema (JSON mode + text parsing). A native parse
+  failure surfaces as `parsed: null` → mapped to "no parsed". Parse sites call
+  the existing parsers with an optional pre-parsed object (`parsed` wins; text
+  ladder verbatim; `parseWorkerKind` lives in `swarm/tool-validation.ts`).
+  Prompts: cascade prose is profile data — `reasoning()` composes
+  `prompts.cascadeNote` (fallback `DEFAULT_CASCADE_NOTE`, memoized per note —
+  byte-stable cache anchors per profile; `promptsForConfig(config)` is the
+  node accessor); role blocks are model-agnostic. Every json_object prompt
+  mentions "JSON" (provider-side validation).
 
 Run kernel (R4): every CLI run has a `RunContext` (`src/run/`, L3) — `runId`
 (crypto.randomUUID, validated lowercase-UUID), profile name, started-at, and an
@@ -344,6 +361,18 @@ recovered via `graph.getState`) confirmed-fixed, re-review both CLOSED. New
 backlog finding: default-profile live 400 (json_object prompt validation) —
 pre-existing, routed to R5. Next is R5 (structured outputs + prompt
 de-cascading).
+
+Status update 2026-06-11 (R5 done): structured outputs + prompt de-cascading
+landed (commit `67bc12c`, no review-fix commit — Codex review returned
+0 P1/P2/P3). See §2 "Structured outputs (R5)" for the architecture. The R4
+json_object 400 backlog finding is fixed (all json_object prompts mention
+"JSON"). `profiles/default.json5` carries the pre-R5 cascade prose as its
+`prompts.cascadeNote`. Live: pure-reasoning task on a direct all-Haiku profile
+completed ($0.005049 accounted, RunSummary written) and a probe confirmed
+`result.parsed` arrives via the native jsonSchema path ($0.000904). Out of
+scope (backlog): swarm ReAct structured migration, swarm profile propagation.
+smeTiebreaker/claudeArchitect/claudeCoder have no JSON contract — no schema by
+design. Next is R6 (profiles + CLI surface + example profiles).
 
 Open backlog:
 

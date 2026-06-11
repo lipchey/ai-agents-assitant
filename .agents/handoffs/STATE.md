@@ -2,13 +2,13 @@
 phase: "R"
 phase_status: in_progress
 plan_path: docs/superpowers/plans/2026-06-10-boilerplate-refactor.md
-active_task: "R5"
-active_status: pending
-baseline_sha: "efd78f1"
+active_task: ""
+active_status: ""
+baseline_sha: ""
 r0_keys_rotated: true
-updated_at: 2026-06-11T10:00:00Z
+updated_at: 2026-06-11T10:20:00Z
 updated_by: claude
-next_action: "R4 complete (feat 1362bc9 run kernel + review-fix 85005a3; baseline 1e05557). Codex review → 1 P1 (resume runId path traversal; now validated at parse/context/writer layers) + 1 P2 (resumed failure summary lost task; recovered via graph.getState) confirmed-fixed → re-review both CLOSED. ./verify --fast green; 180 unit tests; live kill test (SIGINT after complexityRouter → failed summary, $0.001434 partial) and live resume (re-entered thread at swarm, completed, $0.111/0.25) both passed on a direct all-Haiku profile. NEW backlog finding: default-profile live runs 400 at the router ('Prompt must contain the word json' — json_object validation); pre-existing, natural fix in R5. Next: R5 — Structured outputs + prompt de-cascading, via 'виконай сесію R5'. Read STATE.md, plan Task R5 (Steps 5.1-5.7) + Standing rules, spec §3 (D6) + §3.2/§3.3; zod decision schemas mirror the EXISTING parser expectations (do not change field names); direct provider gains withStructuredOutput, openclaw stays text-only; parse sites prefer ChatResult.parsed with the text-parser fallback preserved verbatim (R1 parser tests unchanged); cascade prose in prompts becomes profile-injected (byte-stable per profile). Mind the json_object backlog finding when touching router/firewall prompts."
+next_action: "R5 complete (feat 67bc12c structured outputs + profile-injected cascade prompts; baseline efd78f1; NO review-fix commit — Codex review verdict 0 P1/0 P2/0 P3, fix+re-review legs skipped per chain). ./verify --fast + npm test green; 207 unit tests (+27). Live: pure-reasoning task on direct all-Haiku profile ($0.005049, RunSummary written) + probe confirmed native jsonSchema parsed object end-to-end. R4 json_object 400 backlog finding FIXED in-session (all json_object prompts now say 'Return ONLY this JSON'). DeepSeek stays on text fallback (D6 feature gate); swarm ReAct structured migration + swarm profile propagation remain backlog. Next: R6 — Profiles + CLI surface + example profiles (personal-dev/research-playground/client-baseline.json5, --profile/--resume CLI polish, README), via 'виконай сесію R6'. Read STATE.md, plan Task R6 + Standing rules, spec §3.2 (profile contract; example profile sketches in its Notes) ; mind: AGENT_PROFILE env selection already exists in src/cli/config.ts (loadActiveProfile), profiles need pricing entries for every model id, direct bindings need bare ids, and profiles may now pin prompts.cascadeNote."
 ---
 
 # Live refactor state
@@ -71,6 +71,16 @@ thread_id = runId); `--resume <runId>` validates a lowercase UUID, recovers
 `originalTask` via `graph.getState`, and fails fast on an unknown checkpoint.
 `HITL_THREAD_CONFIG_KEY` → `THREAD_ID_CONFIG_KEY` (one thread_id scalar).
 Live: SIGINT kill → failed summary with partial cost; resume → completed.
-Codex review: 1 P1 + 1 P2 confirmed-fixed, re-review CLOSED. Next R-session
-is R5 (Structured outputs). Ordering rules still hold: never run two sessions
-concurrently in this pilot.
+Codex review: 1 P1 + 1 P2 confirmed-fixed, re-review CLOSED.
+
+R5 is complete (2026-06-11): structured outputs + prompt de-cascading landed
+(feat `67bc12c`; baseline `efd78f1`; no review-fix commit — Codex verdict
+0/0/0). Zod decision schemas (`src/types/graph/decisions.ts`) mirror the
+parser contracts; the direct transport honors `structuredSchema` natively for
+Anthropic/OpenAI (`withStructuredOutput`, method jsonSchema, includeRaw;
+OpenAI strict; DeepSeek text-fallback per D6); parse sites prefer
+`result.parsed` over the verbatim text ladder; cascade prose is now profile
+data (`prompts.cascadeNote`, memoized composition, `promptsForConfig`);
+json_object prompts all mention "JSON" (closes the R4 live-400 finding).
+Next R-session is R6 (Profiles + CLI surface). Ordering rules still hold:
+never run two sessions concurrently in this pilot.
