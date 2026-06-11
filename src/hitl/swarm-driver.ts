@@ -1,11 +1,6 @@
 import { Command, INTERRUPT, isInterrupted } from "@langchain/langgraph";
 import { randomUUID } from "node:crypto";
-import {
-    DEFAULT_MAX_HITL_ROUNDS,
-    HITL_THREAD_CONFIG_KEY,
-    HITL_THREAD_ID_PREFIX,
-    HitlResolutionAction,
-} from "../consts";
+import { DEFAULT_MAX_HITL_ROUNDS, HITL_THREAD_ID_PREFIX, HitlResolutionAction, THREAD_ID_CONFIG_KEY } from "../consts";
 import type {
     HitlDrivableGraph,
     HitlGraphRunConfig,
@@ -21,7 +16,7 @@ export const driveSwarmWithHitl = async <TInput, TState>(
     options?: { threadId?: string; maxRounds?: number },
 ): Promise<TState> => {
     const config: HitlGraphRunConfig = {
-        configurable: { [HITL_THREAD_CONFIG_KEY]: options?.threadId ?? `${HITL_THREAD_ID_PREFIX}${randomUUID()}` },
+        configurable: { [THREAD_ID_CONFIG_KEY]: options?.threadId ?? `${HITL_THREAD_ID_PREFIX}${randomUUID()}` },
     };
     const maxRounds = options?.maxRounds ?? DEFAULT_MAX_HITL_ROUNDS;
 

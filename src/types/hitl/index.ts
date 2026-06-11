@@ -1,9 +1,9 @@
 import type { Command, LangGraphRunnableConfig } from "@langchain/langgraph";
 import type {
     FailureType,
-    HITL_THREAD_CONFIG_KEY,
     HitlInterruptKind,
     HitlResolutionAction,
+    THREAD_ID_CONFIG_KEY,
     WorkerKind,
 } from "../../consts";
 
@@ -22,7 +22,7 @@ export type HitlResolution =
 
 export type HitlResolver = (request: HitlInterruptPayload) => Promise<HitlResolution>;
 
-export type HitlGraphRunConfig = { configurable: { [HITL_THREAD_CONFIG_KEY]: string }; recursionLimit?: number };
+export type HitlGraphRunConfig = { configurable: { [THREAD_ID_CONFIG_KEY]: string }; recursionLimit?: number };
 
 export interface HitlDrivableGraph<TInput, TState> {
     invoke(input: TInput | Command, config: HitlGraphRunConfig): Promise<TState>;

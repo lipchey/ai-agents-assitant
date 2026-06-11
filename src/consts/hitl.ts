@@ -1,7 +1,6 @@
 /* Non-serializable HITL resolver stays in LangGraph config, not graph state. */
 export const HITL_RESOLVER_CONFIG_KEY = "hitlResolver";
 
-export const HITL_THREAD_CONFIG_KEY = "thread_id";
 export const HITL_THREAD_ID_PREFIX = "swarm-";
 
 export const HitlInterruptKind = {

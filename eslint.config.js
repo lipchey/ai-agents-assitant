@@ -45,6 +45,7 @@ const boundariesElements = [
     { type: "state", mode: "full", pattern: "src/state/**/*" },
     { type: "logging", mode: "full", pattern: "src/logging/**/*" },
     { type: "prompts", mode: "full", pattern: "src/prompts/**/*" },
+    { type: "run", mode: "full", pattern: "src/run/**/*" },
     { type: "tools", mode: "full", pattern: "src/tools/**/*" },
     { type: "hitl", mode: "full", pattern: "src/hitl/**/*" },
     { type: "patching", mode: "full", pattern: "src/patching/**/*" },
@@ -57,7 +58,7 @@ const boundariesElements = [
 const L0 = ["consts"];
 const L1 = [...L0, "types"];
 const L2 = [...L1, "shared", "models"];
-const L3 = [...L2, "state", "logging", "prompts"];
+const L3 = [...L2, "state", "logging", "prompts", "run"];
 const L4 = [...L3, "tools", "hitl"];
 const L5 = [...L4, "patching"];
 const L6graph = [...L5, "graph", "swarm"];
@@ -105,7 +106,7 @@ export default tseslint.config(
                         { from: ["consts"], allow: L0 },
                         { from: ["types"], allow: L1 },
                         { from: ["shared", "models"], allow: L2 },
-                        { from: ["state", "logging", "prompts"], allow: L3 },
+                        { from: ["state", "logging", "prompts", "run"], allow: L3 },
                         { from: ["tools", "hitl"], allow: L4 },
                         { from: ["patching"], allow: L5 },
                         { from: ["graph"], allow: L6graph },

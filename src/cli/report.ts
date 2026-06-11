@@ -38,3 +38,12 @@ export const printReport = (
     }
     output.line("========================");
 };
+
+export const printRunArtifacts = (
+    runId: string,
+    summaryPath: string,
+    output: OutputWriter = getOutputWriter(),
+): void => {
+    output.line(`Run ID: ${runId}`);
+    output.line(`Run summary: ${summaryPath}`);
+};

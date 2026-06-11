@@ -1,7 +1,10 @@
 export { buildMainGraph } from "./graph";
 
+export { buildRunSummary, createRunContext, readRunContext, wrapNode, writeRunSummary } from "./run";
+export type { NodeVisit, RunContext, RunSummary } from "./run";
+
 export { configureLogging, createLogger, getLogger, getOutputWriter, StreamSink } from "./logging";
-export { LogFormat, LogLevel } from "./consts";
+export { LogFormat, LogLevel, RunStatus } from "./consts";
 export type { ConfigureLoggingOptions, LogFields, Logger, LogRecord, LogSink, OutputWriter } from "./types";
 
 export {

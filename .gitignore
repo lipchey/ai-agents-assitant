@@ -18,5 +18,5 @@ dist/
 .idea/
 .vscode/
 .codegraph/
-reports/quality/
+reports/
 .eslintcache

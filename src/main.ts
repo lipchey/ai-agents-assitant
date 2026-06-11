@@ -1,27 +1,61 @@
 import "dotenv/config";
+import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import {
     buildHitlResolver,
     loadActiveProfile,
+    parseCliArgs,
+    printReport,
+    printRunArtifacts,
     readCostBudgetUsd,
     readPatchApplicationEnabled,
-    printReport,
+    USAGE_TEXT,
 } from "./cli";
+import type { CliArgs } from "./cli";
 import {
+    CHECKPOINT_DB_PATH,
     HITL_RESOLVER_CONFIG_KEY,
     MAIN_GRAPH_RECURSION_LIMIT,
     PROFILE_CONFIG_KEY,
+    RUN_CONTEXT_CONFIG_KEY,
+    RunStatus,
+    THREAD_ID_CONFIG_KEY,
     TOOL_REGISTRY_CONFIG_KEY,
 } from "./consts";
-import { buildMainGraph } from "./graph";
+import { buildMainGraph, isCostBudgetNear } from "./graph";
 import { getLogger, getOutputWriter } from "./logging";
+import { buildRunSummary, createRunContext, writeRunSummary } from "./run";
+import type { RunContext } from "./run";
+import { errorMessage } from "./shared";
 import { getDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
 
 const run = async (): Promise<void> => {
     const logger = getLogger().child({ module: "main" });
     const output = getOutputWriter();
-    const task = process.argv.slice(2).join(" ").trim();
-    if (!task) {
-        output.errorLine('Usage: npm start -- "<your task description>"');
+
+    let args: CliArgs;
+    try {
+        args = parseCliArgs(process.argv.slice(2));
+    } catch (error) {
+        output.errorLine(errorMessage(error));
+        output.errorLine(USAGE_TEXT);
+        process.exit(1);
+    }
+
+    if (args.help) {
+        output.line(USAGE_TEXT);
+        process.exit(0);
+    }
+
+    const { task, resumeRunId } = args;
+    if (!task && resumeRunId === undefined) {
+        output.errorLine(USAGE_TEXT);
+        process.exit(1);
+    }
+    if (task && resumeRunId !== undefined) {
+        output.errorLine("--resume takes no new task input.");
+        output.errorLine(USAGE_TEXT);
         process.exit(1);
     }
 
@@ -38,8 +72,40 @@ const run = async (): Promise<void> => {
         process.exit(1);
     }
 
+    /* Declared before the try so the catch/SIGINT paths can reach them; a failure
+       before the run context exists has no partial usage worth reporting. */
+    let runContext: RunContext | undefined;
+    let summaryWritten = false;
+    const writeFailureSummary = (error: unknown): void => {
+        if (summaryWritten || runContext === undefined) {
+            return;
+        }
+        const summary = buildRunSummary({
+            runContext,
+            task,
+            status: RunStatus.FAILED,
+            answer: "",
+            totalCostUsd: runContext.usage.totalCostUsd,
+            totalTokens: runContext.usage.totalTokens,
+            usageStats: runContext.usage.usageStats,
+            error: errorMessage(error),
+        });
+        const path = writeRunSummary(summary);
+        summaryWritten = true;
+        printRunArtifacts(runContext.runId, path, output);
+        logger.info("Run summary written.", { runId: runContext.runId, path, status: RunStatus.FAILED });
+    };
+
+    const onSigint = (): void => {
+        logger.warn(
+            "Run interrupted by SIGINT; writing failure summary.",
+            runContext ? { runId: runContext.runId } : {},
+        );
+        writeFailureSummary(new Error("Run interrupted by SIGINT."));
+        process.exit(130);
+    };
+
     try {
-        const graph = buildMainGraph();
         const profile = loadActiveProfile();
         const costBudgetUsd = readCostBudgetUsd(profile.budget?.costBudgetUsd);
         const patchApplicationEnabled = readPatchApplicationEnabled();
@@ -47,24 +113,60 @@ const run = async (): Promise<void> => {
             logger.info("Patch application enabled; verified changes will be written to the repository.");
         }
         logger.info("Active profile resolved.", { profile: profile.name, costBudgetUsd });
-        const finalState = await graph.invoke(
-            { originalTask: task, costBudgetUsd, patchApplicationEnabled },
-            /* Keep the non-serializable HITL resolver and profile out of checkpointed graph state. */
-            {
-                recursionLimit: MAIN_GRAPH_RECURSION_LIMIT,
-                configurable: {
-                    [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver(),
-                    [TOOL_REGISTRY_CONFIG_KEY]: tools,
-                    [PROFILE_CONFIG_KEY]: profile,
-                },
+
+        runContext = createRunContext({ profileName: profile.name, ...(resumeRunId ? { runId: resumeRunId } : {}) });
+
+        /* thread_id keys the SqliteSaver checkpoint; reusing runId makes --resume re-enter the same thread. */
+        mkdirSync(dirname(CHECKPOINT_DB_PATH), { recursive: true });
+        const checkpointer = SqliteSaver.fromConnString(CHECKPOINT_DB_PATH);
+        const graph = buildMainGraph({ checkpointer });
+
+        const taskInput = { originalTask: task, costBudgetUsd, patchApplicationEnabled };
+        /* LangGraph resume semantics: a null input re-enters the checkpointed thread
+           keyed by thread_id without supplying new graph state. */
+        const input = resumeRunId ? (null as unknown as typeof taskInput) : taskInput;
+
+        process.once("SIGINT", onSigint);
+        const finalState = await graph.invoke(input, {
+            recursionLimit: MAIN_GRAPH_RECURSION_LIMIT,
+            /* Keep the non-serializable HITL resolver, profile, registry, and run context out of checkpointed state. */
+            configurable: {
+                [HITL_RESOLVER_CONFIG_KEY]: buildHitlResolver(),
+                [TOOL_REGISTRY_CONFIG_KEY]: tools,
+                [PROFILE_CONFIG_KEY]: profile,
+                [THREAD_ID_CONFIG_KEY]: runContext.runId,
+                [RUN_CONTEXT_CONFIG_KEY]: runContext,
             },
-        );
+        });
+        process.removeListener("SIGINT", onSigint);
+
+        /* Heuristic: a run that ends inside the soft-ceiling stop zone is reported budget_stopped. */
+        const status = isCostBudgetNear(finalState) ? RunStatus.BUDGET_STOPPED : RunStatus.COMPLETED;
+        const answer = finalState.finalAnswer || finalState.bestDraft || finalState.currentDraft || "";
+        const summary = buildRunSummary({
+            runContext,
+            task: finalState.originalTask || task,
+            status,
+            answer,
+            totalCostUsd: finalState.totalCost,
+            totalTokens: finalState.totalTokens,
+            usageStats: finalState.usageStats,
+            ...(typeof finalState.verificationPassed === "boolean"
+                ? { verificationPassed: finalState.verificationPassed }
+                : {}),
+        });
+        const path = writeRunSummary(summary);
+        summaryWritten = true;
 
         printReport(finalState, costBudgetUsd, output);
+        printRunArtifacts(runContext.runId, path, output);
+        logger.info("Run summary written.", { runId: runContext.runId, path, status });
     } catch (error) {
         logger.error("Agent execution failed.", { error });
+        writeFailureSummary(error);
         process.exitCode = 1;
     } finally {
+        process.removeListener("SIGINT", onSigint);
         await tools.stop();
         await stopOpenClawGateway();
     }

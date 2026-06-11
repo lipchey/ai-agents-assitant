@@ -1,5 +1,7 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph";
 import { MainNode } from "../consts";
+import { wrapNode } from "../run";
 import { GraphState } from "../state";
 import { applyPatches } from "./nodes/apply-patches.ts";
 import { claudeArchitect, frontierArchitect } from "./nodes/architects.ts";
@@ -22,21 +24,21 @@ import {
     routeDebate,
 } from "./routing.ts";
 
-export const buildMainGraph = () => {
+export const buildMainGraph = (options: { checkpointer?: BaseCheckpointSaver } = {}) => {
     return new StateGraph(GraphState)
-        .addNode(MainNode.COMPLEXITY_ROUTER, complexityRouter)
-        .addNode(MainNode.DIRECT_RESPONDER, directResponder)
-        .addNode(MainNode.SWARM, swarmNode)
-        .addNode(MainNode.FIREWALL, firewall)
-        .addNode(MainNode.FRONTIER_ARCHITECT, frontierArchitect)
-        .addNode(MainNode.CLAUDE_ARCHITECT, claudeArchitect)
-        .addNode(MainNode.CLAUDE_CODER, claudeCoder)
-        .addNode(MainNode.FRONTIER_CRITIC, frontierCritic)
-        .addNode(MainNode.OPENAI_CRITIC, openaiCritic)
-        .addNode(MainNode.SME_TIEBREAKER, smeTiebreaker)
-        .addNode(MainNode.APPLY_PATCHES, applyPatches)
-        .addNode(MainNode.VERIFY, verify)
-        .addNode(MainNode.FINALIZE, finalize)
+        .addNode(MainNode.COMPLEXITY_ROUTER, wrapNode(MainNode.COMPLEXITY_ROUTER, complexityRouter))
+        .addNode(MainNode.DIRECT_RESPONDER, wrapNode(MainNode.DIRECT_RESPONDER, directResponder))
+        .addNode(MainNode.SWARM, wrapNode(MainNode.SWARM, swarmNode))
+        .addNode(MainNode.FIREWALL, wrapNode(MainNode.FIREWALL, firewall))
+        .addNode(MainNode.FRONTIER_ARCHITECT, wrapNode(MainNode.FRONTIER_ARCHITECT, frontierArchitect))
+        .addNode(MainNode.CLAUDE_ARCHITECT, wrapNode(MainNode.CLAUDE_ARCHITECT, claudeArchitect))
+        .addNode(MainNode.CLAUDE_CODER, wrapNode(MainNode.CLAUDE_CODER, claudeCoder))
+        .addNode(MainNode.FRONTIER_CRITIC, wrapNode(MainNode.FRONTIER_CRITIC, frontierCritic))
+        .addNode(MainNode.OPENAI_CRITIC, wrapNode(MainNode.OPENAI_CRITIC, openaiCritic))
+        .addNode(MainNode.SME_TIEBREAKER, wrapNode(MainNode.SME_TIEBREAKER, smeTiebreaker))
+        .addNode(MainNode.APPLY_PATCHES, wrapNode(MainNode.APPLY_PATCHES, applyPatches))
+        .addNode(MainNode.VERIFY, wrapNode(MainNode.VERIFY, verify))
+        .addNode(MainNode.FINALIZE, wrapNode(MainNode.FINALIZE, finalize))
         .addEdge(START, MainNode.COMPLEXITY_ROUTER)
         .addConditionalEdges(MainNode.COMPLEXITY_ROUTER, routeByComplexity, {
             [MainNode.DIRECT_RESPONDER]: MainNode.DIRECT_RESPONDER,
@@ -83,5 +85,5 @@ export const buildMainGraph = () => {
             [MainNode.CLAUDE_CODER]: MainNode.CLAUDE_CODER,
         })
         .addEdge(MainNode.FINALIZE, END)
-        .compile();
+        .compile(options.checkpointer ? { checkpointer: options.checkpointer } : {});
 };

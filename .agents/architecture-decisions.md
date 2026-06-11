@@ -19,16 +19,16 @@ from STRICTLY LOWER layers, from its own layer (siblings), and from external
 packages. The one intra-layer rule is inside L6: `graph -> swarm` is allowed,
 `swarm -> graph` is forbidden.
 
-| Layer | Dirs / modules                            | May import from                                         |
-| ----- | ----------------------------------------- | ------------------------------------------------------- |
-| L0    | `src/consts`                              | (nothing in `src/`) - the universal sink                |
-| L1    | `src/types`                               | L0                                                      |
-| L2    | `src/shared`, `src/models`                | L0-L1 (+ L2 siblings)                                   |
-| L3    | `src/state`, `src/logging`, `src/prompts` | L0-L2 (+ L3 siblings)                                   |
-| L4    | `src/tools`, `src/hitl`                   | L0-L3 (+ L4 siblings)                                   |
-| L5    | `src/patching`                            | L0-L4                                                   |
-| L6    | `src/swarm`, `src/graph`                  | L0-L5; `graph -> swarm` allowed, NEVER `swarm -> graph` |
-| L7    | `src/cli`, `src/main.ts`, `src/index.ts`  | L0-L6                                                   |
+| Layer | Dirs / modules                                       | May import from                                         |
+| ----- | ---------------------------------------------------- | ------------------------------------------------------- |
+| L0    | `src/consts`                                         | (nothing in `src/`) - the universal sink                |
+| L1    | `src/types`                                          | L0                                                      |
+| L2    | `src/shared`, `src/models`                           | L0-L1 (+ L2 siblings)                                   |
+| L3    | `src/state`, `src/logging`, `src/prompts`, `src/run` | L0-L2 (+ L3 siblings)                                   |
+| L4    | `src/tools`, `src/hitl`                              | L0-L3 (+ L4 siblings)                                   |
+| L5    | `src/patching`                                       | L0-L4                                                   |
+| L6    | `src/swarm`, `src/graph`                             | L0-L5; `graph -> swarm` allowed, NEVER `swarm -> graph` |
+| L7    | `src/cli`, `src/main.ts`, `src/index.ts`             | L0-L6                                                   |
 
 Type-only edges (`import type` / `export type`) are in scope: the layering
 governs the type graph as well as the value graph.
@@ -145,6 +145,28 @@ allow rule). `./verify --fast` (depcruise) stays green: `src/tools` and
 `src/graph` consume `src/models` as a legal downward L4/L6 -> L2 edge. The old
 `src/tools/models.ts` (`modelForRole` switch) was deleted; its bindings now live in
 `profiles/*.json5` resolved through `src/models`.
+
+### Amendment 2026-06-11 (R4): `src/run` added at L3
+
+Session R4 introduced the run kernel `src/run` (the runId-bearing `RunContext`
+threaded via `configurable`, the `wrapNode` node-lifecycle timing/cost-delta
+wrapper, and the `RunSummary` builder/writer). It sits at L3 beside `src/state`/
+`src/logging`/`src/prompts`. In practice it imports only L0 (`consts`), L2
+(`shared`), and its L3 sibling `src/logging` - plus external packages
+(`@langchain/langgraph` types, `node:crypto`/`node:fs`/`node:path`) - never a
+higher layer; the L3 policy additionally permits L1 (`types`), L2 (`models`), and
+the `state`/`prompts` siblings. It is consumed DOWNWARD by `src/graph` (L6 ->
+L3: `build.ts` wraps every main-graph node with `wrapNode`) and by `src/main.ts` /
+`src/cli` (L7 -> L3: runId / checkpointer / `RunSummary` wiring), both legal
+edges. Per the closed-enumeration rule above, this was added together to all three
+sources in the same session: this table (L3 row), `.dependency-cruiser.cjs`
+(`LAYER_DIRS`, `aboveL0`/`aboveL1`/`aboveL2`, and the `layer-L3-base` rule now
+matching `^src/(state|logging|prompts|run)/`), and the `eslint.config.js` mirror
+(`boundariesElements`, `L3`, and the L3 allow rule). `./verify --fast` (depcruise)
+stays green. R4 also renamed the lone `HITL_THREAD_CONFIG_KEY` scalar (value
+`"thread_id"`) to `THREAD_ID_CONFIG_KEY` in the new `src/consts/run.ts`, so one
+`thread_id` definition is shared by the main-graph SqliteSaver checkpointer and the
+swarm HITL driver.
 
 ## ADR-002: Knip dead-code config and report-only baseline
 
