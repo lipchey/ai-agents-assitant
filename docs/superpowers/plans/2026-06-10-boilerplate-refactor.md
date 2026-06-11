@@ -246,30 +246,39 @@ through the direct provider with non-zero cost accounting.
   summary write), `.gitignore` (`reports/`), `package.json`
   (`@langchain/langgraph-checkpoint-sqlite`)
 
-- [ ] **Step 4.1:** `run-context.ts`: `runId` (crypto.randomUUID), profile
+- [x] **Step 4.1:** `run-context.ts`: `runId` (crypto.randomUUID), profile
   name, start time; threaded via `configurable` beside the profile;
   `thread_id = runId`.
-- [ ] **Step 4.2:** `node-lifecycle.ts`: `wrapNode(name, fn)` — debug log on
+- [x] **Step 4.2:** `node-lifecycle.ts`: `wrapNode(name, fn)` — debug log on
   enter; on exit log `{ node, runId, durationMs, costDeltaUsd, model? }`
   via `getLogger().child({module:"graph"})`, computing cost delta from
   `usageStats` before/after. Apply to every main-graph node registration in
   `build.ts` (swarm nodes optional — only if trivially identical).
-- [ ] **Step 4.3:** Attach `SqliteSaver` (file under `.agent-runs.sqlite` or
+  (Done: cost delta read from the reducer-delta update; the optional `model`
+  field was dropped — UsageKey does not map 1:1 to ModelRole; swarm nodes
+  not wrapped — run context is not threaded into the isolated swarm config.)
+- [x] **Step 4.3:** Attach `SqliteSaver` (file under `.agent-runs.sqlite` or
   `reports/checkpoints.sqlite` — gitignored) to the main graph compile;
   `--resume <runId>` re-invokes with the same `thread_id` and no new task
   input; document the flag in `--help` output and README section.
-- [ ] **Step 4.4:** `run-summary.ts`: build `RunSummary` exactly as spec
+  (Done: `reports/checkpoints.sqlite`; README created; `--resume` validates
+  a lowercase-UUID runId and fails fast on an unknown checkpoint — R4 review.)
+- [x] **Step 4.4:** `run-summary.ts`: build `RunSummary` exactly as spec
   §3.4 from final state + node-lifecycle records; write
   `reports/runs/<runId>.json` on success, budget-stop, AND the catch path in
   `main.ts` (status `failed`, partial usage included). Console report
   (`cli/report.ts`) now also prints `runId` + summary path on all paths.
-- [ ] **Step 4.5:** `tests/unit/run.test.ts` — wrapNode timing/cost-delta
+  (`budget_stopped` = final-state `isCostBudgetNear` heuristic; SIGINT path
+  also writes the failed summary.)
+- [x] **Step 4.5:** `tests/unit/run.test.ts` — wrapNode timing/cost-delta
   accounting with a stub node; RunSummary writer on the three status paths
-  (temp dir).
-- [ ] **Step 4.6:** Verify: `npm test` green; kill a live run mid-flight
+  (temp dir). (15 cases incl. runId-validation guards from the R4 review.)
+- [x] **Step 4.6:** Verify: `npm test` green; kill a live run mid-flight
   (Ctrl-C after first node) → `reports/runs/<id>.json` exists with
-  `status:"failed"` and partial cost.
-- [ ] **Step 4.7:** Commit: `feat: run kernel — runId, sqlite checkpointer, per-node cost/timing, RunSummary artifact`
+  `status:"failed"` and partial cost. (Done live: SIGINT after
+  complexityRouter → failed summary with $0.001434 partial cost; bonus:
+  `--resume` of that run re-entered the thread at `swarm` and completed.)
+- [x] **Step 4.7:** Commit: `feat: run kernel — runId, sqlite checkpointer, per-node cost/timing, RunSummary artifact`
 
 **Verification boundary:** `npm test` green; failure-path summary verified.
 

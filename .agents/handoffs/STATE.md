@@ -6,9 +6,9 @@ active_task: ""
 active_status: ""
 baseline_sha: ""
 r0_keys_rotated: true
-updated_at: 2026-06-11T08:35:00Z
+updated_at: 2026-06-11T09:45:00Z
 updated_by: claude
-next_action: "R3 complete (feat e7b260d provider seam + review-fix 638dec2; baseline 7a66bf7). Codex review → 2 P2 confirmed-fixed (gateway-prefixed ids rejected on direct bindings; HTTP 408 retried) → re-review both CLOSED, no new issues. ./verify --fast green; 165 unit tests; live direct spot check (all-roles claude-haiku-4-5 profile) answered with $0.001058 accounted. Next: R4 — Run kernel, via 'виконай сесію R4'. Read STATE.md, plan Task R4 (Steps 4.1-4.7) + Standing rules, spec §3.4 RunSummary + D4/D5/D9. R4 creates src/run/ (run-context, node-lifecycle, run-summary) — a NEW top-level src dir, so extend ADR-001 + .dependency-cruiser.cjs + eslint.config.js in the same session (run sits ABOVE models: run-context threads the profile ref; spec says 'L3' in its own numbering — pick the ADR band that satisfies run→models and graph→run edges). Adds @langchain/langgraph-checkpoint-sqlite (SqliteSaver, thread_id=runId, --resume), wraps main-graph nodes with timing/cost-delta logging, writes reports/runs/<runId>.json on success/budget-stop/failure (gitignore reports/)."
+next_action: "R4 complete (feat 1362bc9 run kernel + review-fix 85005a3; baseline 1e05557). Codex review → 1 P1 (resume runId path traversal; now validated at parse/context/writer layers) + 1 P2 (resumed failure summary lost task; recovered via graph.getState) confirmed-fixed → re-review both CLOSED. ./verify --fast green; 180 unit tests; live kill test (SIGINT after complexityRouter → failed summary, $0.001434 partial) and live resume (re-entered thread at swarm, completed, $0.111/0.25) both passed on a direct all-Haiku profile. NEW backlog finding: default-profile live runs 400 at the router ('Prompt must contain the word json' — json_object validation); pre-existing, natural fix in R5. Next: R5 — Structured outputs + prompt de-cascading, via 'виконай сесію R5'. Read STATE.md, plan Task R5 (Steps 5.1-5.7) + Standing rules, spec §3 (D6) + §3.2/§3.3; zod decision schemas mirror the EXISTING parser expectations (do not change field names); direct provider gains withStructuredOutput, openclaw stays text-only; parse sites prefer ChatResult.parsed with the text-parser fallback preserved verbatim (R1 parser tests unchanged); cascade prose in prompts becomes profile-injected (byte-stable per profile). Mind the json_object backlog finding when touching router/firewall prompts."
 ---
 
 # Live refactor state
@@ -57,6 +57,20 @@ invocationKwargs when unset; LangChain internal retries off), and the retry laye
 `callLlm` dispatches by transport and prices raw usage in one place. Bare direct
 API ids joined model-pricing.json; the loader rejects gateway-prefixed ids on
 effective-direct bindings. Live direct Haiku spot check passed ($0.001058
-accounted). Codex review: 2 P2 confirmed-fixed, re-review CLOSED. Next R-session
-is R4 (Run kernel). Ordering rules still hold: never run two sessions
+accounted). Codex review: 2 P2 confirmed-fixed, re-review CLOSED.
+
+R4 is complete (2026-06-11): the run kernel landed (feat `1362bc9`, review-fix
+`85005a3`; baseline `1e05557`). `src/run/` (new L3 dir; ADR-001 amended +
+depcruise/eslint mirrors extended in-session) owns the runId-bearing
+`RunContext` (configurable-threaded, validated, in-memory NodeVisit/usage
+recorder), `wrapNode` (all 13 main-graph nodes: enter/exit/error logging with
+per-node durationMs + costDeltaUsd), and the FROZEN spec-§3.4 `RunSummary`
+writer (`reports/runs/<runId>.json` on completed/budget_stopped/failed incl.
+SIGINT). Main graph compiles with SqliteSaver (`reports/checkpoints.sqlite`,
+thread_id = runId); `--resume <runId>` validates a lowercase UUID, recovers
+`originalTask` via `graph.getState`, and fails fast on an unknown checkpoint.
+`HITL_THREAD_CONFIG_KEY` → `THREAD_ID_CONFIG_KEY` (one thread_id scalar).
+Live: SIGINT kill → failed summary with partial cost; resume → completed.
+Codex review: 1 P1 + 1 P2 confirmed-fixed, re-review CLOSED. Next R-session
+is R5 (Structured outputs). Ordering rules still hold: never run two sessions
 concurrently in this pilot.

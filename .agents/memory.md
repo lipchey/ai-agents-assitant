@@ -79,6 +79,24 @@ then builds the same OpenClaw request as before. The default cascade:
   profile load. Bare-id pricing entries live beside the legacy prefixed keys
   in `model-pricing.json`.
 
+Run kernel (R4): every CLI run has a `RunContext` (`src/run/`, L3) — `runId`
+(crypto.randomUUID, validated lowercase-UUID), profile name, started-at, and an
+in-memory recorder of `NodeVisit`s + accumulated usage — threaded through
+`configurable[RUN_CONTEXT_CONFIG_KEY]` beside the profile (non-serializable,
+never checkpointed). `buildMainGraph` wraps all 13 main-graph nodes with
+`wrapNode` (debug enter; info exit with `{node, runId, durationMs,
+costDeltaUsd}`; error+rethrow on throw), reading the cost/token delta from the
+node's reducer-delta update. The main graph compiles with a `SqliteSaver`
+checkpointer (`reports/checkpoints.sqlite`, `thread_id = runId`);
+`--resume <runId>` re-invokes with `null` input on the same thread after
+recovering `originalTask` via `graph.getState` (fails fast on unknown runId).
+Every termination path — completed, budget_stopped (final-state
+`isCostBudgetNear` heuristic), failed (catch and SIGINT) — writes the FROZEN
+spec-§3.4 `RunSummary` to `reports/runs/<runId>.json` (gitignored) and prints
+runId + summary path. Swarm nodes are not wrapped (run context is not threaded
+into the isolated swarm config — same deferral as profile propagation). The
+swarm keeps its per-invocation `MemorySaver` (HITL isolation, D4).
+
 Routing guards in `src/graph/routing.ts` and `src/graph/budget.ts`:
 
 - Soft USD budget: `GraphState.costBudgetUsd`, default `$1.00`
@@ -309,6 +327,23 @@ effective-direct bindings (review finding). Live direct spot check: all-roles
 Haiku profile answered with $0.001058 accounted. Codex review 2 P2
 confirmed-fixed, re-review CLOSED. Next is R4 (run kernel: runId, SqliteSaver
 checkpointer, per-node cost/timing, RunSummary).
+
+Status update 2026-06-11 (R4 done): the run kernel landed (commits `1362bc9` +
+review-fix `85005a3`). `src/run/` (new L3 dir; ADR-001 amended, depcruise +
+eslint mirrors extended) owns RunContext/wrapNode/RunSummary — see §2 Run
+kernel. `HITL_THREAD_CONFIG_KEY` was renamed to `THREAD_ID_CONFIG_KEY`
+(`src/consts/run.ts`) — one "thread_id" scalar for swarm HITL and the main
+checkpointer. `@langchain/langgraph-checkpoint-sqlite` 1.0.3 exact-pinned;
+README created; `reports/` gitignored. Live validation: SIGINT after the first
+node wrote a failed summary with partial cost ($0.001434); `--resume` of that
+run re-entered the checkpointed thread at `swarm` and completed
+(verificationPassed true, $0.111 of $0.25 budget). Codex review: 1 P1 (resume
+runId path traversal — now validated at parse, context-create, and
+summary-write layers) + 1 P2 (resumed failure summary lost the task — now
+recovered via `graph.getState`) confirmed-fixed, re-review both CLOSED. New
+backlog finding: default-profile live 400 (json_object prompt validation) —
+pre-existing, routed to R5. Next is R5 (structured outputs + prompt
+de-cascading).
 
 Open backlog:
 

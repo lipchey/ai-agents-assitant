@@ -41,8 +41,18 @@ future sessions focused on what still needs action.
       `model-pricing.json`; loader rejects gateway-prefixed ids on direct
       bindings. Live direct Haiku spot check: answer + $0.001058 accounted.
       Codex review: 2 P2 confirmed-fixed, re-review CLOSED.
-- [ ] R4 Run kernel: runId, SqliteSaver checkpointer + `--resume`, per-node
-      cost/timing logs, RunSummary artifact on all termination paths.
+- [x] R4 Run kernel: runId, SqliteSaver checkpointer + `--resume`, per-node
+      cost/timing logs, RunSummary artifact on all termination paths. Done
+      2026-06-11 (commits `1362bc9` + review-fix `85005a3`). Added `src/run/`
+      (L3: run-context, node-lifecycle `wrapNode`, run-summary writer) +
+      `src/consts/run.ts`; all 13 main-graph nodes wrapped; SqliteSaver at
+      `reports/checkpoints.sqlite` with `thread_id = runId`; `--help`/`--resume`
+      CLI; spec-§3.4 RunSummary (FROZEN) written on completed/budget_stopped/
+      failed incl. SIGINT; README created; `reports/` gitignored;
+      `@langchain/langgraph-checkpoint-sqlite` 1.0.3 exact-pinned. Live: SIGINT
+      kill → failed summary with partial cost; resume re-entered the thread and
+      completed ($0.111/0.25). Codex review: 1 P1 (resume runId path traversal) + 1 P2 (resumed failure summary lost task) confirmed-fixed, re-review
+      both CLOSED.
 - [ ] R5 Structured outputs (main graph) with text-parser fallback;
       profile-injected cascade prompts.
 - [ ] R6 Profile CLI surface + personal-dev / research-playground /
@@ -56,6 +66,16 @@ future sessions focused on what still needs action.
 
 ## Backlog
 
+- [ ] (R4 finding) Default-profile live runs fail at `complexityRouter` with
+      HTTP 400 "Prompt must contain the word 'json' in some form to use
+      'response_format' of type 'json_object'" — the DeepSeek/OpenAI-style
+      json_object validation rejects the router/firewall prompts on the
+      openclaw transport. Pre-existing (R4 touched no prompts/LLM paths; the
+      R3 live check used a direct all-Haiku profile). Fix candidates: add a
+      "json" mention to the router/firewall prompt contracts (cache-anchor +
+      parser alignment per code-guidelines §6) or drop `responseFormat` for
+      those roles; natural home is R5 (structured outputs touches these
+      prompts anyway).
 - [ ] Langfuse (v5, OTel path) tracing integration behind the R4 callbacks
       hook; self-hosted; custom DeepSeek pricing in its model table.
 - [ ] Declarative topology variants per profile (spec D3 deferral) — only
