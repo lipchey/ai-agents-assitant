@@ -10,7 +10,7 @@ export const USAGE_TEXT = [
     "Options:",
     '  "<task>"          Run the agent on a new task.',
     `  --resume <runId>  Resume a checkpointed run from ${CHECKPOINT_DB_PATH}`,
-    "                    (takes no new task input; thread_id = runId).",
+    "                    (use the UUID printed by the original run; no new task input).",
     "  -h, --help        Show this help and exit.",
     "",
     "Environment:",

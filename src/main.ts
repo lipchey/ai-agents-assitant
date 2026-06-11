@@ -25,9 +25,9 @@ import {
 } from "./consts";
 import { buildMainGraph, isCostBudgetNear } from "./graph";
 import { getLogger, getOutputWriter } from "./logging";
-import { buildRunSummary, createRunContext, writeRunSummary } from "./run";
+import { buildRunSummary, createRunContext, isRunId, writeRunSummary } from "./run";
 import type { RunContext } from "./run";
-import { errorMessage } from "./shared";
+import { asRecord, errorMessage } from "./shared";
 import { getDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "./tools";
 
 const run = async (): Promise<void> => {
@@ -58,6 +58,11 @@ const run = async (): Promise<void> => {
         output.errorLine(USAGE_TEXT);
         process.exit(1);
     }
+    if (resumeRunId !== undefined && !isRunId(resumeRunId)) {
+        output.errorLine(`--resume expects the runId printed by the original run (a UUID); got "${resumeRunId}".`);
+        output.errorLine(USAGE_TEXT);
+        process.exit(1);
+    }
 
     /* One shared registry: the same instance the compatibility seams and DI fallbacks resolve to. */
     const tools = getDefaultToolRegistry();
@@ -76,13 +81,16 @@ const run = async (): Promise<void> => {
        before the run context exists has no partial usage worth reporting. */
     let runContext: RunContext | undefined;
     let summaryWritten = false;
+    /* In resume mode the CLI carries no task, so the summary task is recovered
+       from the checkpoint below; both the failure and success paths read this. */
+    let summaryTask = task;
     const writeFailureSummary = (error: unknown): void => {
         if (summaryWritten || runContext === undefined) {
             return;
         }
         const summary = buildRunSummary({
             runContext,
-            task,
+            task: summaryTask,
             status: RunStatus.FAILED,
             answer: "",
             totalCostUsd: runContext.usage.totalCostUsd,
@@ -121,6 +129,18 @@ const run = async (): Promise<void> => {
         const checkpointer = SqliteSaver.fromConnString(CHECKPOINT_DB_PATH);
         const graph = buildMainGraph({ checkpointer });
 
+        if (resumeRunId) {
+            /* Recover the original task from the checkpointed thread so a failed
+               resumed run still records it, and fail fast on a runId with no
+               checkpoint instead of silently re-entering an empty thread. */
+            const prior = await graph.getState({ configurable: { [THREAD_ID_CONFIG_KEY]: runContext.runId } });
+            const priorTask = asRecord(prior.values)?.originalTask;
+            if (typeof priorTask !== "string" || priorTask.length === 0) {
+                throw new Error(`No checkpoint found for runId "${resumeRunId}".`);
+            }
+            summaryTask = priorTask;
+        }
+
         const taskInput = { originalTask: task, costBudgetUsd, patchApplicationEnabled };
         /* LangGraph resume semantics: a null input re-enters the checkpointed thread
            keyed by thread_id without supplying new graph state. */
@@ -145,7 +165,7 @@ const run = async (): Promise<void> => {
         const answer = finalState.finalAnswer || finalState.bestDraft || finalState.currentDraft || "";
         const summary = buildRunSummary({
             runContext,
-            task: finalState.originalTask || task,
+            task: finalState.originalTask || summaryTask,
             status,
             answer,
             totalCostUsd: finalState.totalCost,

@@ -3,6 +3,7 @@
  * accessor validation, and the RunSummary writer. No network; the only I/O is a
  * temp-dir write in the summary suite.
  */
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,7 +11,7 @@ import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { describe, expect, it } from "vitest";
 import { RUN_CONTEXT_CONFIG_KEY, RunStatus } from "../../src/consts";
 import { wrapNode } from "../../src/run/node-lifecycle.ts";
-import { createRunContext, readRunContext } from "../../src/run/run-context.ts";
+import { createRunContext, isRunId, readRunContext } from "../../src/run/run-context.ts";
 import type { RunContext } from "../../src/run/run-context.ts";
 import { buildRunSummary, writeRunSummary } from "../../src/run/run-summary.ts";
 import type { RunSummary } from "../../src/run/run-summary.ts";
@@ -99,6 +100,41 @@ describe("readRunContext", () => {
     });
 });
 
+describe("isRunId", () => {
+    it("accepts a lowercase crypto.randomUUID() shape", () => {
+        expect(isRunId(randomUUID())).toBe(true);
+        expect(isRunId("123e4567-e89b-12d3-a456-426614174000")).toBe(true);
+    });
+
+    it("rejects path-traversal and separator values", () => {
+        expect(isRunId("../../package")).toBe(false);
+        expect(isRunId("../../../etc/passwd")).toBe(false);
+        expect(isRunId("a/b")).toBe(false);
+        expect(isRunId("a\\b")).toBe(false);
+        expect(isRunId("")).toBe(false);
+        expect(isRunId("not-a-uuid")).toBe(false);
+    });
+
+    it("rejects the uppercase UUID variant (we only ever generate lowercase)", () => {
+        expect(isRunId("123E4567-E89B-12D3-A456-426614174000")).toBe(false);
+    });
+});
+
+describe("createRunContext", () => {
+    it("generates a valid runId when none is supplied", () => {
+        expect(isRunId(createRunContext({ profileName: "p" }).runId)).toBe(true);
+    });
+
+    it("reuses a valid supplied runId", () => {
+        const runId = randomUUID();
+        expect(createRunContext({ profileName: "p", runId }).runId).toBe(runId);
+    });
+
+    it("throws on a supplied runId that is not a UUID", () => {
+        expect(() => createRunContext({ profileName: "p", runId: "../../package" })).toThrow(/Invalid runId/u);
+    });
+});
+
 describe("writeRunSummary", () => {
     const makeContext = (): RunContext => {
         const ctx = createRunContext({ profileName: "summary-profile" });
@@ -168,5 +204,23 @@ describe("writeRunSummary", () => {
         expect("verificationPassed" in parsedFailed).toBe(false);
 
         expect(new Set([completedPath, budgetPath, failedPath]).size).toBe(3);
+    });
+
+    it("refuses to write a summary whose runId could traverse the reports directory", () => {
+        const dir = mkdtempSync(join(tmpdir(), "run-summary-"));
+        const traversing: RunSummary = {
+            runId: "../../package",
+            task: "do a thing",
+            profileName: "summary-profile",
+            status: RunStatus.FAILED,
+            answer: "",
+            totalCostUsd: 0,
+            totalTokens: 0,
+            usageStats: {},
+            durationMs: 0,
+            nodeVisits: [],
+        };
+
+        expect(() => writeRunSummary(traversing, dir)).toThrow(/invalid runId/u);
     });
 });

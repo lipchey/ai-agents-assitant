@@ -26,7 +26,8 @@ npm start -- --resume <runId>
 
 The Main Graph checkpoints to a `SqliteSaver` at `reports/checkpoints.sqlite` with
 `thread_id = runId`. Resuming re-enters the same checkpointed thread and takes no
-new task input.
+new task input. The `<runId>` must be the UUID printed by the original run; any
+runId without a checkpoint is rejected.
 
 ## Run artifacts
 

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { RUN_REPORTS_DIR } from "../consts";
 import type { RunStatus } from "../consts";
 import type { UsageStats } from "../shared";
+import { isRunId } from "./run-context.ts";
 import type { NodeVisit, RunContext } from "./run-context.ts";
 
 /* FROZEN contract (design spec §3.4): field names and order are consumed by the
@@ -49,6 +50,11 @@ export const buildRunSummary = (input: {
 
 /* Synchronous write so the SIGINT failure path completes before process.exit. */
 export const writeRunSummary = (summary: RunSummary, baseDir: string = RUN_REPORTS_DIR): string => {
+    /* The runId is a filename component; reject anything that could traverse out
+       of baseDir before joining the path (defense for any future caller). */
+    if (!isRunId(summary.runId)) {
+        throw new Error(`Refusing to write run summary: invalid runId "${summary.runId}".`);
+    }
     mkdirSync(baseDir, { recursive: true });
     const path = join(baseDir, `${summary.runId}.json`);
     writeFileSync(path, `${JSON.stringify(summary, null, 2)}\n`);

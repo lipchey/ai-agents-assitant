@@ -8,6 +8,14 @@ export type NodeVisit = { node: string; durationMs: number; costUsd: number };
 
 export type RunUsageTotals = { totalCostUsd: number; totalTokens: number; usageStats: UsageStats };
 
+/* A runId is both a checkpoint thread key and a filename component
+   (reports/runs/<runId>.json); only the lowercase crypto.randomUUID() shape we
+   generate is valid. Rejecting everything else stops a --resume value with path
+   separators or ".." from traversing out of the reports directory. */
+const RUN_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+
+export const isRunId = (value: string): boolean => RUN_ID_PATTERN.test(value);
+
 export type RunContext = {
     runId: string;
     profileName: string;
@@ -18,13 +26,20 @@ export type RunContext = {
     usage: RunUsageTotals;
 };
 
-export const createRunContext = (options: { profileName: string; runId?: string }): RunContext => ({
-    runId: options.runId ?? randomUUID(),
-    profileName: options.profileName,
-    startedAtMs: Date.now(),
-    visits: [],
-    usage: { totalCostUsd: 0, totalTokens: 0, usageStats: {} },
-});
+export const createRunContext = (options: { profileName: string; runId?: string }): RunContext => {
+    /* A resumed runId must be one we generated; reject anything else before it
+       becomes a checkpoint key or a summary filename. */
+    if (options.runId !== undefined && !isRunId(options.runId)) {
+        throw new Error(`Invalid runId "${options.runId}": expected a crypto.randomUUID() value.`);
+    }
+    return {
+        runId: options.runId ?? randomUUID(),
+        profileName: options.profileName,
+        startedAtMs: Date.now(),
+        visits: [],
+        usage: { totalCostUsd: 0, totalTokens: 0, usageStats: {} },
+    };
+};
 
 export const isRunContext = (value: unknown): value is RunContext => {
     const record = asRecord(value);
