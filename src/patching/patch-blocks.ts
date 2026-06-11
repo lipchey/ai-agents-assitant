@@ -1,12 +1,33 @@
 /* Opt-in patches are structured-only and snapshot pristine files for rollback. */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { MISSING_FILE_ERROR_CODE, OriginalReadKind, PATCH_BLOCK, PROTECTED_SEGMENTS } from "../consts";
-import { resolveWorkspacePath } from "../tools";
+import {
+    MISSING_FILE_ERROR_CODE,
+    OriginalReadKind,
+    PATCH_BLOCK,
+    PROTECTED_BASENAMES,
+    PROTECTED_BASENAME_PREFIXES,
+    PROTECTED_ROOT_SEGMENTS,
+    PROTECTED_SEGMENTS,
+} from "../consts";
+import { getWorkspaceRoot, resolveWorkspacePath } from "../tools";
 import type { ApplyPatchesResult, OriginalReadResult, PatchBlock } from "../types/patching";
 
+/* Defense-in-depth on the workspace-relative target: any protected segment, a guarded
+   build/quality basename, a secret/config basename prefix, or a workspace-root-only gate tree. */
 const isProtectedPath = (relativePath: string): boolean => {
-    return relativePath.split(/[\\/]/u).some((segment) => PROTECTED_SEGMENTS.has(segment));
+    const segments = relativePath.split(/[\\/]/u);
+    if (segments.some((segment) => PROTECTED_SEGMENTS.has(segment))) {
+        return true;
+    }
+    const basename = segments[segments.length - 1] ?? "";
+    if (PROTECTED_BASENAMES.has(basename)) {
+        return true;
+    }
+    if (PROTECTED_BASENAME_PREFIXES.some((prefix) => basename.startsWith(prefix))) {
+        return true;
+    }
+    return PROTECTED_ROOT_SEGMENTS.has(segments[0] ?? "");
 };
 
 /* Later blocks for the same path win; prose outside delimiters never touches disk. */
@@ -53,7 +74,7 @@ export const applyPatchBlocks = async (
             skipped.push(`${block.path} (escapes workspace)`);
             continue;
         }
-        const relative = path.relative(process.cwd(), resolved);
+        const relative = path.relative(getWorkspaceRoot(), resolved);
         if (isProtectedPath(relative)) {
             skipped.push(`${block.path} (protected path)`);
             continue;

@@ -49,7 +49,15 @@ export {
     STARTUP_TIMEOUT_MS,
     STRONG_REASONING_AGENT_ID,
 } from "./openclaw.ts";
-export { MISSING_FILE_ERROR_CODE, OriginalReadKind, PATCH_BLOCK, PROTECTED_SEGMENTS } from "./patching.ts";
+export {
+    MISSING_FILE_ERROR_CODE,
+    OriginalReadKind,
+    PATCH_BLOCK,
+    PROTECTED_BASENAMES,
+    PROTECTED_BASENAME_PREFIXES,
+    PROTECTED_ROOT_SEGMENTS,
+    PROTECTED_SEGMENTS,
+} from "./patching.ts";
 export { CHECKPOINT_DB_PATH, RUN_CONTEXT_CONFIG_KEY, RUN_REPORTS_DIR, RunStatus, THREAD_ID_CONFIG_KEY } from "./run.ts";
 export {
     BuiltInToolId,

@@ -7,6 +7,11 @@ verification nodes, delegating tool-heavy subtasks to a ReAct **Swarm Sub-Graph*
 under a human-in-the-loop safety envelope. Which model serves which role is
 configuration, not code (see `profiles/`).
 
+## Prerequisites
+
+- Node.js matching the `engines` range in `package.json`.
+- [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) on `PATH` — required by the swarm's `find_files`/`grep_code` tools (`brew install ripgrep` / `apt install ripgrep`).
+
 ## Quickstart
 
 ```bash

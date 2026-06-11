@@ -10,5 +10,6 @@
     "bench/asserts/*.mjs"
   ],
   "project": ["src/**/*.ts", "scripts/**/*.ts", "bench/**/*.mjs"],
-  "ignoreDependencies": ["promptfoo"]
+  "ignoreDependencies": ["promptfoo"],
+  "ignoreBinaries": ["rg"]
 }
