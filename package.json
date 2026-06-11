@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "tsx src/main.ts",
+    "gateway": "node -r dotenv/config node_modules/openclaw/openclaw.mjs gateway run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
