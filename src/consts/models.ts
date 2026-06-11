@@ -83,6 +83,9 @@ export const ANTHROPIC_ALWAYS_THINKING_MODEL_IDS = ["claude-fable-5"] as const;
 export const ModelTransport = {
     DIRECT: "direct",
     OPENCLAW: "openclaw",
+    /* Offline scripted transport (R8): a per-test fake provider replays canned
+       responses so a full run executes with no network or gateway. */
+    FAKE: "fake",
 } as const;
 
 export type ModelTransport = (typeof ModelTransport)[keyof typeof ModelTransport];

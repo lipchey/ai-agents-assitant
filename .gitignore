@@ -20,4 +20,5 @@ dist/
 .codegraph/
 reports/
 bench/.work/
+tests/e2e/.work/
 .eslintcache

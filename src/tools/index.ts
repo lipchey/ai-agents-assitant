@@ -15,7 +15,7 @@ export {
     STRONG_REASONING_AGENT_ID,
 } from "../consts";
 export { invokeGatewayTool, jsonPost } from "./http.ts";
-export { callLlm } from "./llm.ts";
+export { callLlm, setFakeChatProvider } from "./llm.ts";
 export { runLocalPseudoTool } from "./local-tools.ts";
 export { calculateUsage, loadPricing } from "./pricing.ts";
 export { createDefaultToolRegistry, createToolRegistry, getDefaultToolRegistry } from "./registry.ts";
@@ -25,7 +25,7 @@ export { buildCompactToolResultReport } from "./result-reports.ts";
 export { unwrapToolResult } from "./results.ts";
 export { openclawRpc } from "./rpc.ts";
 export { runWebLookupWithFallback } from "./web-search.ts";
-export { resolveWorkspacePath } from "./workspace.ts";
+export { getWorkspaceRoot, resolveWorkspacePath, setWorkspaceRoot } from "./workspace.ts";
 export type { LlmCallOptions, LlmCallResult } from "./llm.ts";
 export type {
     JsonObject,

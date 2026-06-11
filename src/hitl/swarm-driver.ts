@@ -13,10 +13,15 @@ export const driveSwarmWithHitl = async <TInput, TState>(
     graph: HitlDrivableGraph<TInput, TState>,
     initialInput: TInput,
     resolver: HitlResolver,
-    options?: { threadId?: string; maxRounds?: number },
+    options?: { threadId?: string; maxRounds?: number; configurable?: Record<string, unknown> },
 ): Promise<TState> => {
+    /* Extra configurable keys (e.g. the active profile) ride into the sub-graph;
+       the thread id wins so an isolated checkpoint per run is never overridden. */
     const config: HitlGraphRunConfig = {
-        configurable: { [THREAD_ID_CONFIG_KEY]: options?.threadId ?? `${HITL_THREAD_ID_PREFIX}${randomUUID()}` },
+        configurable: {
+            ...options?.configurable,
+            [THREAD_ID_CONFIG_KEY]: options?.threadId ?? `${HITL_THREAD_ID_PREFIX}${randomUUID()}`,
+        },
     };
     const maxRounds = options?.maxRounds ?? DEFAULT_MAX_HITL_ROUNDS;
 

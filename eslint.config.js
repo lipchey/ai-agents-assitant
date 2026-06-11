@@ -79,6 +79,8 @@ export default tseslint.config(
                fixture copies the agent mutates. Neither is project code. */
             "bench/fixtures/**",
             "bench/.work/**",
+            /* Per-run e2e fixture copies the agent mutates (some left type-broken). */
+            "tests/e2e/.work/**",
         ],
     },
     js.configs.recommended,

@@ -1,4 +1,5 @@
 import { interrupt } from "@langchain/langgraph";
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import {
     ModelRole,
     RESPONSE_FORMAT_JSON,
@@ -21,12 +22,15 @@ import { runReactWorker } from "./react-worker.ts";
 import { parseWorkerKind } from "./tool-validation.ts";
 
 export const createWorkerNodes = (tools: ToolRegistry) => ({
-    codeExplorer: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER, tools),
-    infraOps: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS, tools),
-    webResearcher: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER, tools),
+    codeExplorer: (state: SwarmWorkerStateValue, config?: LangGraphRunnableConfig) =>
+        runReactWorker(state, WorkerKind.CODE_EXPLORER, tools, config),
+    infraOps: (state: SwarmWorkerStateValue, config?: LangGraphRunnableConfig) =>
+        runReactWorker(state, WorkerKind.INFRA_OPS, tools, config),
+    webResearcher: (state: SwarmWorkerStateValue, config?: LangGraphRunnableConfig) =>
+        runReactWorker(state, WorkerKind.WEB_RESEARCHER, tools, config),
 });
 
-export const leadDelegator = async (state: SwarmWorkerStateValue) => {
+export const leadDelegator = async (state: SwarmWorkerStateValue, config?: LangGraphRunnableConfig) => {
     const seededKind = state.workerKind ?? WorkerKind.CODE_EXPLORER;
     let selectedKind = seededKind;
     let usage = emptyUsage();
@@ -43,6 +47,7 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
                 .filter(Boolean)
                 .join("\n\n"),
             { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON, structuredSchema: workerKindDecisionSchema },
+            config,
         );
         selectedKind = parseWorkerKind(result.content, seededKind, result.parsed);
         usage = usageFromLlm(result);
@@ -62,10 +67,14 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
     };
 };
 
-export const smeOracle = async (state: SwarmWorkerStateValue) => {
-    const result = await callLlm(ModelRole.REASONER, SystemPrompts.smeOracle, state.escalationQuery, {
-        maxTokens: 900,
-    });
+export const smeOracle = async (state: SwarmWorkerStateValue, config?: LangGraphRunnableConfig) => {
+    const result = await callLlm(
+        ModelRole.REASONER,
+        SystemPrompts.smeOracle,
+        state.escalationQuery,
+        { maxTokens: 900 },
+        config,
+    );
     return {
         escalationResponse: result.content,
         escalationAttempts: (state.escalationAttempts ?? 0) + 1,
@@ -106,12 +115,13 @@ export const humanGate = (state: SwarmWorkerStateValue) => {
     };
 };
 
-export const workerCompress = async (state: SwarmWorkerStateValue) => {
+export const workerCompress = async (state: SwarmWorkerStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.FIREWALL,
         SystemPrompts.workerCompress,
         state.rawToolOutput || safeJson(state.toolCalls),
         { maxTokens: 1_200, responseFormat: RESPONSE_FORMAT_JSON },
+        config,
     );
     return {
         workerSummary: result.content,

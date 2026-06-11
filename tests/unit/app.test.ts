@@ -28,9 +28,15 @@ describe("runAgentTask option guards", () => {
         await expect(runAgentTask("task", options)).rejects.toThrow(/hitl: "off"/u);
     });
 
-    it("rejects a workspaceDir other than the current working directory", async () => {
-        await expect(runAgentTask("task", { workspaceDir: join(process.cwd(), "bench") })).rejects.toThrow(
-            /reserved until the workspace seam/u,
+    it("rejects a nonexistent workspaceDir before any runtime startup", async () => {
+        await expect(
+            runAgentTask("task", { workspaceDir: join(process.cwd(), "definitely-not-a-directory-xyz") }),
+        ).rejects.toThrow(/workspaceDir does not exist/u);
+    });
+
+    it("rejects a workspaceDir that is a file, not a directory", async () => {
+        await expect(runAgentTask("task", { workspaceDir: join(process.cwd(), "package.json") })).rejects.toThrow(
+            /workspaceDir is not a directory/u,
         );
     });
 
@@ -70,6 +76,14 @@ describe("runAgentTask option guards", () => {
            proving cwd passes it without starting the runtime. */
         await expect(
             runAgentTask("task", { workspaceDir: process.cwd(), profile: "definitely-not-a-profile" }),
+        ).rejects.toThrow(/definitely-not-a-profile/u);
+    });
+
+    it("accepts a valid non-cwd workspaceDir (fails later, on the profile)", async () => {
+        /* A real directory other than cwd now passes the boundary; the unknown
+           profile then fails AFTER it, proving the seam honors the directory. */
+        await expect(
+            runAgentTask("task", { workspaceDir: join(process.cwd(), "bench"), profile: "definitely-not-a-profile" }),
         ).rejects.toThrow(/definitely-not-a-profile/u);
     });
 });

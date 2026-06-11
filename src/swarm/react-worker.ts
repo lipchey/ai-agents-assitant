@@ -1,4 +1,5 @@
 /* Recoverable reasoning errors stay in-loop; environment failures route to HITL. */
+import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import {
     ModelRole,
     RESPONSE_FORMAT_JSON,
@@ -78,6 +79,7 @@ export const runReactWorker = async (
     state: SwarmWorkerStateValue,
     kind: WorkerKind,
     tools: ToolRegistry = getDefaultToolRegistry(),
+    config?: LangGraphRunnableConfig,
 ) => {
     const system = WORKER_PROMPTS[kind];
     const usageKey = WORKER_USAGE_KEY[kind];
@@ -110,10 +112,13 @@ export const runReactWorker = async (
     for (let step = 0; step < MAX_REACT_STEPS; step += 1) {
         let planResult: LlmCallResult;
         try {
-            planResult = await callLlm(ModelRole.WORKER, system, buildWorkerContext(state, steps, toolCatalog), {
-                maxTokens: 700,
-                responseFormat: RESPONSE_FORMAT_JSON,
-            });
+            planResult = await callLlm(
+                ModelRole.WORKER,
+                system,
+                buildWorkerContext(state, steps, toolCatalog),
+                { maxTokens: 700, responseFormat: RESPONSE_FORMAT_JSON },
+                config,
+            );
         } catch (error) {
             /* Planner gateway/timeout failures are environment issues, not graph crashes. */
             const message = errorMessage(error);

@@ -32,10 +32,31 @@ const logChatRetry: ChatRetryListener = (info, context) => {
     });
 };
 
-let providerRegistry: Record<ModelTransport, ChatProvider> | undefined;
+/* The two real transports are lazily built once; FAKE is served from an injected
+   scripted provider (offline runs) and so is kept out of the registry. */
+type RealTransport = Exclude<ModelTransport, typeof ModelTransport.FAKE>;
+let providerRegistry: Record<RealTransport, ChatProvider> | undefined;
+
+/* Installed by setFakeChatProvider() for an offline/scripted run; absent in
+   production, where the failing placeholder makes a stray fake binding loud. */
+let fakeChatProvider: ChatProvider | undefined;
+
+const failingFakeProvider: ChatProvider = {
+    kind: ModelTransport.FAKE,
+    call: async () => {
+        throw new Error("fake transport requires an installed scripted provider — call setFakeChatProvider().");
+    },
+};
+
+export const setFakeChatProvider = (provider?: ChatProvider): void => {
+    fakeChatProvider = provider;
+};
 
 /* Lazily built so module load stays side-effect free for the barrel. */
 const chatProviderFor = (transport: ModelTransport): ChatProvider => {
+    if (transport === ModelTransport.FAKE) {
+        return fakeChatProvider ?? failingFakeProvider;
+    }
     providerRegistry ??= {
         [ModelTransport.OPENCLAW]: createOpenClawChatProvider({
             post: jsonPost,

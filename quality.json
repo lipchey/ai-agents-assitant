@@ -85,7 +85,8 @@
         "argv": ["./node_modules/.bin/knip", "--reporter", "json"],
         "mode": "report-only",
         "timeout_seconds": 60
-      }
+      },
+      { "name": "e2e", "argv": ["npm", "run", "test:e2e"], "timeout_seconds": 60 }
     ],
     "audit": []
   },

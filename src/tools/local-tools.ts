@@ -18,7 +18,7 @@ import type { SafeDirectExecCommand } from "../consts";
 import { clampInt, readNumber, readString, truncate } from "../shared";
 import type { JsonObject, ToolArgs, ToolCallOptions } from "../types/tools";
 import { ToolError } from "./errors.ts";
-import { resolveWorkspacePath } from "./workspace.ts";
+import { getWorkspaceRoot, resolveWorkspacePath } from "./workspace.ts";
 
 function assertSafeDirectExecCommand(tool: string, command: string): asserts command is SafeDirectExecCommand {
     if (!isSafeDirectExecCommand(command)) {
@@ -38,7 +38,7 @@ const runLocalProcess = async (
     args: string[],
     options?: { cwd?: string; timeoutS?: number; maxOutputChars?: number },
 ): Promise<JsonObject> => {
-    const cwd = options?.cwd ? resolveWorkspacePath(options.cwd) : process.cwd();
+    const cwd = options?.cwd ? resolveWorkspacePath(options.cwd) : getWorkspaceRoot();
     const timeoutMs = (options?.timeoutS ?? DEFAULT_TIMEOUT_S) * 1_000;
     const maxOutputChars = options?.maxOutputChars ?? MAX_PROCESS_OUTPUT_CHARS;
 

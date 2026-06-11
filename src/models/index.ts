@@ -17,3 +17,5 @@ export { createOpenClawChatProvider } from "./providers/openclaw.ts";
 export type { OpenClawTransport } from "./providers/openclaw.ts";
 export { createDirectChatProvider } from "./providers/direct.ts";
 export type { DirectProviderHooks } from "./providers/direct.ts";
+export { createFakeChatProvider } from "./providers/fake.ts";
+export type { FakeChatScript, FakeScriptStep } from "./providers/fake.ts";

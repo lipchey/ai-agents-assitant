@@ -7,3 +7,4 @@ src/consts/pricing/model-pricing.json
 /tools/
 schemas/quality.schema.json
 docs/
+tests/e2e/.work/

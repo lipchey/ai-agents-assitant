@@ -1,5 +1,5 @@
 import { SqliteSaver } from "@langchain/langgraph-checkpoint-sqlite";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
     CHECKPOINT_DB_PATH,
@@ -22,9 +22,10 @@ import type { Profile } from "../models";
 import { buildRunSummary, createRunContext, writeRunSummary } from "../run";
 import type { RunContext, RunSummary } from "../run";
 import { asRecord, errorMessage } from "../shared";
-import { getDefaultToolRegistry, startOpenClawGateway, stopOpenClawGateway } from "../tools";
+import { getDefaultToolRegistry, setWorkspaceRoot, startOpenClawGateway, stopOpenClawGateway } from "../tools";
 import type { GraphStateValue } from "../state";
 import type { HitlResolver } from "../types/hitl";
+import type { ToolRegistry } from "../types/tools";
 
 /* Composition root for one agent run: runtime startup, run kernel wiring, graph
    invocation, and the RunSummary on every termination path. The CLI (main.ts)
@@ -46,6 +47,12 @@ export type ExecuteAgentRunInput = {
     costBudgetUsd: number;
     patchApplicationEnabled: boolean;
     hitlResolver: HitlResolver;
+    /* Tool registry for this run; offline/e2e callers inject a local-only registry
+       so no gateway-backed provider forces an OpenClaw startup. */
+    tools?: ToolRegistry;
+    /* Work-tree root for filesystem tools and patching; process.cwd() when absent
+       (profile/pricing loading stays cwd-anchored regardless — see workspace.ts). */
+    workspaceDir?: string;
     /* Called once the run context exists, before the graph is invoked. */
     onRunReady?: (handle: AgentRunHandle) => void;
 };
@@ -65,8 +72,15 @@ export const executeAgentRun = async (input: ExecuteAgentRunInput): Promise<Exec
     const logger = getLogger().child({ module: "app" });
     const { profile, resumeRunId } = input;
 
-    /* One shared registry: the same instance the compatibility seams and DI fallbacks resolve to. */
-    const tools = getDefaultToolRegistry();
+    /* One shared registry: the same instance the compatibility seams and DI fallbacks
+       resolve to, unless a caller injects a local-only registry for an offline run. */
+    const tools = input.tools ?? getDefaultToolRegistry();
+
+    /* Relocate the work tree before startup so filesystem tools and patching follow
+       the injected root; reset on every exit path below. */
+    if (input.workspaceDir !== undefined) {
+        setWorkspaceRoot(resolve(input.workspaceDir));
+    }
 
     /* The gateway is also the web-search backend, so it is required when any
        tool provider routes through it — not only when an LLM binding does. */
@@ -88,6 +102,9 @@ export const executeAgentRun = async (input: ExecuteAgentRunInput): Promise<Exec
             await stopOpenClawGateway();
         }
         await tools.stop();
+        if (input.workspaceDir !== undefined) {
+            setWorkspaceRoot(undefined);
+        }
         throw error;
     }
 
@@ -210,6 +227,9 @@ export const executeAgentRun = async (input: ExecuteAgentRunInput): Promise<Exec
         if (gatewayStarted) {
             await stopOpenClawGateway();
         }
+        if (input.workspaceDir !== undefined) {
+            setWorkspaceRoot(undefined);
+        }
     }
 };
 
@@ -223,10 +243,12 @@ export type RunAgentTaskOptions = {
     applyPatches?: boolean;
     /* Pinned off: the programmatic entrypoint must never block on stdin. */
     hitl?: "off";
-    /* Reserved (R8): the workspace seam is process.cwd() everywhere today, so
-       only the current working directory is accepted until the fake-provider
-       e2e lands a real workspace root. */
+    /* Work-tree root for filesystem tools and patching; validated at the boundary
+       and threaded to executeAgentRun. Profile/pricing loading stays cwd-anchored. */
     workspaceDir?: string;
+    /* Offline/e2e callers inject a local-only tool registry so no gateway-backed
+       provider forces an OpenClaw startup. */
+    tools?: ToolRegistry;
 };
 
 /* Programmatic entrypoint (spec D7): one full agent run on a task, resolving
@@ -253,11 +275,16 @@ export const runAgentTask = async (task: string, options: RunAgentTaskOptions = 
             `runAgentTask requires budgetUsd to be a finite number greater than 0; got "${String(options.budgetUsd)}".`,
         );
     }
-    if (options.workspaceDir !== undefined && resolve(options.workspaceDir) !== process.cwd()) {
-        throw new Error(
-            "runAgentTask workspaceDir is reserved until the workspace seam lands (R8); " +
-                "only the current working directory is supported.",
-        );
+    if (options.workspaceDir !== undefined) {
+        let stat: ReturnType<typeof statSync>;
+        try {
+            stat = statSync(options.workspaceDir);
+        } catch {
+            throw new Error(`runAgentTask workspaceDir does not exist: ${options.workspaceDir}`);
+        }
+        if (!stat.isDirectory()) {
+            throw new Error(`runAgentTask workspaceDir is not a directory: ${options.workspaceDir}`);
+        }
     }
     const profile =
         typeof options.profile === "object" ? options.profile : loadProfile(options.profile ?? DEFAULT_PROFILE_NAME);
@@ -267,6 +294,8 @@ export const runAgentTask = async (task: string, options: RunAgentTaskOptions = 
         costBudgetUsd: options.budgetUsd ?? profile.budget?.costBudgetUsd ?? DEFAULT_COST_BUDGET_USD,
         patchApplicationEnabled: options.applyPatches ?? false,
         hitlResolver: autoAbortResolver,
+        ...(options.workspaceDir !== undefined ? { workspaceDir: options.workspaceDir } : {}),
+        ...(options.tools !== undefined ? { tools: options.tools } : {}),
     });
     return summary;
 };

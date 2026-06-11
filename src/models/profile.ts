@@ -18,7 +18,7 @@ import {
 } from "../consts";
 
 const providerSchema = z.enum([ModelProvider.ANTHROPIC, ModelProvider.OPENAI, ModelProvider.DEEPSEEK]);
-const transportSchema = z.enum([ModelTransport.DIRECT, ModelTransport.OPENCLAW]);
+const transportSchema = z.enum([ModelTransport.DIRECT, ModelTransport.OPENCLAW, ModelTransport.FAKE]);
 const thinkingSchema = z.enum([ThinkingMode.ADAPTIVE, ThinkingMode.ENABLED, ThinkingMode.DISABLED]);
 const effortSchema = z.enum([
     ReasoningEffort.LOW,
