@@ -180,6 +180,13 @@ describe("routeDebate", () => {
         );
     });
 
+    it("falls through to the claude coder when a sub-cap refetch is unaffordable", () => {
+        /* totalCost 0.88 makes the 0.08 refetch projection cross the 0.95 soft ceiling while the 0.06 coder cycle still fits. */
+        expect(routeDebate(makeState({ needsMoreContext: true, contextFetches: 0, totalCost: 0.88 }))).toBe(
+            MainNode.CLAUDE_CODER,
+        );
+    });
+
     it("calls the SME tiebreaker when the debate cap is reached and affordable", () => {
         expect(routeDebate(makeState({ debateIterations: MAX_DEBATE_ITERATIONS }))).toBe(MainNode.SME_TIEBREAKER);
     });

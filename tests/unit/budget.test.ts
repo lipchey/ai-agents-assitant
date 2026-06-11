@@ -118,4 +118,11 @@ describe("isCostBudgetNear unset or non-positive budget", () => {
         expect(isCostBudgetNear(state, 999)).toBe(false);
         expect(canSpendUsd(state, 999)).toBe(true);
     });
+
+    it("is never near when the budget property is absent (treated as unlimited)", () => {
+        const state = makeState(DEFAULT_COST_BUDGET_USD, 999);
+        Reflect.deleteProperty(state, "costBudgetUsd");
+        expect(isCostBudgetNear(state, 999)).toBe(false);
+        expect(canSpendUsd(state, 999)).toBe(true);
+    });
 });
