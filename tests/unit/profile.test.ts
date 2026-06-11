@@ -52,6 +52,19 @@ const validRoles = (): Record<string, { provider: string; model: string }> => ({
     critic: { provider: "openai", model: "openai/gpt-5.5" },
 });
 
+/* Provider-native bare ids (no gateway "provider/" prefix) — required on the
+   direct transport, every id has a model-pricing.json entry. */
+const bareRoles = (): Record<string, { provider: string; model: string; transport?: string }> => ({
+    router: { provider: "deepseek", model: "deepseek-v4-flash" },
+    firewall: { provider: "deepseek", model: "deepseek-v4-flash" },
+    worker: { provider: "deepseek", model: "deepseek-v4-flash" },
+    frontier: { provider: "deepseek", model: "deepseek-v4-pro" },
+    architect: { provider: "anthropic", model: "claude-opus-4-8" },
+    sme: { provider: "anthropic", model: "claude-opus-4-8" },
+    coder: { provider: "anthropic", model: "claude-sonnet-4-6" },
+    critic: { provider: "openai", model: "gpt-5.5" },
+});
+
 const validProfile = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
     name: "test",
     transport: { default: "openclaw" },
@@ -105,6 +118,24 @@ describe("loadProfile fail-fast validation", () => {
     });
 });
 
+describe("direct transport rejects gateway-prefixed model ids", () => {
+    it("rejects a prefixed id when transport.default is direct", () => {
+        expect(() => parseProfile(validProfile({ transport: { default: "direct" } }))).toThrow(/gateway-prefixed/u);
+    });
+
+    it("rejects a prefixed id via a per-binding transport override", () => {
+        const roles = bareRoles();
+        roles.coder = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "direct" };
+        expect(() => parseProfile(validProfile({ roles }))).toThrow(/gateway-prefixed/u);
+    });
+
+    it("still loads a prefixed id whose binding overrides transport back to openclaw", () => {
+        const roles = bareRoles();
+        roles.coder = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "openclaw" };
+        expect(() => parseProfile(validProfile({ transport: { default: "direct" }, roles }))).not.toThrow();
+    });
+});
+
 describe("readProfile validates configurable profiles", () => {
     it("falls back to the default profile when none is injected", () => {
         expect(readProfile(undefined).name).toBe("default");
@@ -132,7 +163,9 @@ describe("callLlm transport dispatch", () => {
         const previousKey = process.env.ANTHROPIC_API_KEY;
         delete process.env.ANTHROPIC_API_KEY;
         try {
-            const profile = parseProfile(validProfile({ transport: { default: "direct" } }));
+            /* Bare provider-native ids: the direct-transport guard rejects
+               gateway-prefixed ids, so the dispatch proof uses bare bindings. */
+            const profile = parseProfile(validProfile({ transport: { default: "direct" }, roles: bareRoles() }));
             await expect(callLlm(ModelRole.CODER, "system", "user", {}, { configurable: { profile } })).rejects.toThrow(
                 /Anthropic API key/iu,
             );

@@ -111,9 +111,27 @@ const assertPricingEntries = (profile: Profile, sourceLabel: string): void => {
     }
 };
 
+/* The direct transport feeds binding.model straight into the provider SDK, so it
+   must be a provider-native bare id. A gateway-style "provider/model" ref (the
+   only form containing a slash) would defeat the id-prefix model mapping
+   (ANTHROPIC_FIXED_SAMPLING_MODEL_IDS et al.) and be rejected by the provider
+   API, yet still pass the pricing check because both forms are priced — so reject
+   it at load time on the effective transport. */
+const assertDirectModelIds = (profile: Profile, sourceLabel: string): void => {
+    for (const [role, binding] of Object.entries(profile.roles)) {
+        const transport = binding.transport ?? profile.transport.default;
+        if (transport === ModelTransport.DIRECT && binding.model.includes("/")) {
+            throw new Error(
+                `Profile ${sourceLabel} role "${role}" model "${binding.model}" is a gateway-prefixed id on the direct transport; direct bindings require a provider-native id with no "/".`,
+            );
+        }
+    }
+};
+
 export const parseProfile = (raw: unknown, sourceLabel = "<inline>"): Profile => {
     const profile = profileSchema.parse(raw);
     assertPricingEntries(profile, sourceLabel);
+    assertDirectModelIds(profile, sourceLabel);
     validatedProfiles.add(profile);
     return profile;
 };

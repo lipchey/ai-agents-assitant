@@ -13,7 +13,8 @@ const statusError = (status: number): Error => Object.assign(new Error(`HTTP ${s
 const instantSleep = (): Promise<void> => Promise.resolve();
 
 describe("isTransientLlmError", () => {
-    it("retries 429 and 5xx statuses but never other 4xx", () => {
+    it("retries 408/429/5xx statuses but never other 4xx", () => {
+        expect(isTransientLlmError(statusError(408))).toBe(true);
         expect(isTransientLlmError(statusError(429))).toBe(true);
         expect(isTransientLlmError(statusError(500))).toBe(true);
         expect(isTransientLlmError(statusError(503))).toBe(true);

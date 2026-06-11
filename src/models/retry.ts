@@ -53,9 +53,10 @@ export const isTransientLlmError = (error: unknown): boolean => {
             cause?: unknown;
         };
         if (typeof status === "number") {
-            /* An HTTP status is authoritative: retry rate limits and server-side
-               failures, never client-side validation errors. */
-            return status === 429 || status >= 500;
+            /* An HTTP status is authoritative: retry request timeouts (408), rate
+               limits (429), and server-side failures (5xx), never other
+               client-side validation errors. */
+            return status === 408 || status === 429 || status >= 500;
         }
         if (typeof name === "string" && TRANSIENT_ERROR_NAMES.has(name)) {
             return true;
