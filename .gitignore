@@ -4,6 +4,15 @@ dist/
 .env.local
 .openclaw_artifacts/
 .openclaw_state/
+.openclaw/
+# OpenClaw agent workspace memory: local-only, env/personal-specific,
+# re-seeded by bootstrap if absent. Keep out of git (TOOLS.md may hold infra
+# notes, USER.md personal info). The config (openclaw.config.json5) stays tracked.
+/IDENTITY.md
+/SOUL.md
+/USER.md
+/TOOLS.md
+/HEARTBEAT.md
 *.last-good
 .patch-smoke-*
 .idea/
