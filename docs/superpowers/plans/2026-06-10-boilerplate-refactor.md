@@ -323,6 +323,60 @@ Swarm ReAct-step structured migration is OUT of scope (backlog).
 
 ---
 
+### Task R6a: Model tier layer — role→tier→model indirection (runs BEFORE R6)
+
+> Added 2026-06-11 (owner decision). Normative spec:
+> [docs/superpowers/specs/2026-06-11-model-tiers-design.md](../specs/2026-06-11-model-tiers-design.md)
+> (amends R-spec §3.2). Profiles gain a required `tiers` block
+> (frontier/adviser/skilled/worker); `roles` becomes an optional override map;
+> `ModelRole.FRONTIER` is renamed to `REASONER`. Behavior of the default
+> profile stays byte-equivalent (tier-spec §6 migration table).
+
+**Files:**
+- Modify: `src/consts/models.ts` (`ModelRole.FRONTIER` → `REASONER`),
+  `src/models/profile.ts` (tier schema v2 + loader validation),
+  `src/models/resolve.ts` (`DEFAULT_ROLE_TIER` + tier resolution),
+  `profiles/default.json5` (tier-format migration),
+  `src/graph/nodes/{architects,critics}.ts` + `src/swarm/nodes.ts` (enum
+  rename call sites), `src/prompts/core.ts` (`DEFAULT_CASCADE_NOTE` tier
+  vocabulary), `tests/unit/profile.test.ts` + other suites touching the
+  `frontier` role key, `.agents/architecture-decisions.md` (new ADR-003),
+  `.agents/memory.md` (architecture note)
+
+- [ ] **Step 6a.1:** Rename `ModelRole.FRONTIER` → `ModelRole.REASONER`
+  (enum value `"frontier"` → `"reasoner"`) across src + tests +
+  `default.json5`. Graph node names (`frontierArchitect`, `frontierCritic`)
+  stay — RunSummary §3.4 is FROZEN.
+- [ ] **Step 6a.2:** Profile schema v2 (tier-spec §2): required `tiers`
+  object (4 keys, existing `ModelBinding` values); `roles` → optional
+  override map with the strict two-shape union (full binding | `{ tier,
+  params? }`); extend the loader's pricing + direct-transport-id checks to
+  tier bindings and full-binding overrides.
+- [ ] **Step 6a.3:** `DEFAULT_ROLE_TIER` map (tier-spec §3) +
+  `resolveBinding` precedence: full override > tier reassignment > default
+  tier; role params merge over tier params (tier-spec §4). Return type stays
+  `ModelBinding` — `callLlm`/providers untouched.
+- [ ] **Step 6a.4:** Migrate `profiles/default.json5` to tier format per the
+  tier-spec §6 table (reasoner + critic as full overrides); `cascadeNote`
+  bytes unchanged; `DEFAULT_CASCADE_NOTE` fallback reworded to tier
+  vocabulary.
+- [ ] **Step 6a.5:** Tests: default-profile equivalence pinning (8 roles =
+  exact pre-R6a bindings); resolution precedence + params-merge cases;
+  loader failures (missing tier key, mixed override shape, missing pricing
+  on a tier binding, gateway-prefixed id on a direct tier binding). R1
+  characterization suite green with only the role-key rename.
+- [ ] **Step 6a.6:** Docs: ADR-003 (tier indirection) in
+  `.agents/architecture-decisions.md`; `.agents/memory.md` architecture
+  note. No new top-level `src/` dir → no layer-DAG change.
+- [ ] **Step 6a.7:** Verify: `npm test` + `./verify --fast` green. No live
+  run required (behavior-neutral refactor pinned by the equivalence tests).
+- [ ] **Step 6a.8:** Commit: `feat: model tier layer — role→tier→model indirection with per-role overrides; rename frontier role to reasoner`
+
+**Verification boundary:** `npm test` + `./verify --fast` green;
+default-profile equivalence tests prove byte-identical resolved bindings.
+
+---
+
 ### Task R6: Profiles + CLI surface + example profiles
 
 **Files:**
@@ -336,11 +390,13 @@ Swarm ReAct-step structured migration is OUT of scope (backlog).
 - [ ] **Step 6.1:** `--profile <name|path>` flag (default `default`),
   `AGENT_PROFILE` env override; profile name flows into RunSummary (already
   in the type) and the console report header.
-- [ ] **Step 6.2:** Author the three example profiles per spec §3.2
-  (personal-dev pinned there; research-playground = current DeepSeek cascade
-  on direct transport; client-baseline = cheap cascade, Sonnet coder, Opus
-  SME, budget 0.50). Every `model` must have a pricing entry — extend
-  `model-pricing.json` if a chosen id is missing.
+- [ ] **Step 6.2:** Author the three example profiles in the TIER format
+  (R6a) per
+  [specs/2026-06-11-model-tiers-design.md](../specs/2026-06-11-model-tiers-design.md)
+  §7 (personal-dev sketched there; research-playground = current DeepSeek
+  cascade on direct transport; client-baseline = cheap cascade, Sonnet
+  coder, Opus SME, budget 0.50). Every `model` must have a pricing entry —
+  extend `model-pricing.json` if a chosen id is missing.
 - [ ] **Step 6.3:** `run-task.sh`: add `PROFILE` env passthrough
   (`PROFILE=personal-dev BUDGET=0.25 scripts/run-task.sh "<task>"`).
 - [ ] **Step 6.4:** Update `.env.example` (AGENT_PROFILE, note that provider

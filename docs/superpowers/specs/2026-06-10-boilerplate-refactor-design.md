@@ -137,6 +137,15 @@ profile and delegates to the bound provider.
 
 ### 3.2 Profile contract (pinned)
 
+> **Amendment (2026-06-11, session R6a):** superseded by the tier-format
+> contract v2 in
+> [2026-06-11-model-tiers-design.md](2026-06-11-model-tiers-design.md) —
+> profiles now define a required `tiers` block
+> (frontier/adviser/skilled/worker) and `roles` becomes an optional override
+> map; `ModelRole.FRONTIER` is renamed to `REASONER`. The text below is the
+> v1 contract, kept for history; loader-validation principles (fail fast,
+> pricing entries, transport-id checks) carry over.
+
 All 8 existing `ModelRole` values are required keys; the loader fails fast on
 a missing role, an unknown provider, or a `model` string without a pricing
 entry in `src/consts/pricing/model-pricing.json`.

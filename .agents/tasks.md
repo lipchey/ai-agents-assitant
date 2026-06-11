@@ -66,8 +66,13 @@ future sessions focused on what still needs action.
       json_object prompts now mention "JSON" (closes the R4 backlog 400).
       Live: pure-reasoning direct-Haiku run + native-parsed probe. Codex
       review: 0 P1/P2/P3 — no fix pass needed.
+- [ ] R6a Model tier layer (added 2026-06-11, runs BEFORE R6): profiles gain
+      a required `tiers` block (frontier/adviser/skilled/worker) with `roles`
+      as optional per-role overrides; rename `ModelRole.FRONTIER` →
+      `REASONER`; `default.json5` migrated byte-equivalently. Spec:
+      [docs/superpowers/specs/2026-06-11-model-tiers-design.md](../docs/superpowers/specs/2026-06-11-model-tiers-design.md).
 - [ ] R6 Profile CLI surface + personal-dev / research-playground /
-      client-baseline example profiles; README.
+      client-baseline example profiles (tier format per R6a); README.
 - [ ] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
       smoke suite + fixtures; `npm run bench`.
 - [ ] R8 Offline e2e on a fake provider + security hardening (patch guards,
