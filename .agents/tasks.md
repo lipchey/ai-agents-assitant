@@ -78,8 +78,20 @@ future sessions focused on what still needs action.
       tests, 217 unit cases green). Codex review: 2 P2 confirmed-fixed
       (full-binding equivalence pinning; DEFAULT_ROLE_TIER contract tests),
       re-review both CLOSED; 1 P3 routed to backlog.
-- [ ] R6 Profile CLI surface + personal-dev / research-playground /
-      client-baseline example profiles (tier format per R6a); README.
+- [x] R6 Profile CLI surface + personal-dev / research-playground /
+      client-baseline example profiles (tier format per R6a); README. Done
+      2026-06-11 (commits `277c054` + review-fix `79380bb`). `--profile` flag
+      (precedence: flag > non-blank AGENT_PROFILE > default), profile name in
+      the telemetry header (RunSummary already carried it); three direct-
+      transport example profiles (no pricing additions needed); run-task.sh
+      PROFILE passthrough; README rewritten (quickstart, profiles anatomy,
+      transports, resume); .env.example AGENT_PROFILE; all four shipped
+      profiles CI-validated (parametrized loader + cli tests; 244 unit
+      cases). Codex review: 2 P2 confirmed-fixed (gateway startup now gated
+      on `effectiveTransports` + `ToolRegistry.requiresGateway` — the web
+      provider still legitimately requires the gateway; `--resume` recovers
+      the original run's profile from its RunSummary, explicit conflicting
+      selection honored with a warning), re-review both CLOSED, 0 new.
 - [ ] R7 Bench harness: `runAgentTask` entrypoint + promptfoo provider +
       smoke suite + fixtures; `npm run bench`.
 - [ ] R8 Offline e2e on a fake provider + security hardening (patch guards,

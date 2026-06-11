@@ -387,26 +387,37 @@ default-profile equivalence tests prove byte-identical resolved bindings.
   `.env.example`, `README.md` (or create — usage, profiles, resume, bench
   pointer), `.agents/memory.md` (§ Architecture: profiles/providers note)
 
-- [ ] **Step 6.1:** `--profile <name|path>` flag (default `default`),
+- [x] **Step 6.1:** `--profile <name|path>` flag (default `default`),
   `AGENT_PROFILE` env override; profile name flows into RunSummary (already
   in the type) and the console report header.
-- [ ] **Step 6.2:** Author the three example profiles in the TIER format
+  (Done: precedence = explicit flag > non-blank AGENT_PROFILE > default;
+  `Profile:` line in the telemetry report. R6 review added: gateway startup
+  gated on `effectiveTransports(profile)` + `ToolRegistry.requiresGateway()`;
+  `--resume` recovers the original run's profile from its RunSummary, an
+  explicit conflicting selection is honored with a warning.)
+- [x] **Step 6.2:** Author the three example profiles in the TIER format
   (R6a) per
   [specs/2026-06-11-model-tiers-design.md](../specs/2026-06-11-model-tiers-design.md)
   §7 (personal-dev sketched there; research-playground = current DeepSeek
   cascade on direct transport; client-baseline = cheap cascade, Sonnet
   coder, Opus SME, budget 0.50). Every `model` must have a pricing entry —
   extend `model-pricing.json` if a chosen id is missing.
-- [ ] **Step 6.3:** `run-task.sh`: add `PROFILE` env passthrough
+  (Done: all chosen bare ids were already priced since R3 — no pricing diff.)
+- [x] **Step 6.3:** `run-task.sh`: add `PROFILE` env passthrough
   (`PROFILE=personal-dev BUDGET=0.25 scripts/run-task.sh "<task>"`).
-- [ ] **Step 6.4:** Update `.env.example` (AGENT_PROFILE, note that provider
+- [x] **Step 6.4:** Update `.env.example` (AGENT_PROFILE, note that provider
   keys are now read directly by the app for direct transport) and write the
   README sections (quickstart, profile anatomy, resume, transports).
-- [ ] **Step 6.5:** Loader test additions: all four shipped profiles load
+  (Bench pointer deferred to R7 — no bench exists to point at yet.)
+- [x] **Step 6.5:** Loader test additions: all four shipped profiles load
   and validate in CI (`tests/unit/profile.test.ts` — parametrized).
-- [ ] **Step 6.6:** Verify: `npm test` green; `npm start -- --profile
+  (Plus `tests/unit/cli.test.ts`: --profile parsing + selection precedence +
+  resume-profile recovery; 244 unit cases total after the review fixes.)
+- [x] **Step 6.6:** Verify: `npm test` green; `npm start -- --profile
   research-playground "Summarize: <one paragraph>"` runs live cheap.
-- [ ] **Step 6.7:** Commit: `feat: profile CLI surface + personal-dev / research-playground / client-baseline profiles`
+  (Live: completed on direct DeepSeek Flash, $0.000163, profileName in
+  RunSummary + telemetry header; PROFILE passthrough fail-fast checked.)
+- [x] **Step 6.7:** Commit: `feat: profile CLI surface + personal-dev / research-playground / client-baseline profiles`
 
 **Verification boundary:** `npm test` green; all profiles validate; live
 cheap run per at least one non-default profile.

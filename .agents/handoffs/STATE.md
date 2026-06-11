@@ -6,9 +6,9 @@ active_task: ""
 active_status: ""
 baseline_sha: ""
 r0_keys_rotated: true
-updated_at: 2026-06-11T11:13:21Z
+updated_at: 2026-06-11T12:17:47Z
 updated_by: claude
-next_action: "R6a complete (feat 4af2809, review-fix 41f18ad; Codex 2 P2 confirmed-fixed, re-review CLOSED; 1 P3 → backlog). Next: R6 via 'виконай сесію R6' — Profiles + CLI surface + example profiles in TIER format per docs/superpowers/specs/2026-06-11-model-tiers-design.md §7 (personal-dev/research-playground/client-baseline.json5, --profile CLI polish, run-task.sh PROFILE passthrough, .env.example, README). Mind: AGENT_PROFILE env selection already exists in src/cli/config.ts (loadActiveProfile); profiles need pricing entries for every model id; direct bindings need bare ids; profiles may pin prompts.cascadeNote; profile contract is now tiers (4 required) + optional role overrides (strict full-binding | {tier, params} union, ADR-003)."
+next_action: "R6 complete (feat 277c054, review-fix 79380bb; Codex 2 P2 confirmed-fixed, re-review both CLOSED, 0 new). Next: R7 via 'виконай сесію R7' — bench harness: runAgentTask programmatic entrypoint (main.ts becomes a thin CLI over it), promptfoo custom JS provider (consult CURRENT promptfoo docs for the provider API), bench/ config + 6-task smoke suite + mini-ts-repo fixture, npm run bench → reports/bench/<timestamp>/; offline-mode flag may be a no-op guard until R8 (leave a backlog checkbox if so). Mind: owner raised the quality.json fast tier to 240s and added unit+prettier-code checks (bd79aab) — ./verify --fast now runs the unit suite; tier budgets are NEGOTIABLE, propose raises to the owner (session-protocol.md); profile selection precedence is --profile flag > non-blank AGENT_PROFILE > default; --resume recovers the original profile from its RunSummary; gateway startup is conditional (effectiveTransports + ToolRegistry.requiresGateway)."
 ---
 
 # Live refactor state
@@ -95,6 +95,20 @@ frontierArchitect/frontierCritic stay — FROZEN RunSummary §3.4).
 cascadeNote bytes unchanged; `DEFAULT_CASCADE_NOTE` reworded to tier
 vocabulary). Codex review: 2 P2 (test-strengthening) confirmed-fixed,
 re-review both CLOSED; 1 P3 (memory §1 wording) → backlog needs-human.
-Next R-session is R6 (Profiles + CLI surface, example profiles in tier
-format). Ordering rules still hold: never run two sessions concurrently in
-this pilot.
+R6 is complete (2026-06-11): the profile CLI surface landed (feat `277c054`,
+review-fix `79380bb`; baseline `6e8898f`). `--profile <name|path>` flag
+(precedence: flag > non-blank AGENT_PROFILE > default), `Profile:` line in
+the telemetry report, three direct-transport example profiles
+(personal-dev / research-playground / client-baseline, tier format, no
+pricing additions needed), run-task.sh PROFILE passthrough, README rewrite
+(quickstart/profiles/transports/resume), .env.example AGENT_PROFILE; all
+four shipped profiles CI-validated (244 unit cases). Live:
+`--profile research-playground` completed on direct DeepSeek Flash
+($0.000163, profileName in RunSummary + telemetry). Codex review: 2 P2
+confirmed-fixed (conditional gateway startup via `effectiveTransports` +
+`ToolRegistry.requiresGateway`; `--resume` recovers the original profile
+from its RunSummary), re-review both CLOSED, 0 new. In parallel the owner
+landed `bd79aab`: fast-tier budget 240s + unit/prettier-code checks, and the
+negotiable-budgets rule in session-protocol.md.
+Next R-session is R7 (bench harness). Ordering rules still hold: never run
+two sessions concurrently in this pilot.

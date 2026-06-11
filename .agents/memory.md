@@ -89,6 +89,25 @@ before. The default cascade:
   (`claude-haiku-4-5`); gateway-prefixed ids on a direct binding fail at
   profile load. Bare-id pricing entries live beside the legacy prefixed keys
   in `model-pricing.json`.
+- Profile selection (R6): the active profile comes from `--profile <name|path>`
+  (wins) > non-blank `AGENT_PROFILE` > `"default"` (`loadActiveProfile`,
+  `src/cli/config.ts`); run-task.sh passes `PROFILE` through. The profile name
+  prints in the telemetry report and lands in `RunSummary.profileName`.
+  `--resume` recovers the ORIGINAL run's profile from
+  `reports/runs/<runId>.json` when no explicit selection is made
+  (`resolveResumeProfile`; missing summary → default + warn; an explicit
+  conflicting selection is honored with a warning). The OpenClaw gateway
+  starts only when needed: `effectiveTransports(profile)` (resolved bindings
+  across all 8 roles) contains `openclaw` OR `ToolRegistry.requiresGateway()`
+  — the web-search provider routes through the gateway and declares
+  `requiresGateway: true`, so default-registry runs still start it regardless
+  of LLM transport (gateway-less web search = tool-transport backlog item).
+  Shipped example profiles (all direct transport, tier format):
+  `personal-dev` (Sonnet adviser/skilled, Haiku worker, Fable 5 frontier, GPT
+  cross-family critic, $2), `research-playground` (default DeepSeek-heavy
+  cascade on direct ids, reasoner override only, $1), `client-baseline`
+  (DeepSeek Flash worker, Sonnet skilled, Opus adviser/frontier, no
+  cross-family critic, $0.50).
 - Structured outputs (R5, spec D6): decision-shaped calls (router, frontier
   architect, both critics, swarm leadDelegator) pass a zod schema from
   `src/types/graph/decisions.ts` via `LlmCallOptions.structuredSchema`. On the
@@ -398,6 +417,19 @@ vocabulary). Codex review: 2 P2 (test-strengthening: full-binding equivalence
 pinning, DEFAULT_ROLE_TIER contract) confirmed-fixed, re-review both CLOSED;
 1 P3 (memory §1 goal wording) → backlog. Unit suite 217 cases. Next is R6
 (profile CLI surface + example profiles in tier format).
+
+Status update 2026-06-11 (R6 done): the profile CLI surface landed (feat
+`277c054`, review-fix `79380bb`; baseline `6e8898f`). `--profile` flag +
+AGENT_PROFILE precedence, telemetry-header profile line, three direct-transport
+example profiles (`personal-dev` / `research-playground` / `client-baseline`),
+run-task.sh PROFILE passthrough, README rewrite, .env.example AGENT_PROFILE —
+see §2 "Profile selection (R6)". Live check: `--profile research-playground`
+completed on direct DeepSeek Flash ($0.000163). Codex review: 2 P2
+confirmed-fixed (conditional gateway startup; resume profile recovery),
+re-review both CLOSED, 0 new; 244 unit cases green. In parallel the owner
+raised the `quality.json` fast-tier budget to 240s and added `unit` +
+`prettier-code` checks there (`bd79aab`) — `./verify --fast` now runs the unit
+suite. Next is R7 (bench harness: `runAgentTask` entrypoint + promptfoo).
 
 Open backlog:
 
