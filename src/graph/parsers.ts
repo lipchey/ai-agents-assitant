@@ -34,8 +34,14 @@ const heuristicComplexity = (task: string): RouterDecision => {
     return { complexity: GraphComplexity.TRIVIAL, routeConfidence: 0.6 };
 };
 
-export const parseRouterDecision = (content: string, task: string): RouterDecision => {
-    const parsed = asRecord(extractJsonObject(content));
+/* A provider-validated structured object (R5) takes precedence over text
+   extraction; the text ladder stays the universal fallback (openclaw transport,
+   unsupported providers, native parse failures). */
+const decisionRecord = (content: string, preParsed: unknown): Record<string, unknown> | null =>
+    asRecord(preParsed) ?? asRecord(extractJsonObject(content));
+
+export const parseRouterDecision = (content: string, task: string, preParsed?: unknown): RouterDecision => {
+    const parsed = decisionRecord(content, preParsed);
     const complexity = parsed?.complexity;
     const confidence = parsed?.routeConfidence;
 
@@ -45,8 +51,8 @@ export const parseRouterDecision = (content: string, task: string): RouterDecisi
     return heuristicComplexity(task);
 };
 
-export const parseCriticDecision = (content: string): CriticDecision => {
-    const parsed = asRecord(extractJsonObject(content));
+export const parseCriticDecision = (content: string, preParsed?: unknown): CriticDecision => {
+    const parsed = decisionRecord(content, preParsed);
     const consensus =
         typeof parsed?.consensus === "boolean" ? parsed.consensus : /\bLGTM\b|approved|looks good/iu.test(content);
     const needsMoreContext =
@@ -57,8 +63,11 @@ export const parseCriticDecision = (content: string): CriticDecision => {
     return { consensus, needsMoreContext, critique };
 };
 
-export const parseFrontierArchitectureDecision = (content: string): FrontierArchitectureDecision => {
-    const parsed = asRecord(extractJsonObject(content));
+export const parseFrontierArchitectureDecision = (
+    content: string,
+    preParsed?: unknown,
+): FrontierArchitectureDecision => {
+    const parsed = decisionRecord(content, preParsed);
     const architectureSpec =
         typeof parsed?.architectureSpec === "string" && parsed.architectureSpec.trim()
             ? parsed.architectureSpec.trim()
@@ -78,9 +87,9 @@ export const parseFrontierArchitectureDecision = (content: string): FrontierArch
     return { architectureSpec, confidence, escalateToStrong, escalationReason };
 };
 
-export const parseFrontierCriticDecision = (content: string): FrontierCriticDecision => {
-    const parsed = asRecord(extractJsonObject(content));
-    const baseDecision = parseCriticDecision(content);
+export const parseFrontierCriticDecision = (content: string, preParsed?: unknown): FrontierCriticDecision => {
+    const parsed = decisionRecord(content, preParsed);
+    const baseDecision = parseCriticDecision(content, preParsed);
     const confidence = typeof parsed?.confidence === "number" ? clamp01(parsed.confidence) : 0.55;
     const requiresStrongCritic =
         typeof parsed?.requiresStrongCritic === "boolean"

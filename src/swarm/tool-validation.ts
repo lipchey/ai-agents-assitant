@@ -1,11 +1,28 @@
 /* Network-free guard layer before any planner-proposed tool call runs. */
-import { FailureType, ReactDecisionKind, ToolErrorKind, type WorkerKind } from "../consts";
+import { FailureType, ReactDecisionKind, ToolErrorKind, WorkerKind } from "../consts";
 import { asRecord, extractJsonObject, errorMessage, readString } from "../shared";
 import { ToolError, getDefaultToolRegistry } from "../tools";
 import type { ToolArgs, ToolRegistry } from "../types/tools";
 import type { ReactDecision, SanitizedAction } from "../types/swarm";
 
 export type { ReactDecision, SanitizedAction } from "../types/swarm";
+
+/* Delegation decision parser: a provider-validated structured object takes
+   precedence; the text path and the heuristic-seed fallback stay verbatim. */
+export const parseWorkerKind = (content: string, fallback: WorkerKind, preParsed?: unknown): WorkerKind => {
+    const parsed = asRecord(preParsed) ?? asRecord(extractJsonObject(content));
+    const value = typeof parsed?.workerKind === "string" ? parsed.workerKind.trim().toLowerCase() : "";
+    switch (value) {
+        case WorkerKind.CODE_EXPLORER:
+            return WorkerKind.CODE_EXPLORER;
+        case WorkerKind.INFRA_OPS:
+            return WorkerKind.INFRA_OPS;
+        case WorkerKind.WEB_RESEARCHER:
+            return WorkerKind.WEB_RESEARCHER;
+        default:
+            return fallback;
+    }
+};
 
 export const parseReactDecision = (content: string): ReactDecision => {
     const parsed = asRecord(extractJsonObject(content));

@@ -1,6 +1,6 @@
 import { ModelRole, UsageKey } from "../../consts";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { SystemPrompts } from "../../prompts";
+import { promptsForConfig } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
 import type { GraphStateValue } from "../../state";
@@ -8,7 +8,7 @@ import type { GraphStateValue } from "../../state";
 export const smeTiebreaker = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.SME,
-        SystemPrompts.smeTiebreaker,
+        promptsForConfig(config).smeTiebreaker,
         [
             `Task:\n${state.originalTask}`,
             `Current draft:\n${state.currentDraft}`,

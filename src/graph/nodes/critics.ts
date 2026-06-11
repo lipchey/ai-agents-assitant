@@ -1,9 +1,10 @@
 import { ModelRole, RESPONSE_FORMAT_JSON, RECENT_DEBATE_WINDOW, UsageKey } from "../../consts";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { readProfile, resolveTuning } from "../../models";
-import { SystemPrompts } from "../../prompts";
+import { promptsForConfig } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
+import { criticDecisionSchema, frontierCriticDecisionSchema } from "../../types/graph";
 import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseCriticDecision, parseFrontierCriticDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../state";
@@ -11,7 +12,7 @@ import type { GraphStateValue } from "../../state";
 export const frontierCritic = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.FRONTIER,
-        SystemPrompts.frontierCritic,
+        promptsForConfig(config).frontierCritic,
         [
             `Task:\n${state.originalTask}`,
             `Draft:\n${state.currentDraft}`,
@@ -20,10 +21,10 @@ export const frontierCritic = async (state: GraphStateValue, config?: LangGraphR
         ]
             .filter(Boolean)
             .join("\n\n"),
-        { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON },
+        { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON, structuredSchema: frontierCriticDecisionSchema },
         config,
     );
-    const decision = parseFrontierCriticDecision(result.content);
+    const decision = parseFrontierCriticDecision(result.content, result.parsed);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
     const strongCriticRequired =
         Boolean(deterministicReason) ||
@@ -52,7 +53,7 @@ export const frontierCritic = async (state: GraphStateValue, config?: LangGraphR
 export const openaiCritic = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.CRITIC,
-        SystemPrompts.openaiCritic,
+        promptsForConfig(config).openaiCritic,
         [
             `Task:\n${state.originalTask}`,
             `Draft:\n${state.currentDraft}`,
@@ -61,10 +62,10 @@ export const openaiCritic = async (state: GraphStateValue, config?: LangGraphRun
         ]
             .filter(Boolean)
             .join("\n\n"),
-        { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON },
+        { maxTokens: 1_400, responseFormat: RESPONSE_FORMAT_JSON, structuredSchema: criticDecisionSchema },
         config,
     );
-    const decision = parseCriticDecision(result.content);
+    const decision = parseCriticDecision(result.content, result.parsed);
     /* Frontier critic already counted this escalated round. */
     const frontierAlreadyCounted = state.strongCriticRequired;
     const debateRound = frontierAlreadyCounted ? Math.max(0, state.debateIterations - 1) : state.debateIterations;

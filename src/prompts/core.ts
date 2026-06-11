@@ -15,19 +15,27 @@ const CORE = [
     "  nothing outside your declared output. Do your single job and stop.",
 ].join("\n");
 
-const REASONING_CONTEXT = [
-    "System mission: produce correct results at the lowest cost. Cheap models",
-    "(DeepSeek Flash) route and compress; a low-cost frontier model (DeepSeek V4",
-    "Pro) does first-pass architecture and critique; strong models (Claude Opus,",
-    "GPT-5.5) run ONLY when high-risk or low-confidence signals demand them.",
-    "Spending a strong model on routine work, or under-reasoning a high-stakes",
-    "change, both break the system — escalate by signal, not by habit.",
-    "",
-    "Reasoning-layer data flow (one direction): complexityRouter → {Swarm tools →",
-    "firewall compression} → frontierArchitect → (claudeArchitect, only if",
-    "escalated) → claudeCoder → frontierCritic → (openaiCritic, only if escalated)",
-    "→ (smeTiebreaker, only on deadlock) → verify (objective typecheck) → finalize.",
-].join("\n");
+/* Model-agnostic fallback when the active profile pins no prompts.cascadeNote.
+   Describes the cascade tiers without naming concrete models (spec §3.2). */
+export const DEFAULT_CASCADE_NOTE =
+    "Cheap models route and compress; stronger models architect and review; the " +
+    "strongest models run ONLY when high-risk or low-confidence signals demand them.";
+
+/* The cascade description is profile data (prompts.cascadeNote): concrete model
+   names must not be hardcoded into cache anchors (review blocker #5). The
+   composed prompt is byte-stable per profile — same note, same anchor bytes. */
+const reasoningContext = (cascadeNote: string): string =>
+    [
+        "System mission: produce correct results at the lowest cost.",
+        cascadeNote,
+        "Spending a strong model on routine work, or under-reasoning a high-stakes",
+        "change, both break the system — escalate by signal, not by habit.",
+        "",
+        "Reasoning-layer data flow (one direction): complexityRouter → {Swarm tools →",
+        "firewall compression} → frontierArchitect → (claudeArchitect, only if",
+        "escalated) → claudeCoder → frontierCritic → (openaiCritic, only if escalated)",
+        "→ (smeTiebreaker, only on deadlock) → verify (objective typecheck) → finalize.",
+    ].join("\n");
 
 const WORKER_CORE = [
     'You are one execution worker inside "ai-agents-assitant", an autonomous',
@@ -54,6 +62,7 @@ const WORKER_CORE = [
     "  follow it before anything else.",
 ].join("\n");
 
-export const reasoning = (roleBlock: string): string => `${CORE}\n\n${REASONING_CONTEXT}\n\n${roleBlock}`;
+export const reasoning = (roleBlock: string, cascadeNote: string = DEFAULT_CASCADE_NOTE): string =>
+    `${CORE}\n\n${reasoningContext(cascadeNote)}\n\n${roleBlock}`;
 export const utility = (roleBlock: string): string => `${CORE}\n\n${roleBlock}`;
 export const worker = (roleBlock: string): string => `${WORKER_CORE}\n\n${roleBlock}`;

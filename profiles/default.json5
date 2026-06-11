@@ -54,4 +54,8 @@
     },
   },
   budget: { costBudgetUsd: 1 },
+  prompts: {
+    // Replicates the pre-R5 hardcoded cascade prose for this profile's bindings.
+    cascadeNote: "Cheap models (DeepSeek Flash) route and compress; a low-cost frontier model (DeepSeek V4 Pro) does first-pass architecture and critique; strong models (Claude Opus, GPT-5.5) run ONLY when high-risk or low-confidence signals demand them.",
+  },
 }

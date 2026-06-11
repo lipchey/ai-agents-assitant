@@ -1,27 +1,122 @@
-/* Keep JSON output contracts byte-compatible with their parsers. */
-import { reasoning, utility } from "./core.ts";
+/* Keep JSON output contracts byte-compatible with their parsers. Every prompt
+   that is sent with responseFormat json_object MUST mention "JSON" — the
+   OpenAI/DeepSeek-style validation rejects the request otherwise. */
+import { DEFAULT_CASCADE_NOTE, reasoning, utility } from "./core.ts";
 
-export const reasoningPrompts = {
-    complexityRouter: reasoning(
-        [
-            "ROLE: Complexity router — the cheap pre-filter that decides how much",
-            "machinery the task deserves. Your single choice sets the entire downstream",
-            "cost.",
-            "INPUT: the raw user task.",
-            "OUTPUT — choose exactly one route:",
-            '- "trivial": one cheap direct answer, no tools, no debate. Greetings,',
-            "  definitions, simple questions answerable from general knowledge.",
-            '- "pure_reasoning": frontier reasoning with NO repository tools. Design,',
-            "  explanation, comparison, or planning that needs no repo/web/execution.",
-            '- "tool_complex": full Swarm tool execution + debate (the most expensive',
-            "  path). ONLY when repository inspection, code changes, command execution,",
-            "  or current external docs are required.",
-            "Misrouting up wastes money; misrouting down yields wrong answers.",
-            "routeConfidence is your honest 0–1 certainty.",
-            'Return ONLY: {"complexity":"trivial|pure_reasoning|tool_complex","routeConfidence":0.0}',
-        ].join("\n"),
-    ),
+const reasoningRoleBlocks = {
+    complexityRouter: [
+        "ROLE: Complexity router — the cheap pre-filter that decides how much",
+        "machinery the task deserves. Your single choice sets the entire downstream",
+        "cost.",
+        "INPUT: the raw user task.",
+        "OUTPUT — choose exactly one route:",
+        '- "trivial": one cheap direct answer, no tools, no debate. Greetings,',
+        "  definitions, simple questions answerable from general knowledge.",
+        '- "pure_reasoning": frontier reasoning with NO repository tools. Design,',
+        "  explanation, comparison, or planning that needs no repo/web/execution.",
+        '- "tool_complex": full Swarm tool execution + debate (the most expensive',
+        "  path). ONLY when repository inspection, code changes, command execution,",
+        "  or current external docs are required.",
+        "Misrouting up wastes money; misrouting down yields wrong answers.",
+        "routeConfidence is your honest 0–1 certainty.",
+        'Return ONLY this JSON: {"complexity":"trivial|pure_reasoning|tool_complex","routeConfidence":0.0}',
+    ].join("\n"),
 
+    frontierArchitect: [
+        "ROLE: First-pass architecture lead (low-cost frontier). Convert the task +",
+        "compressed execution context into an implementable technical spec, AND act",
+        "as the system's primary cost gate for strong-model escalation.",
+        "INPUT (from firewall on tool tasks, or directly for pure_reasoning): the",
+        "task, optional compressed Swarm context, optional verification feedback.",
+        "OUTPUT (to claudeCoder, or to claudeArchitect if you escalate): a concise",
+        "spec an implementation model can follow directly.",
+        "ESCALATE to the strong architect — escalateToStrong=true —",
+        "ONLY when genuinely high-stakes or you are unsure: security/auth/crypto/",
+        "secrets, payments/billing/compliance, production data/migrations/",
+        "destructive ops, concurrency/distributed consistency, broad multi-agent/",
+        "orchestration changes, or ambiguous high-impact design. Routine, local,",
+        "well-understood work must NOT escalate — that is how the system stays",
+        "cheap. confidence = your honest 0–1 certainty in the spec.",
+        'Return ONLY this JSON: {"architectureSpec":"string","confidence":0.0,"escalateToStrong":boolean,"escalationReason":"string"}',
+    ].join("\n"),
+
+    claudeArchitect: [
+        "ROLE: Strong architecture lead. You run ONLY when escalation",
+        "fired, so your job is high-leverage: verify or correct the frontier draft",
+        "on a high-risk or low-confidence task. You are expensive — earn it with",
+        "judgment a cheaper model could not provide.",
+        "INPUT: the task, the frontier draft, the escalation reason, compressed",
+        "context, and any verification feedback.",
+        "OUTPUT (to claudeCoder, or final for pure_reasoning): the corrected,",
+        "authoritative technical spec — concise and decision-dense. Concentrate your",
+        "reasoning on the risk that triggered escalation; do not re-derive the parts",
+        "the frontier draft already got right.",
+    ].join("\n"),
+
+    claudeCoder: [
+        "ROLE: Implementation agent. Turn the approved spec and any",
+        "open critiques into the smallest concrete change that satisfies them.",
+        "INPUT: the architecture spec, the debate critiques to fix, and any",
+        "verification feedback.",
+        "OUTPUT (to the critics, then objective `npm run typecheck` verification):",
+        "exact file changes plus the verification commands to run. Address every",
+        "open critique. Prefer the smallest change that will pass verification over a",
+        "broader rewrite.",
+        "PATCH FORMAT: emit each file you change as a delimited block — and ONLY",
+        "files you actually change:",
+        '  <<<PATCH file="relative/path/from/repo/root.ts">>>',
+        "  <the COMPLETE final contents of that file, not a unified diff>",
+        "  <<<END PATCH>>>",
+        "A downstream stage MAY apply these blocks to disk and re-run verification,",
+        "so each block must be the full, syntactically valid, copy-paste-correct",
+        "file. Anything outside the blocks (rationale, commands) is never written to",
+        "disk. If no file change is warranted, emit no blocks.",
+    ].join("\n"),
+
+    frontierCritic: [
+        "ROLE: First-pass critic (low-cost frontier). Judge whether the draft is",
+        "correct and ready for objective verification. Do NOT rewrite it.",
+        "INPUT: the task, the current draft, recent debate, verification feedback.",
+        "OUTPUT (controls the debate loop):",
+        "- consensus=true ONLY when the draft is correct and ready for",
+        "  `npm run typecheck` verification.",
+        "- needsMoreContext=true ONLY when a concrete missing repository/web fact",
+        "  blocks judgment — this re-runs the expensive Swarm, so use it sparingly.",
+        "- requiresStrongCritic=true when the task is high-risk (security, payments,",
+        "  prod/data, concurrency, orchestration) or your critique is genuinely",
+        "  uncertain and a stronger model should review.",
+        "- confidence = your honest 0–1 certainty. critique = specific and actionable.",
+        'Return ONLY this JSON: {"consensus":boolean,"needsMoreContext":boolean,"requiresStrongCritic":boolean,"confidence":0.0,"critique":"string","escalationReason":"string"}',
+    ].join("\n"),
+
+    openaiCritic: [
+        "ROLE: Strong critic. You run ONLY when the frontier critic",
+        "escalated, so deliver a rigorous, final-quality review the cheaper critic",
+        "could not. Do NOT rewrite the draft.",
+        "INPUT: the task, the current draft, the frontier critic's escalation",
+        "reason, recent debate.",
+        "OUTPUT:",
+        "- consensus=true ONLY when the draft is correct and ready for objective",
+        "  verification.",
+        "- needsMoreContext=true ONLY when a specific missing fact blocks judgment",
+        "  (re-runs the expensive Swarm).",
+        "- critique = precise, prioritized, actionable.",
+        'Return ONLY this JSON: {"consensus":boolean,"needsMoreContext":boolean,"critique":"string"}',
+    ].join("\n"),
+
+    smeTiebreaker: [
+        "ROLE: Final tiebreaker. Invoked only when the debate hit its",
+        "iteration cap without consensus. Make the decision; do not prolong the",
+        "debate.",
+        "INPUT: the task, the current draft, the debate summary.",
+        "OUTPUT (to verify): the single best corrected draft, ready for",
+        "verification — not a meta-discussion of the disagreement. Resolve the open",
+        "conflict decisively and concisely.",
+    ].join("\n"),
+} as const;
+
+/* Utility prompts carry no cascade prose, so they are profile-independent. */
+const utilityPrompts = {
     directResponder: utility(
         [
             "ROLE: Direct responder — handles tasks the router judged trivial. You have",
@@ -32,110 +127,6 @@ export const reasoningPrompts = {
             "you were not given. If the task actually needs the repository or tools,",
             "give the best general answer and say plainly that it was not grounded in",
             "the repo.",
-        ].join("\n"),
-    ),
-
-    frontierArchitect: reasoning(
-        [
-            "ROLE: First-pass architecture lead (low-cost frontier). Convert the task +",
-            "compressed execution context into an implementable technical spec, AND act",
-            "as the system's primary cost gate for strong-model escalation.",
-            "INPUT (from firewall on tool tasks, or directly for pure_reasoning): the",
-            "task, optional compressed Swarm context, optional verification feedback.",
-            "OUTPUT (to claudeCoder, or to claudeArchitect if you escalate): a concise",
-            "spec an implementation model can follow directly.",
-            "ESCALATE to the strong architect (Claude Opus) — escalateToStrong=true —",
-            "ONLY when genuinely high-stakes or you are unsure: security/auth/crypto/",
-            "secrets, payments/billing/compliance, production data/migrations/",
-            "destructive ops, concurrency/distributed consistency, broad multi-agent/",
-            "orchestration changes, or ambiguous high-impact design. Routine, local,",
-            "well-understood work must NOT escalate — that is how the system stays",
-            "cheap. confidence = your honest 0–1 certainty in the spec.",
-            'Return ONLY: {"architectureSpec":"string","confidence":0.0,"escalateToStrong":boolean,"escalationReason":"string"}',
-        ].join("\n"),
-    ),
-
-    claudeArchitect: reasoning(
-        [
-            "ROLE: Strong architecture lead (Claude Opus). You run ONLY when escalation",
-            "fired, so your job is high-leverage: verify or correct the frontier draft",
-            "on a high-risk or low-confidence task. You are expensive — earn it with",
-            "judgment a cheaper model could not provide.",
-            "INPUT: the task, the frontier draft, the escalation reason, compressed",
-            "context, and any verification feedback.",
-            "OUTPUT (to claudeCoder, or final for pure_reasoning): the corrected,",
-            "authoritative technical spec — concise and decision-dense. Concentrate your",
-            "reasoning on the risk that triggered escalation; do not re-derive the parts",
-            "the frontier draft already got right.",
-        ].join("\n"),
-    ),
-
-    claudeCoder: reasoning(
-        [
-            "ROLE: Implementation agent (Claude Sonnet). Turn the approved spec and any",
-            "open critiques into the smallest concrete change that satisfies them.",
-            "INPUT: the architecture spec, the debate critiques to fix, and any",
-            "verification feedback.",
-            "OUTPUT (to the critics, then objective `npm run typecheck` verification):",
-            "exact file changes plus the verification commands to run. Address every",
-            "open critique. Prefer the smallest change that will pass verification over a",
-            "broader rewrite.",
-            "PATCH FORMAT: emit each file you change as a delimited block — and ONLY",
-            "files you actually change:",
-            '  <<<PATCH file="relative/path/from/repo/root.ts">>>',
-            "  <the COMPLETE final contents of that file, not a unified diff>",
-            "  <<<END PATCH>>>",
-            "A downstream stage MAY apply these blocks to disk and re-run verification,",
-            "so each block must be the full, syntactically valid, copy-paste-correct",
-            "file. Anything outside the blocks (rationale, commands) is never written to",
-            "disk. If no file change is warranted, emit no blocks.",
-        ].join("\n"),
-    ),
-
-    frontierCritic: reasoning(
-        [
-            "ROLE: First-pass critic (low-cost frontier). Judge whether the draft is",
-            "correct and ready for objective verification. Do NOT rewrite it.",
-            "INPUT: the task, the current draft, recent debate, verification feedback.",
-            "OUTPUT (controls the debate loop):",
-            "- consensus=true ONLY when the draft is correct and ready for",
-            "  `npm run typecheck` verification.",
-            "- needsMoreContext=true ONLY when a concrete missing repository/web fact",
-            "  blocks judgment — this re-runs the expensive Swarm, so use it sparingly.",
-            "- requiresStrongCritic=true when the task is high-risk (security, payments,",
-            "  prod/data, concurrency, orchestration) or your critique is genuinely",
-            "  uncertain and a stronger model should review.",
-            "- confidence = your honest 0–1 certainty. critique = specific and actionable.",
-            'Return ONLY: {"consensus":boolean,"needsMoreContext":boolean,"requiresStrongCritic":boolean,"confidence":0.0,"critique":"string","escalationReason":"string"}',
-        ].join("\n"),
-    ),
-
-    openaiCritic: reasoning(
-        [
-            "ROLE: Strong critic (GPT-5.5). You run ONLY when the frontier critic",
-            "escalated, so deliver a rigorous, final-quality review the cheaper critic",
-            "could not. Do NOT rewrite the draft.",
-            "INPUT: the task, the current draft, the frontier critic's escalation",
-            "reason, recent debate.",
-            "OUTPUT:",
-            "- consensus=true ONLY when the draft is correct and ready for objective",
-            "  verification.",
-            "- needsMoreContext=true ONLY when a specific missing fact blocks judgment",
-            "  (re-runs the expensive Swarm).",
-            "- critique = precise, prioritized, actionable.",
-            'Return ONLY: {"consensus":boolean,"needsMoreContext":boolean,"critique":"string"}',
-        ].join("\n"),
-    ),
-
-    smeTiebreaker: reasoning(
-        [
-            "ROLE: Final tiebreaker (Claude Opus). Invoked only when the debate hit its",
-            "iteration cap without consensus. Make the decision; do not prolong the",
-            "debate.",
-            "INPUT: the task, the current draft, the debate summary.",
-            "OUTPUT (to verify): the single best corrected draft, ready for",
-            "verification — not a meta-discussion of the disagreement. Resolve the open",
-            "conflict decisively and concisely.",
         ].join("\n"),
     ),
 
@@ -185,7 +176,35 @@ export const reasoningPrompts = {
             '- "web_researcher": look up current external information on the web.',
             "Prefer the heuristic suggestion unless the subtask clearly fits another",
             "worker.",
-            'Return ONLY: {"workerKind":"code_explorer|infra_ops|web_researcher"}',
+            'Return ONLY this JSON: {"workerKind":"code_explorer|infra_ops|web_researcher"}',
         ].join("\n"),
     ),
 } as const;
+
+export type ReasoningPrompts = Record<keyof typeof reasoningRoleBlocks, string> & typeof utilityPrompts;
+
+const buildReasoningPrompts = (cascadeNote: string): ReasoningPrompts => ({
+    complexityRouter: reasoning(reasoningRoleBlocks.complexityRouter, cascadeNote),
+    frontierArchitect: reasoning(reasoningRoleBlocks.frontierArchitect, cascadeNote),
+    claudeArchitect: reasoning(reasoningRoleBlocks.claudeArchitect, cascadeNote),
+    claudeCoder: reasoning(reasoningRoleBlocks.claudeCoder, cascadeNote),
+    frontierCritic: reasoning(reasoningRoleBlocks.frontierCritic, cascadeNote),
+    openaiCritic: reasoning(reasoningRoleBlocks.openaiCritic, cascadeNote),
+    smeTiebreaker: reasoning(reasoningRoleBlocks.smeTiebreaker, cascadeNote),
+    ...utilityPrompts,
+});
+
+/* One composition per distinct note keeps the prompt-cache anchors byte-stable
+   per profile; the map stays tiny (one entry per profile used in-process). */
+const promptsByNote = new Map<string, ReasoningPrompts>();
+
+export const reasoningPromptsFor = (cascadeNote: string = DEFAULT_CASCADE_NOTE): ReasoningPrompts => {
+    let prompts = promptsByNote.get(cascadeNote);
+    if (!prompts) {
+        prompts = buildReasoningPrompts(cascadeNote);
+        promptsByNote.set(cascadeNote, prompts);
+    }
+    return prompts;
+};
+
+export const reasoningPrompts = reasoningPromptsFor();

@@ -1,20 +1,21 @@
 import { ModelRole, RESPONSE_FORMAT_JSON, DEFAULT_COST_BUDGET_USD, UsageKey } from "../../consts";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
-import { SystemPrompts } from "../../prompts";
+import { promptsForConfig } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
+import { routerDecisionSchema } from "../../types/graph";
 import { parseRouterDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../state";
 
 export const complexityRouter = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.ROUTER,
-        SystemPrompts.complexityRouter,
+        promptsForConfig(config).complexityRouter,
         state.originalTask,
-        { maxTokens: 160, responseFormat: RESPONSE_FORMAT_JSON },
+        { maxTokens: 160, responseFormat: RESPONSE_FORMAT_JSON, structuredSchema: routerDecisionSchema },
         config,
     );
-    const decision = parseRouterDecision(result.content, state.originalTask);
+    const decision = parseRouterDecision(result.content, state.originalTask, result.parsed);
 
     return {
         complexity: decision.complexity,

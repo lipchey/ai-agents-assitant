@@ -2,12 +2,14 @@
    OpenClaw gateway. Option mapping honors current Anthropic API semantics —
    adaptive thinking, output_config.effort, no temperature on fixed-sampling
    models, and thinking omitted entirely where an explicit "disabled" would be
-   rejected. structuredSchema is ignored until R5 wires withStructuredOutput. */
+   rejected. structuredSchema rides the provider-native json_schema support
+   (spec D6) with the text path as the universal fallback. */
 import { ChatAnthropic } from "@langchain/anthropic";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import type { UsageMetadata } from "@langchain/core/messages";
 import { ChatDeepSeek } from "@langchain/deepseek";
 import { ChatOpenAI } from "@langchain/openai";
+import type { ZodType } from "zod";
 import {
     ANTHROPIC_ALWAYS_THINKING_MODEL_IDS,
     ANTHROPIC_FIXED_SAMPLING_MODEL_IDS,
@@ -18,7 +20,7 @@ import {
 import type { ProviderUsage } from "../../types/tools";
 import type { ModelBinding } from "../profile.ts";
 import { chatContentToString } from "../provider.ts";
-import type { ChatCallOptions, ChatProvider, ChatRetryListener } from "../provider.ts";
+import type { ChatCallOptions, ChatProvider, ChatResult, ChatRetryListener } from "../provider.ts";
 import { withLlmRetries } from "../retry.ts";
 
 type AnthropicFields = NonNullable<ConstructorParameters<typeof ChatAnthropic>[0]>;
@@ -178,6 +180,46 @@ export const extractDirectUsage = (message: DirectMessageLike): ProviderUsage =>
     };
 };
 
+type StructuredResponse = {
+    raw: DirectMessageLike & { content: unknown };
+    parsed: unknown;
+};
+
+type StructuredInvoker = (messages: [SystemMessage, HumanMessage]) => Promise<StructuredResponse>;
+
+/* Spec D6 per-provider feature gate. Anthropic and OpenAI honor the schema via
+   LangChain's "jsonSchema" method — the provider-NATIVE json_schema output
+   format, not forced tool calling, so it composes with extended thinking.
+   DeepSeek (its class forces functionCalling and strict json output needs the
+   beta endpoint) returns undefined: the call stays on JSON mode + text parsing.
+   includeRaw keeps the raw message for usage/cost extraction and turns a
+   schema-parse failure into { parsed: null } instead of a thrown error. */
+const buildStructuredInvoker = (
+    binding: ModelBinding,
+    options: ChatCallOptions,
+    schema: ZodType,
+): StructuredInvoker | undefined => {
+    switch (binding.provider) {
+        case ModelProvider.ANTHROPIC: {
+            const runnable = buildAnthropicModel(binding, options).withStructuredOutput(schema, {
+                includeRaw: true,
+                method: "jsonSchema",
+            });
+            return (messages) => runnable.invoke(messages);
+        }
+        case ModelProvider.OPENAI: {
+            const runnable = buildOpenAiModel(binding, options).withStructuredOutput(schema, {
+                includeRaw: true,
+                method: "jsonSchema",
+                strict: true,
+            });
+            return (messages) => runnable.invoke(messages);
+        }
+        case ModelProvider.DEEPSEEK:
+            return undefined;
+    }
+};
+
 export type DirectProviderHooks = {
     onRetry?: ChatRetryListener;
 };
@@ -185,14 +227,44 @@ export type DirectProviderHooks = {
 export const createDirectChatProvider = (hooks: DirectProviderHooks = {}): ChatProvider => ({
     kind: ModelTransport.DIRECT,
     call: async (role, binding, system, user, options = {}) => {
-        const model = buildDirectChatModel(binding, options);
-        const messages = buildDirectMessages(binding, system, user, options);
-        const response = await withLlmRetries(() => model.invoke(messages), {
+        const retryOptions = {
             maxRetries: options.maxRetries,
             onRetry: hooks.onRetry
-                ? (info) => hooks.onRetry?.(info, { role, model: binding.model, transport: ModelTransport.DIRECT })
+                ? (info: Parameters<ChatRetryListener>[0]) =>
+                      hooks.onRetry?.(info, { role, model: binding.model, transport: ModelTransport.DIRECT })
                 : undefined,
-        });
+        };
+        const messages = buildDirectMessages(binding, system, user, options);
+
+        if (options.structuredSchema !== undefined) {
+            /* json_object response_format would collide with the native
+               json_schema output format at the wire; the schema supersedes it. */
+            const structuredOptions = { ...options };
+            delete structuredOptions.responseFormat;
+            const invokeStructured = buildStructuredInvoker(binding, structuredOptions, options.structuredSchema);
+            if (invokeStructured) {
+                const response = await withLlmRetries(() => invokeStructured(messages), retryOptions);
+                const rawText = chatContentToString(response.raw.content);
+                const text = rawText || (response.parsed == null ? "" : JSON.stringify(response.parsed));
+                if (!text) {
+                    throw new Error(
+                        `Direct provider returned an empty assistant message for ${role} (${binding.model}).`,
+                    );
+                }
+                const result: ChatResult = {
+                    text,
+                    usage: extractDirectUsage(response.raw),
+                    pricingKey: binding.model,
+                };
+                if (response.parsed != null) {
+                    result.parsed = response.parsed;
+                }
+                return result;
+            }
+        }
+
+        const model = buildDirectChatModel(binding, options);
+        const response = await withLlmRetries(() => model.invoke(messages), retryOptions);
 
         const text = chatContentToString(response.content);
         if (!text) {

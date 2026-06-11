@@ -2,11 +2,11 @@
 phase: "R"
 phase_status: in_progress
 plan_path: docs/superpowers/plans/2026-06-10-boilerplate-refactor.md
-active_task: ""
-active_status: ""
-baseline_sha: ""
+active_task: "R5"
+active_status: pending
+baseline_sha: "efd78f1"
 r0_keys_rotated: true
-updated_at: 2026-06-11T09:45:00Z
+updated_at: 2026-06-11T10:00:00Z
 updated_by: claude
 next_action: "R4 complete (feat 1362bc9 run kernel + review-fix 85005a3; baseline 1e05557). Codex review → 1 P1 (resume runId path traversal; now validated at parse/context/writer layers) + 1 P2 (resumed failure summary lost task; recovered via graph.getState) confirmed-fixed → re-review both CLOSED. ./verify --fast green; 180 unit tests; live kill test (SIGINT after complexityRouter → failed summary, $0.001434 partial) and live resume (re-entered thread at swarm, completed, $0.111/0.25) both passed on a direct all-Haiku profile. NEW backlog finding: default-profile live runs 400 at the router ('Prompt must contain the word json' — json_object validation); pre-existing, natural fix in R5. Next: R5 — Structured outputs + prompt de-cascading, via 'виконай сесію R5'. Read STATE.md, plan Task R5 (Steps 5.1-5.7) + Standing rules, spec §3 (D6) + §3.2/§3.3; zod decision schemas mirror the EXISTING parser expectations (do not change field names); direct provider gains withStructuredOutput, openclaw stays text-only; parse sites prefer ChatResult.parsed with the text-parser fallback preserved verbatim (R1 parser tests unchanged); cascade prose in prompts becomes profile-injected (byte-stable per profile). Mind the json_object backlog finding when touching router/firewall prompts."
 ---

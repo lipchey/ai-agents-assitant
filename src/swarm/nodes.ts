@@ -11,33 +11,20 @@ import {
     WorkerStatus,
 } from "../consts";
 import { SystemPrompts } from "../prompts";
-import { asRecord, extractJsonObject, safeJson, truncate, emptyUsage, usageFromLlm } from "../shared";
+import { safeJson, truncate, emptyUsage, usageFromLlm } from "../shared";
 import { callLlm } from "../tools";
+import { workerKindDecisionSchema } from "../types/graph";
 import type { ToolRegistry } from "../types/tools";
 import type { HitlInterruptPayload, HitlResolution } from "../types/hitl";
 import type { SwarmWorkerStateValue } from "../state";
 import { runReactWorker } from "./react-worker.ts";
+import { parseWorkerKind } from "./tool-validation.ts";
 
 export const createWorkerNodes = (tools: ToolRegistry) => ({
     codeExplorer: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.CODE_EXPLORER, tools),
     infraOps: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.INFRA_OPS, tools),
     webResearcher: (state: SwarmWorkerStateValue) => runReactWorker(state, WorkerKind.WEB_RESEARCHER, tools),
 });
-
-const parseWorkerKind = (content: string, fallback: WorkerKind): WorkerKind => {
-    const parsed = asRecord(extractJsonObject(content));
-    const value = typeof parsed?.workerKind === "string" ? parsed.workerKind.trim().toLowerCase() : "";
-    switch (value) {
-        case WorkerKind.CODE_EXPLORER:
-            return WorkerKind.CODE_EXPLORER;
-        case WorkerKind.INFRA_OPS:
-            return WorkerKind.INFRA_OPS;
-        case WorkerKind.WEB_RESEARCHER:
-            return WorkerKind.WEB_RESEARCHER;
-        default:
-            return fallback;
-    }
-};
 
 export const leadDelegator = async (state: SwarmWorkerStateValue) => {
     const seededKind = state.workerKind ?? WorkerKind.CODE_EXPLORER;
@@ -55,9 +42,9 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
             ]
                 .filter(Boolean)
                 .join("\n\n"),
-            { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON },
+            { maxTokens: 120, responseFormat: RESPONSE_FORMAT_JSON, structuredSchema: workerKindDecisionSchema },
         );
-        selectedKind = parseWorkerKind(result.content, seededKind);
+        selectedKind = parseWorkerKind(result.content, seededKind, result.parsed);
         usage = usageFromLlm(result);
     } catch {
         /* A transient delegator failure should not abort deterministic worker fallback. */

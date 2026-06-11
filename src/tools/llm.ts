@@ -68,5 +68,10 @@ export const callLlm = async (
     const result = await provider.call(role, binding, system, user, merged);
 
     const pricing = (await loadPricing())[result.pricingKey];
-    return { content: result.text, ...calculateUsage(result.usage, pricing) };
+    const usage = calculateUsage(result.usage, pricing);
+    /* parsed is forwarded only when the provider honored structuredSchema, so
+       parse sites can use `parsed ?? text-fallback` without presence checks. */
+    return result.parsed === undefined
+        ? { content: result.text, ...usage }
+        : { content: result.text, parsed: result.parsed, ...usage };
 };

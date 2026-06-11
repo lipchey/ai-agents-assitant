@@ -1,9 +1,10 @@
 import { ModelRole, RESPONSE_FORMAT_JSON, UsageKey } from "../../consts";
 import type { LangGraphRunnableConfig } from "@langchain/langgraph";
 import { readProfile, resolveTuning } from "../../models";
-import { SystemPrompts } from "../../prompts";
+import { promptsForConfig } from "../../prompts";
 import { usageFromLlm } from "../../shared";
 import { callLlm } from "../../tools";
+import { frontierArchitectureDecisionSchema } from "../../types/graph";
 import { strongEscalationReasonForTask } from "../escalation.ts";
 import { parseFrontierArchitectureDecision } from "../parsers.ts";
 import type { GraphStateValue } from "../../state";
@@ -11,7 +12,7 @@ import type { GraphStateValue } from "../../state";
 export const frontierArchitect = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.FRONTIER,
-        SystemPrompts.frontierArchitect,
+        promptsForConfig(config).frontierArchitect,
         [
             `Task:\n${state.originalTask}`,
             state.compressedContext ? `Compressed context:\n${state.compressedContext}` : "",
@@ -19,10 +20,14 @@ export const frontierArchitect = async (state: GraphStateValue, config?: LangGra
         ]
             .filter(Boolean)
             .join("\n\n"),
-        { maxTokens: 2_400, responseFormat: RESPONSE_FORMAT_JSON },
+        {
+            maxTokens: 2_400,
+            responseFormat: RESPONSE_FORMAT_JSON,
+            structuredSchema: frontierArchitectureDecisionSchema,
+        },
         config,
     );
-    const decision = parseFrontierArchitectureDecision(result.content);
+    const decision = parseFrontierArchitectureDecision(result.content, result.parsed);
     const deterministicReason = strongEscalationReasonForTask(state.originalTask);
     const strongEscalationRequired =
         Boolean(deterministicReason) ||
@@ -48,7 +53,7 @@ export const frontierArchitect = async (state: GraphStateValue, config?: LangGra
 export const claudeArchitect = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
         ModelRole.ARCHITECT,
-        SystemPrompts.claudeArchitect,
+        promptsForConfig(config).claudeArchitect,
         [
             `Task:\n${state.originalTask}`,
             state.frontierDraft ? `Low-cost frontier draft to verify or improve:\n${state.frontierDraft}` : "",
