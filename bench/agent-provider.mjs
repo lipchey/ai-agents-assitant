@@ -55,22 +55,34 @@ export default class AgentProvider {
         const vars = context?.vars ?? {};
         try {
             resetFixtureCopy(vars);
+            /* A malformed budget var coerces to NaN, which the graph would treat
+               as an unlimited budget; reject it here (a setup failure, so error
+               is correct) before any live run starts, mirroring runAgentTask. */
+            const budgetUsd = Number(vars.budgetUsd ?? this.config.defaultBudgetUsd ?? 0.05);
+            if (!Number.isFinite(budgetUsd) || budgetUsd <= 0) {
+                return { output: "", error: `Invalid budgetUsd var: "${String(vars.budgetUsd)}"` };
+            }
             const summary = await runAgentTask(String(prompt), {
                 profile: resolveProfile(vars),
-                budgetUsd: Number(vars.budgetUsd ?? this.config.defaultBudgetUsd ?? 0.05),
+                budgetUsd,
                 applyPatches: vars.applyPatches === true || vars.applyPatches === "true",
                 hitl: "off",
             });
+            /* ProviderResponse.error is reserved for the catch path below: promptfoo
+               treats a set error as an infrastructure ERROR and short-circuits before
+               running assertions. A status:"failed" run completed enough to produce a
+               RunSummary, so keep output/cost/tokens and surface the failure text in
+               metadata so the suite's objective asserts grade (and fail) the row. */
             return {
                 output: summary.answer,
                 cost: summary.totalCostUsd,
                 tokenUsage: { total: summary.totalTokens },
-                ...(summary.status === "failed" ? { error: summary.error ?? "agent run failed" } : {}),
                 metadata: {
                     runId: summary.runId,
                     profileName: summary.profileName,
                     status: summary.status,
                     durationMs: summary.durationMs,
+                    ...(summary.status === "failed" ? { error: summary.error ?? "agent run failed" } : {}),
                     ...(typeof summary.verificationPassed === "boolean"
                         ? { verificationPassed: summary.verificationPassed }
                         : {}),

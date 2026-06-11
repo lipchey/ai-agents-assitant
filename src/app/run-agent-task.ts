@@ -241,6 +241,18 @@ export const runAgentTask = async (task: string, options: RunAgentTaskOptions = 
     if (options.hitl !== undefined && options.hitl !== "off") {
         throw new Error(`runAgentTask supports only hitl: "off"; got "${String(options.hitl)}".`);
     }
+    /* Reject a bad budget at the boundary: the graph treats a non-finite or
+       non-positive costBudgetUsd as UNLIMITED (budget.ts), so an unvalidated
+       NaN (e.g. Number("oops") from a bench var) would silently disable the
+       cost ceiling on a live run instead of failing the caller. */
+    if (
+        options.budgetUsd !== undefined &&
+        (typeof options.budgetUsd !== "number" || !Number.isFinite(options.budgetUsd) || options.budgetUsd <= 0)
+    ) {
+        throw new Error(
+            `runAgentTask requires budgetUsd to be a finite number greater than 0; got "${String(options.budgetUsd)}".`,
+        );
+    }
     if (options.workspaceDir !== undefined && resolve(options.workspaceDir) !== process.cwd()) {
         throw new Error(
             "runAgentTask workspaceDir is reserved until the workspace seam lands (R8); " +

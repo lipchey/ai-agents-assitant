@@ -34,6 +34,31 @@ describe("runAgentTask option guards", () => {
         );
     });
 
+    it("rejects a NaN budgetUsd before any runtime startup", async () => {
+        /* Number("oops") is the realistic bench-var failure mode. */
+        await expect(runAgentTask("task", { budgetUsd: Number("oops") })).rejects.toThrow(/budgetUsd/u);
+    });
+
+    it("rejects a zero budgetUsd before any runtime startup", async () => {
+        await expect(runAgentTask("task", { budgetUsd: 0 })).rejects.toThrow(/budgetUsd/u);
+    });
+
+    it("rejects a negative budgetUsd before any runtime startup", async () => {
+        await expect(runAgentTask("task", { budgetUsd: -1 })).rejects.toThrow(/budgetUsd/u);
+    });
+
+    it("rejects an infinite budgetUsd before any runtime startup", async () => {
+        await expect(runAgentTask("task", { budgetUsd: Number.POSITIVE_INFINITY })).rejects.toThrow(/budgetUsd/u);
+    });
+
+    it("accepts a valid budgetUsd (fails later, on the profile)", async () => {
+        /* A finite positive budget passes the guard; the unknown profile then
+           makes the call fail AFTER it, proving the budget guard let it through. */
+        await expect(runAgentTask("task", { budgetUsd: 0.05, profile: "definitely-not-a-profile" })).rejects.toThrow(
+            /definitely-not-a-profile/u,
+        );
+    });
+
     it("rejects an unknown profile name before any runtime startup", async () => {
         await expect(runAgentTask("task", { profile: "definitely-not-a-profile" })).rejects.toThrow(
             /definitely-not-a-profile/u,
