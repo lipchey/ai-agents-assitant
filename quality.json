@@ -68,6 +68,7 @@
       { "name": "typecheck", "argv": ["npm", "run", "typecheck"], "timeout_seconds": 60 },
       { "name": "lint", "argv": ["npm", "run", "lint"], "timeout_seconds": 60 },
       { "name": "smoke", "argv": ["npm", "run", "smoke"], "timeout_seconds": 300 },
+      { "name": "unit", "argv": ["npm", "run", "test:unit"], "timeout_seconds": 45 },
       {
         "name": "secret-scan",
         "argv": ["./tools/run-gitleaks", "git", "--no-banner", "--redact"],
