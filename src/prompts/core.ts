@@ -18,8 +18,8 @@ const CORE = [
 /* Model-agnostic fallback when the active profile pins no prompts.cascadeNote.
    Describes the cascade tiers without naming concrete models (spec §3.2). */
 export const DEFAULT_CASCADE_NOTE =
-    "Cheap models route and compress; stronger models architect and review; the " +
-    "strongest models run ONLY when high-risk or low-confidence signals demand them.";
+    "Workers route and compress; advisers architect and review; the frontier " +
+    "model runs ONLY behind escalation gates.";
 
 /* The cascade description is profile data (prompts.cascadeNote): concrete model
    names must not be hardcoded into cache anchors (review blocker #5). The

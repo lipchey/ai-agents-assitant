@@ -95,7 +95,7 @@ describe("buildOpenClawChatRequest", () => {
     });
 
     it("maps non-Anthropic adaptive thinking to enabled and keeps reasoning_effort", () => {
-        const request = buildOpenClawChatRequest(ModelRole.FRONTIER, flashBinding, "sys", "usr", {
+        const request = buildOpenClawChatRequest(ModelRole.REASONER, flashBinding, "sys", "usr", {
             thinking: "adaptive",
             reasoningEffort: "high",
         });

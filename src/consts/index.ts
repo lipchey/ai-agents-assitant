@@ -29,6 +29,7 @@ export {
     ModelProvider,
     ModelRef,
     ModelRole,
+    ModelTier,
     ModelTransport,
     PROFILE_CONFIG_KEY,
     ReasoningEffort,

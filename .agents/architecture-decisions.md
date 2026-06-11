@@ -276,3 +276,57 @@ The verbatim JSON reporter output embeds `line`/`col`/`pos` positions for each
 finding. Because the runner does not diff baselines, this is harmless today, but
 a future baseline-diff feature should normalize away positional fields (or
 re-emit the baseline) to avoid churn when unrelated edits shift line numbers.
+
+## ADR-003: Model tier indirection (role → tier → model)
+
+### Status
+
+Accepted - 2026-06-11 (session R6a). Owner-approved via the model-tiers design
+spec (`docs/superpowers/specs/2026-06-11-model-tiers-design.md`, decisions
+D-T1..D-T4), which amends §3.2 of the R-spec and is the normative contract;
+this entry records the decision and its invariants.
+
+### Decision
+
+Profiles bind models in two layers. A required `tiers` block binds the four
+purpose-based tier codenames - `frontier` (most capable/expensive), `adviser`
+(strong but cheaper), `skilled` (mid), `worker` (cheapest) - each to a full
+`ModelBinding`. `roles` becomes an OPTIONAL override map whose values are one
+of two mutually exclusive STRICT shapes: a full `ModelBinding` (bypasses the
+tier layer) or `{ tier, params? }` (reassign the tier and/or merge params).
+The code-owned `DEFAULT_ROLE_TIER` map (`src/models/resolve.ts`) assigns each
+of the 8 `ModelRole`s a default tier: router/firewall/worker → `worker`,
+coder → `skilled`, reasoner/architect/critic → `adviser`, sme → `frontier`.
+`resolveBinding` precedence: full override > tier reassignment > default tier;
+override params win key-by-key over tier params; the return type stays a plain
+`ModelBinding`, so everything downstream (per-call option merge, transport
+dispatch, structured outputs) is untouched.
+
+`ModelRole.FRONTIER` (the cheap first-pass reasoner) was renamed
+`ModelRole.REASONER` (value `"frontier"` → `"reasoner"`) to free the word
+"frontier" for the top tier. The graph node names `frontierArchitect` /
+`frontierCritic` are NOT renamed - they are part of the FROZEN RunSummary
+contract (R-spec §3.4); a node rename is a separate owner decision (backlog).
+
+### Rationale
+
+Since R2/R3 the code is provider-agnostic, but swapping the model cascade
+meant editing 8 full bindings per profile. Tiers move the cascade strategy as
+one 4-line unit (the experimentation loop R6's example profiles exist for)
+while per-role overrides keep the previous granularity (D-T1). There is NO
+backward compatibility with the flat role-map format: the only existing
+profile (`default.json5`) was migrated in-session, byte-equivalently per the
+spec-§6 table, pinned by the R1 characterization suite plus new equivalence
+tests (D-T4, pre-v0.1.0).
+
+### Invariants
+
+- All four tier keys are required; loader pricing and direct-transport-id
+  checks apply to every tier binding AND every full-binding override.
+- Both role-override shapes are zod-STRICT: an object mixing `tier` with
+  `provider`/`model` is rejected, never silently half-applied. Do not relax.
+- Tier-reassignment overrides carry `params` only - no `transport` (YAGNI; a
+  role needing a different transport uses a full-binding override).
+- `worker` is both a role and a tier name; the contexts never mix (roles live
+  in code and the `roles` map, tiers in the `tiers` map), and the worker
+  role's default tier IS `worker`.

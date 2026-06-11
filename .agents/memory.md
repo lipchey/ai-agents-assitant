@@ -40,21 +40,32 @@ Topology in `src/graph/build.ts`:
   failed patch formatting/guarded skips route back to `claudeCoder` until the
   patch-format retry cap, then finalize.
 
-Model cascade (R2: bindings are now profile DATA, not a switch). The
-`src/models/` subsystem (L2) defines a zod-validated `Profile`
-(role→`ModelBinding`, `transport`, `budget`, `tuning`) loaded from
-`profiles/<name>.json5` and threaded through LangGraph `configurable`
-(`PROFILE_CONFIG_KEY`, module-default fallback `loadProfile("default")`).
-`profiles/default.json5` byte-replicates the prior `modelForRole` switch on the
-openclaw transport; `src/tools/models.ts` was deleted. `callLlm` resolves the
-binding (`resolveBinding`) and merges `binding.params` (model-tied
-temperature/thinking/effort) under per-call options (maxTokens/responseFormat),
-then builds the same OpenClaw request as before. The default cascade:
+Model cascade (R2: bindings are profile DATA, not a switch; R6a: tier
+indirection, ADR-003). The `src/models/` subsystem (L2) defines a zod-validated
+`Profile` loaded from `profiles/<name>.json5` and threaded through LangGraph
+`configurable` (`PROFILE_CONFIG_KEY`, module-default fallback
+`loadProfile("default")`). A profile binds the four REQUIRED tier codenames —
+`frontier`/`adviser`/`skilled`/`worker` (`ModelTier`) — each to a full
+`ModelBinding`; `roles` is an OPTIONAL override map whose values are either a
+full `ModelBinding` (bypasses tiers) or strict `{ tier, params? }` (reassign
+tier / merge params, override params winning key-by-key). Roles default to
+tiers via the code-owned `DEFAULT_ROLE_TIER` (`src/models/resolve.ts`):
+router/firewall/worker→worker, coder→skilled, reasoner/architect/critic→adviser,
+sme→frontier. Loader pricing + direct-id checks cover tier bindings and
+full-binding overrides. `profiles/default.json5` resolves byte-equivalently to
+the prior `modelForRole` switch on the openclaw transport (reasoner + critic as
+full overrides); `src/tools/models.ts` was deleted. `callLlm` resolves the
+binding (`resolveBinding`, returns a plain `ModelBinding`) and merges
+`binding.params` (model-tied temperature/thinking/effort) under per-call
+options (maxTokens/responseFormat), then builds the same OpenClaw request as
+before. The default cascade:
 
 - `router`, `directResponder`, `firewall`, and worker planners use
   DeepSeek V4 Flash through `ModelRole.ROUTER`/`FIREWALL`/`WORKER`.
 - `frontierArchitect`, `frontierCritic`, and swarm `smeOracle` use
-  DeepSeek V4 Pro through `ModelRole.FRONTIER`.
+  DeepSeek V4 Pro through `ModelRole.REASONER` (renamed from `FRONTIER` in
+  R6a; the graph NODE names `frontierArchitect`/`frontierCritic` stay — FROZEN
+  RunSummary contract).
 - Strong escalation uses Claude Opus for `claudeArchitect`/`smeTiebreaker`,
   Claude Sonnet for `claudeCoder`, and GPT for `openaiCritic`.
 - Claude Opus adaptive thinking routes through the `strong-reasoning` OpenClaw

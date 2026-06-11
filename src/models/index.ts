@@ -1,6 +1,6 @@
 export { loadProfile, parseProfile } from "./profile.ts";
-export type { ModelBinding, ModelParams, Profile, ProfileTuning } from "./profile.ts";
-export { getDefaultProfile, readProfile, resolveBinding, resolveTuning } from "./resolve.ts";
+export type { ModelBinding, ModelParams, Profile, ProfileTuning, RoleOverride } from "./profile.ts";
+export { DEFAULT_ROLE_TIER, getDefaultProfile, readProfile, resolveBinding, resolveTuning } from "./resolve.ts";
 export type { ResolvedTuning } from "./resolve.ts";
 export { chatContentToString } from "./provider.ts";
 export type { ChatCallOptions, ChatProvider, ChatResult, ChatRetryContext, ChatRetryListener } from "./provider.ts";

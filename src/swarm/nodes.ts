@@ -63,7 +63,7 @@ export const leadDelegator = async (state: SwarmWorkerStateValue) => {
 };
 
 export const smeOracle = async (state: SwarmWorkerStateValue) => {
-    const result = await callLlm(ModelRole.FRONTIER, SystemPrompts.smeOracle, state.escalationQuery, {
+    const result = await callLlm(ModelRole.REASONER, SystemPrompts.smeOracle, state.escalationQuery, {
         maxTokens: 900,
     });
     return {

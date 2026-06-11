@@ -20,7 +20,7 @@ export type ModelProvider = (typeof ModelProvider)[keyof typeof ModelProvider];
 
 export const ModelRole = {
     ROUTER: "router",
-    FRONTIER: "frontier",
+    REASONER: "reasoner",
     ARCHITECT: "architect",
     CODER: "coder",
     CRITIC: "critic",
@@ -30,6 +30,20 @@ export const ModelRole = {
 } as const;
 
 export type ModelRole = (typeof ModelRole)[keyof typeof ModelRole];
+
+/* Purpose-based model tiers (most → least capable). A profile binds these four
+   codenames to concrete models; roles resolve to a tier via DEFAULT_ROLE_TIER
+   (src/models/resolve.ts) unless a per-role override pins one. `worker` is both
+   a role and a tier name; the contexts never mix (roles in code/the `roles` map,
+   tiers in the `tiers` map). */
+export const ModelTier = {
+    FRONTIER: "frontier",
+    ADVISER: "adviser",
+    SKILLED: "skilled",
+    WORKER: "worker",
+} as const;
+
+export type ModelTier = (typeof ModelTier)[keyof typeof ModelTier];
 
 export const ChatRole = {
     SYSTEM: "system",

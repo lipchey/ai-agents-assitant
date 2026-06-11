@@ -11,7 +11,7 @@ import type { GraphStateValue } from "../../state";
 
 export const frontierCritic = async (state: GraphStateValue, config?: LangGraphRunnableConfig) => {
     const result = await callLlm(
-        ModelRole.FRONTIER,
+        ModelRole.REASONER,
         promptsForConfig(config).frontierCritic,
         [
             `Task:\n${state.originalTask}`,

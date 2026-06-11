@@ -1,15 +1,17 @@
 /*
- * Tests for the R2 profile subsystem (src/models). They (1) pin the loader's
- * fail-fast guards, (2) assert resolveBinding(role, defaultProfile) reproduces the
- * pre-refactor modelForRole switch for every ModelRole, and (3) check the tuning
- * merge defaults to the src/consts/tuning.ts values. The regression table below is
- * the byte-stability contract for profiles/default.json5.
+ * Tests for the R2 profile subsystem (src/models), updated for the R6a tier layer.
+ * They (1) pin the loader's fail-fast guards across tier bindings and role
+ * overrides, (2) assert resolveBinding(role, defaultProfile) still reproduces the
+ * pre-refactor modelForRole switch for every ModelRole (byte-equivalent migration),
+ * (3) pin the resolution precedence (default tier / tier reassignment / param merge
+ * / full override), and (4) check the tuning merge defaults. The EXPECTED_BINDINGS
+ * table below is the byte-stability contract for profiles/default.json5.
  */
 import { describe, expect, it } from "vitest";
 import { loadProfile, parseProfile } from "../../src/models/profile.ts";
 import { readProfile, resolveBinding, resolveTuning } from "../../src/models/resolve.ts";
 import { callLlm } from "../../src/tools/llm.ts";
-import { ModelRole } from "../../src/consts/models.ts";
+import { ModelRole, ModelTier } from "../../src/consts/models.ts";
 import {
     CONFIDENCE_ESCALATION_THRESHOLD,
     DEFAULT_LLM_MAX_RETRIES,
@@ -25,7 +27,7 @@ const EXPECTED_BINDINGS: Record<ModelRole, { model: string; params: Record<strin
     [ModelRole.ROUTER]: { model: "deepseek/deepseek-v4-flash", params: { temperature: 0, thinking: "disabled" } },
     [ModelRole.FIREWALL]: { model: "deepseek/deepseek-v4-flash", params: { temperature: 0, thinking: "disabled" } },
     [ModelRole.WORKER]: { model: "deepseek/deepseek-v4-flash", params: { temperature: 0, thinking: "disabled" } },
-    [ModelRole.FRONTIER]: {
+    [ModelRole.REASONER]: {
         model: "deepseek/deepseek-v4-pro",
         params: { temperature: 0.2, thinking: "enabled", reasoningEffort: "high" },
     },
@@ -41,44 +43,54 @@ const EXPECTED_BINDINGS: Record<ModelRole, { model: string; params: Record<strin
     [ModelRole.CRITIC]: { model: "openai/gpt-5.5", params: { temperature: 0.1 } },
 };
 
-const validRoles = (): Record<string, { provider: string; model: string }> => ({
-    router: { provider: "deepseek", model: "deepseek/deepseek-v4-flash" },
-    firewall: { provider: "deepseek", model: "deepseek/deepseek-v4-flash" },
-    worker: { provider: "deepseek", model: "deepseek/deepseek-v4-flash" },
-    frontier: { provider: "deepseek", model: "deepseek/deepseek-v4-pro" },
-    architect: { provider: "anthropic", model: "anthropic/claude-opus-4-8" },
-    sme: { provider: "anthropic", model: "anthropic/claude-opus-4-8" },
-    coder: { provider: "anthropic", model: "anthropic/claude-sonnet-4-6" },
-    critic: { provider: "openai", model: "openai/gpt-5.5" },
+type RawBinding = { provider: string; model: string; transport?: string; params?: Record<string, unknown> };
+
+/* Four gateway-prefixed tier bindings (openclaw transport), every model priced. */
+const validTiers = (): Record<string, RawBinding> => ({
+    worker: {
+        provider: "deepseek",
+        model: "deepseek/deepseek-v4-flash",
+        params: { temperature: 0, thinking: "disabled" },
+    },
+    skilled: { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", params: { temperature: 0.2 } },
+    adviser: {
+        provider: "anthropic",
+        model: "anthropic/claude-opus-4-8",
+        params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
+    frontier: {
+        provider: "anthropic",
+        model: "anthropic/claude-opus-4-8",
+        params: { thinking: "adaptive", reasoningEffort: "high" },
+    },
 });
 
 /* Provider-native bare ids (no gateway "provider/" prefix) — required on the
-   direct transport, every id has a model-pricing.json entry. */
-const bareRoles = (): Record<string, { provider: string; model: string; transport?: string }> => ({
-    router: { provider: "deepseek", model: "deepseek-v4-flash" },
-    firewall: { provider: "deepseek", model: "deepseek-v4-flash" },
+   direct transport; every id has a model-pricing.json entry. */
+const bareTiers = (): Record<string, RawBinding> => ({
     worker: { provider: "deepseek", model: "deepseek-v4-flash" },
-    frontier: { provider: "deepseek", model: "deepseek-v4-pro" },
-    architect: { provider: "anthropic", model: "claude-opus-4-8" },
-    sme: { provider: "anthropic", model: "claude-opus-4-8" },
-    coder: { provider: "anthropic", model: "claude-sonnet-4-6" },
-    critic: { provider: "openai", model: "gpt-5.5" },
+    skilled: { provider: "anthropic", model: "claude-sonnet-4-6" },
+    adviser: { provider: "anthropic", model: "claude-opus-4-8" },
+    frontier: { provider: "anthropic", model: "claude-opus-4-8" },
 });
 
 const validProfile = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
     name: "test",
     transport: { default: "openclaw" },
-    roles: validRoles(),
+    tiers: validTiers(),
     ...overrides,
 });
 
 describe("loadProfile (default)", () => {
-    it("loads the default profile on the openclaw transport with all roles", () => {
+    it("loads the default profile on the openclaw transport with all four tiers", () => {
         const profile = loadProfile("default");
         expect(profile.name).toBe("default");
         expect(profile.transport.default).toBe("openclaw");
+        for (const tier of Object.values(ModelTier)) {
+            expect(profile.tiers[tier]).toBeDefined();
+        }
         for (const role of Object.values(ModelRole)) {
-            expect(profile.roles[role]).toBeDefined();
+            expect(() => resolveBinding(role, profile)).not.toThrow();
         }
     });
 });
@@ -94,45 +106,109 @@ describe("resolveBinding reproduces the pre-refactor switch", () => {
     }
 });
 
+describe("resolveBinding tier precedence", () => {
+    it("resolves a role with no override via its DEFAULT_ROLE_TIER tier", () => {
+        const profile = parseProfile(validProfile());
+        const binding = resolveBinding(ModelRole.CODER, profile);
+        /* coder defaults to the skilled tier. */
+        expect(binding.model).toBe("anthropic/claude-sonnet-4-6");
+        expect(binding.params).toEqual({ temperature: 0.2 });
+    });
+
+    it("resolves a { tier } reassignment via the named tier", () => {
+        const profile = parseProfile(validProfile({ roles: { coder: { tier: "adviser" } } }));
+        const binding = resolveBinding(ModelRole.CODER, profile);
+        expect(binding.model).toBe("anthropic/claude-opus-4-8");
+        expect(binding.params).toEqual({ thinking: "adaptive", reasoningEffort: "high" });
+    });
+
+    it("merges { tier, params } with role params winning key-by-key over the tier params", () => {
+        const profile = parseProfile(
+            validProfile({
+                roles: { coder: { tier: "adviser", params: { reasoningEffort: "low", temperature: 0.5 } } },
+            }),
+        );
+        const binding = resolveBinding(ModelRole.CODER, profile);
+        expect(binding.model).toBe("anthropic/claude-opus-4-8");
+        /* thinking kept from the tier; reasoningEffort overridden; temperature added. */
+        expect(binding.params).toEqual({ thinking: "adaptive", reasoningEffort: "low", temperature: 0.5 });
+    });
+
+    it("returns a full-binding override verbatim, bypassing the default tier", () => {
+        const profile = parseProfile(
+            validProfile({
+                roles: { critic: { provider: "openai", model: "openai/gpt-5.5", params: { temperature: 0.1 } } },
+            }),
+        );
+        const binding = resolveBinding(ModelRole.CRITIC, profile);
+        /* critic defaults to the adviser (opus) tier; the override wins outright. */
+        expect(binding.provider).toBe("openai");
+        expect(binding.model).toBe("openai/gpt-5.5");
+        expect(binding.params).toEqual({ temperature: 0.1 });
+    });
+
+    it("omits params when neither the tier binding nor an override contributes one", () => {
+        const profile = parseProfile(validProfile({ tiers: bareTiers() }));
+        const binding = resolveBinding(ModelRole.ROUTER, profile);
+        expect(binding.model).toBe("deepseek-v4-flash");
+        expect(binding.params).toBeUndefined();
+    });
+});
+
 describe("loadProfile fail-fast validation", () => {
     it("accepts a complete valid profile object", () => {
         expect(() => parseProfile(validProfile())).not.toThrow();
     });
 
-    it("rejects a profile missing a role", () => {
-        const roles = validRoles();
-        delete roles.sme;
-        expect(() => parseProfile(validProfile({ roles }))).toThrow();
+    it("rejects a profile missing a tier", () => {
+        const tiers = validTiers();
+        delete tiers.frontier;
+        expect(() => parseProfile(validProfile({ tiers }))).toThrow();
     });
 
-    it("rejects an unknown provider", () => {
-        const roles = validRoles();
-        roles.router = { provider: "google", model: "deepseek/deepseek-v4-flash" };
-        expect(() => parseProfile(validProfile({ roles }))).toThrow();
+    it("rejects an unknown provider on a tier binding", () => {
+        const tiers = validTiers();
+        tiers.worker = { provider: "google", model: "deepseek/deepseek-v4-flash" };
+        expect(() => parseProfile(validProfile({ tiers }))).toThrow();
     });
 
-    it("rejects a model without a model-pricing.json entry", () => {
-        const roles = validRoles();
-        roles.coder = { provider: "anthropic", model: "anthropic/claude-does-not-exist" };
+    it("rejects a tier binding without a model-pricing.json entry", () => {
+        const tiers = validTiers();
+        tiers.skilled = { provider: "anthropic", model: "anthropic/claude-does-not-exist" };
+        expect(() => parseProfile(validProfile({ tiers }))).toThrow(/model-pricing/u);
+    });
+
+    it("rejects a full-binding role override without a model-pricing.json entry", () => {
+        const roles = { critic: { provider: "anthropic", model: "anthropic/claude-does-not-exist" } };
         expect(() => parseProfile(validProfile({ roles }))).toThrow(/model-pricing/u);
+    });
+
+    it("rejects an override that mixes a tier with a full binding (strictness)", () => {
+        const roles = { coder: { tier: "adviser", provider: "anthropic", model: "anthropic/claude-opus-4-8" } };
+        expect(() => parseProfile(validProfile({ roles }))).toThrow();
+    });
+
+    it("rejects an unknown tier name on a reassignment override", () => {
+        const roles = { coder: { tier: "nonexistent" } };
+        expect(() => parseProfile(validProfile({ roles }))).toThrow();
     });
 });
 
 describe("direct transport rejects gateway-prefixed model ids", () => {
-    it("rejects a prefixed id when transport.default is direct", () => {
+    it("rejects a prefixed id on a tier binding when transport.default is direct", () => {
         expect(() => parseProfile(validProfile({ transport: { default: "direct" } }))).toThrow(/gateway-prefixed/u);
     });
 
-    it("rejects a prefixed id via a per-binding transport override", () => {
-        const roles = bareRoles();
-        roles.coder = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "direct" };
-        expect(() => parseProfile(validProfile({ roles }))).toThrow(/gateway-prefixed/u);
+    it("rejects a prefixed id via a per-tier-binding transport override", () => {
+        const tiers = validTiers();
+        tiers.skilled = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "direct" };
+        expect(() => parseProfile(validProfile({ tiers }))).toThrow(/gateway-prefixed/u);
     });
 
-    it("still loads a prefixed id whose binding overrides transport back to openclaw", () => {
-        const roles = bareRoles();
-        roles.coder = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "openclaw" };
-        expect(() => parseProfile(validProfile({ transport: { default: "direct" }, roles }))).not.toThrow();
+    it("still loads a prefixed id whose tier binding overrides transport back to openclaw", () => {
+        const tiers = bareTiers();
+        tiers.skilled = { provider: "anthropic", model: "anthropic/claude-sonnet-4-6", transport: "openclaw" };
+        expect(() => parseProfile(validProfile({ transport: { default: "direct" }, tiers }))).not.toThrow();
     });
 });
 
@@ -143,9 +219,9 @@ describe("readProfile validates configurable profiles", () => {
     });
 
     it("re-validates an unvalidated profile injected via configurable", () => {
-        const roles = validRoles();
-        delete roles.sme;
-        const invalid = validProfile({ roles });
+        const tiers = validTiers();
+        delete tiers.frontier;
+        const invalid = validProfile({ tiers });
         expect(() => readProfile({ configurable: { profile: invalid } })).toThrow();
     });
 
@@ -164,8 +240,9 @@ describe("callLlm transport dispatch", () => {
         delete process.env.ANTHROPIC_API_KEY;
         try {
             /* Bare provider-native ids: the direct-transport guard rejects
-               gateway-prefixed ids, so the dispatch proof uses bare bindings. */
-            const profile = parseProfile(validProfile({ transport: { default: "direct" }, roles: bareRoles() }));
+               gateway-prefixed ids, so the dispatch proof uses bare bindings.
+               coder resolves to the skilled (anthropic) tier. */
+            const profile = parseProfile(validProfile({ transport: { default: "direct" }, tiers: bareTiers() }));
             await expect(callLlm(ModelRole.CODER, "system", "user", {}, { configurable: { profile } })).rejects.toThrow(
                 /Anthropic API key/iu,
             );
