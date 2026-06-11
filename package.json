@@ -23,6 +23,7 @@
     "smoke": "npm run smoke:react && npm run smoke:patch && npm run smoke:hitl && npm run smoke:websearch && npm run smoke:verify-report && npm run smoke:logging",
     "smoke:offline": "npm run smoke:react && npm run smoke:patch && npm run smoke:hitl && npm run smoke:websearch && npm run smoke:verify-report && npm run smoke:logging",
     "arch": "depcruise --config .dependency-cruiser.cjs \"src/**/*.ts\"",
+    "bench": "node bench/run-bench.mjs",
     "test:unit": "vitest run",
     "test": "npm run typecheck && npm run lint && npm run test:unit && npm run smoke"
   },
@@ -53,6 +54,7 @@
     "eslint-plugin-boundaries": "^6.0.2",
     "knip": "^6.16.1",
     "prettier": "^3.8.3",
+    "promptfoo": "0.121.15",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.1",

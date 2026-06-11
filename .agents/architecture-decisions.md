@@ -28,7 +28,7 @@ packages. The one intra-layer rule is inside L6: `graph -> swarm` is allowed,
 | L4    | `src/tools`, `src/hitl`                              | L0-L3 (+ L4 siblings)                                   |
 | L5    | `src/patching`                                       | L0-L4                                                   |
 | L6    | `src/swarm`, `src/graph`                             | L0-L5; `graph -> swarm` allowed, NEVER `swarm -> graph` |
-| L7    | `src/cli`, `src/main.ts`, `src/index.ts`             | L0-L6                                                   |
+| L7    | `src/cli`, `src/app`, `src/main.ts`, `src/index.ts`  | L0-L6 (+ L7 siblings)                                   |
 
 Type-only edges (`import type` / `export type`) are in scope: the layering
 governs the type graph as well as the value graph.
@@ -167,6 +167,24 @@ stays green. R4 also renamed the lone `HITL_THREAD_CONFIG_KEY` scalar (value
 `"thread_id"`) to `THREAD_ID_CONFIG_KEY` in the new `src/consts/run.ts`, so one
 `thread_id` definition is shared by the main-graph SqliteSaver checkpointer and the
 swarm HITL driver.
+
+### Amendment 2026-06-11 (R7): `src/app` added at L7
+
+Session R7 introduced the programmatic composition root `src/app`
+(`runAgentTask` / `executeAgentRun`: runtime startup, run-kernel wiring, graph
+invocation, RunSummary on every termination path). The refactor plan sketched
+this file as `src/run/run-agent-task.ts`, but `src/run` is L3 and the
+entrypoint must compose `src/graph` (L6), `src/tools`/`src/hitl` (L4), and
+`src/models` (L2) — placing it in `src/run` would invert the DAG (`graph`
+already consumes `run` via `wrapNode`). It therefore sits at L7 beside
+`src/cli`: `src/main.ts` is now a thin CLI over `executeAgentRun`, and the
+bench provider consumes `runAgentTask` through the root barrel. Boundary
+within L7: `app` owns _running the agent programmatically_; `cli` owns
+terminal concerns (argv, env-derived options, report printing); `app` must not
+import `cli`. Per the closed-enumeration rule above, this was added together
+to all three sources in the same session: this table (L7 row),
+`.dependency-cruiser.cjs` (`LAYER_DIRS`, `aboveL0`-`aboveL6`), and the
+`eslint.config.js` mirror (`boundariesElements`, `L7`, allow rule).
 
 ## ADR-002: Knip dead-code config and report-only baseline
 

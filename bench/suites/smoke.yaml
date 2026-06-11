@@ -1,0 +1,108 @@
+# Smoke suite (plan R7.3): 2 trivial, 2 pure-reasoning, 2 coding tasks.
+# Latency thresholds are generous on purpose: every task pays runtime startup
+# (tool registry, and the OpenClaw gateway while web search routes through it).
+- description: trivial-arithmetic
+  vars:
+    task: "What is 2 + 2? Reply with just the number."
+  assert:
+    - type: contains
+      value: "4"
+    - type: cost
+      threshold: 0.01
+    - type: latency
+      threshold: 120000
+
+- description: trivial-capital
+  vars:
+    task: "What is the capital city of France? Answer with the city name only."
+  assert:
+    - type: icontains
+      value: "paris"
+    - type: cost
+      threshold: 0.01
+    - type: latency
+      threshold: 120000
+
+- description: reasoning-tcp-handshake
+  vars:
+    task: >-
+      Explain why TCP connection establishment needs three messages instead of
+      two. Cover what each message proves to each side, in at most three short
+      paragraphs.
+  assert:
+    - type: llm-rubric
+      value: >-
+        The answer correctly explains the TCP three-way handshake: it must say
+        that both sides need their initial sequence numbers acknowledged
+        (equivalently, each side must prove it can both send and receive), and
+        why two messages leave one side unconfirmed.
+      threshold: 0.7
+    - type: cost
+      threshold: 0.06
+    - type: latency
+      threshold: 300000
+
+- description: reasoning-locking-tradeoff
+  vars:
+    task: >-
+      Compare optimistic and pessimistic locking for incrementing a single hot
+      counter row under high contention, and recommend one approach with a
+      clear justification.
+  assert:
+    - type: llm-rubric
+      value: >-
+        The answer accurately contrasts optimistic locking (retry/abort cost
+        explodes under contention) with pessimistic locking (serialized access,
+        lock-wait cost), and makes a definite, well-justified recommendation
+        for the high-contention case (pessimistic locking or an atomic
+        in-place/queued update).
+      threshold: 0.7
+    - type: cost
+      threshold: 0.06
+    - type: latency
+      threshold: 300000
+
+- description: coding-fix-type-error
+  vars:
+    task: >-
+      In this repository, the mini TypeScript package at
+      bench/.work/coding-fix/mini-ts-repo has exactly one TypeScript compile
+      error. Find it and fix it with the smallest possible change, preserving
+      the intent documented in the code comments. Do not modify any other
+      files.
+    fixture: mini-ts-repo
+    fixtureCopy: bench/.work/coding-fix/mini-ts-repo
+    mustChangeFile: src/inventory.ts
+    applyPatches: true
+    budgetUsd: 0.15
+  assert:
+    - type: javascript
+      value: file://asserts/fixture-typecheck.mjs
+    - type: cost
+      threshold: 0.2
+    - type: latency
+      threshold: 600000
+
+- description: coding-add-feature
+  vars:
+    task: >-
+      Work on the mini TypeScript package at
+      bench/.work/coding-add/mini-ts-repo. First fix its one TypeScript compile
+      error (preserve the documented intent). Then add a new exported function
+      `formatTotal(cents: number): string` to
+      bench/.work/coding-add/mini-ts-repo/src/report.ts that renders cents as
+      dollars, e.g. 1234 becomes "$12.34". The whole package must compile with
+      npx tsc --noEmit.
+    fixture: mini-ts-repo
+    fixtureCopy: bench/.work/coding-add/mini-ts-repo
+    mustChangeFile: src/report.ts
+    requireInFile: formatTotal
+    applyPatches: true
+    budgetUsd: 0.2
+  assert:
+    - type: javascript
+      value: file://asserts/fixture-typecheck.mjs
+    - type: cost
+      threshold: 0.25
+    - type: latency
+      threshold: 600000

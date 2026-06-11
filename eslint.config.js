@@ -52,6 +52,7 @@ const boundariesElements = [
     { type: "swarm", mode: "full", pattern: "src/swarm/**/*" },
     { type: "graph", mode: "full", pattern: "src/graph/**/*" },
     { type: "cli", mode: "full", pattern: "src/cli/**/*" },
+    { type: "app", mode: "full", pattern: "src/app/**/*" },
     { type: "entry", mode: "full", pattern: "src/*.ts" },
 ];
 
@@ -63,7 +64,7 @@ const L4 = [...L3, "tools", "hitl"];
 const L5 = [...L4, "patching"];
 const L6graph = [...L5, "graph", "swarm"];
 const L6swarm = [...L5, "swarm"];
-const L7 = [...L5, "graph", "swarm", "cli", "entry"];
+const L7 = [...L5, "graph", "swarm", "cli", "app", "entry"];
 
 export default tseslint.config(
     {
@@ -74,10 +75,22 @@ export default tseslint.config(
             ".dependency-cruiser.cjs",
             "tools/**",
             "schemas/**",
+            /* Bench fixtures carry a deliberate type bug; .work holds per-run
+               fixture copies the agent mutates. Neither is project code. */
+            "bench/fixtures/**",
+            "bench/.work/**",
         ],
     },
     js.configs.recommended,
     ...tseslint.configs.recommended,
+    {
+        /* Plain-JS node scripts (bench runner/provider/asserts): js.configs.recommended
+           has no environment globals, so declare the node ones we use. */
+        files: ["**/*.mjs"],
+        languageOptions: {
+            globals: { console: "readonly", process: "readonly", URL: "readonly" },
+        },
+    },
     {
         files: ["**/*.ts"],
         plugins: { project: projectPlugin },
@@ -111,7 +124,7 @@ export default tseslint.config(
                         { from: ["patching"], allow: L5 },
                         { from: ["graph"], allow: L6graph },
                         { from: ["swarm"], allow: L6swarm },
-                        { from: ["cli", "entry"], allow: L7 },
+                        { from: ["cli", "app", "entry"], allow: L7 },
                     ],
                 },
             ],

@@ -110,6 +110,23 @@ Every termination path writes a machine-readable `RunSummary` to
 `runId` and summary path are also printed to the console. The whole `reports/`
 tree is gitignored.
 
+## Programmatic API and bench
+
+`runAgentTask(task, { profile, budgetUsd, applyPatches, hitl: "off" })` (exported
+from the root barrel) runs one full agent task in-process and resolves with the
+`RunSummary` on every terminal path - the CLI in `src/main.ts` is a thin wrapper
+over the same kernel. The promptfoo smoke bench rides it:
+
+```bash
+npm run bench                                   # 6-task smoke suite, profile "default"
+PROFILE=research-playground npm run bench       # profile passthrough
+npm run bench -- --filter trivial               # subset by test description
+```
+
+Results land in `reports/bench/<timestamp>/` (`results.json` + a generated
+`summary.md` table with per-task cost/latency/tokens). See
+[bench/README.md](bench/README.md) for suite anatomy and requirements.
+
 ## Contributing
 
 Profiles live in `profiles/*.json5` (selected via `--profile`/`AGENT_PROFILE`).

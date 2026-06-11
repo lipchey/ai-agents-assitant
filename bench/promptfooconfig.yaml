@@ -1,0 +1,28 @@
+# Smoke bench over the dual-graph agent (plan R7, spec §3.5). Run it through
+# `npm run bench` (bench/run-bench.mjs): the runner loads .env, disables
+# caching, forces sequential execution, and writes results + a summary table
+# to reports/bench/<timestamp>/.
+description: "ai-agents-assitant smoke bench: 6 tasks through runAgentTask"
+
+prompts:
+  - "{{task}}"
+
+providers:
+  - id: file://./agent-provider.mjs
+    label: agent
+    config:
+      # Soft USD ceiling per task unless a test var overrides it.
+      defaultBudgetUsd: 0.05
+
+defaultTest:
+  options:
+    # Cheap judge for llm-rubric asserts; reads DEEPSEEK_API_KEY from .env.
+    provider: deepseek:deepseek-v4-flash
+
+# Agent runs are non-deterministic and mutate local state (fixture copies,
+# run summaries): never serve cached results, never run tests concurrently.
+evaluateOptions:
+  cache: false
+  maxConcurrency: 1
+
+tests: file://suites/smoke.yaml

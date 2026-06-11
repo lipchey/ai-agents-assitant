@@ -19,4 +19,5 @@ dist/
 .vscode/
 .codegraph/
 reports/
+bench/.work/
 .eslintcache

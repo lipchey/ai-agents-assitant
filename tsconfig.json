@@ -23,5 +23,6 @@
 
     "moduleResolution": "bundler",
     "rewriteRelativeImportExtensions": true
-  }
+  },
+  "exclude": ["node_modules", "dist", "bench"]
 }

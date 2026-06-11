@@ -1,5 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/main.ts", "src/index.ts", "src/*/index.ts", "src/types/*/index.ts"],
-  "project": ["src/**/*.ts", "scripts/**/*.ts"]
+  "entry": [
+    "src/main.ts",
+    "src/index.ts",
+    "src/*/index.ts",
+    "src/types/*/index.ts",
+    "bench/run-bench.mjs",
+    "bench/agent-provider.mjs",
+    "bench/asserts/*.mjs"
+  ],
+  "project": ["src/**/*.ts", "scripts/**/*.ts", "bench/**/*.mjs"],
+  "ignoreDependencies": ["promptfoo"]
 }

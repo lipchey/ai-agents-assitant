@@ -1,5 +1,8 @@
 export { buildMainGraph } from "./graph";
 
+export { runAgentTask } from "./app";
+export type { RunAgentTaskOptions } from "./app";
+
 export { buildRunSummary, createRunContext, readRunContext, wrapNode, writeRunSummary } from "./run";
 export type { NodeVisit, RunContext, RunSummary } from "./run";
 
