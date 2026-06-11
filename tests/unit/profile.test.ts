@@ -7,7 +7,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { loadProfile, parseProfile } from "../../src/models/profile.ts";
-import { resolveBinding, resolveTuning } from "../../src/models/resolve.ts";
+import { readProfile, resolveBinding, resolveTuning } from "../../src/models/resolve.ts";
+import { callLlm } from "../../src/tools/llm.ts";
 import { ModelRole } from "../../src/consts/models.ts";
 import {
     CONFIDENCE_ESCALATION_THRESHOLD,
@@ -101,6 +102,34 @@ describe("loadProfile fail-fast validation", () => {
         const roles = validRoles();
         roles.coder = { provider: "anthropic", model: "anthropic/claude-does-not-exist" };
         expect(() => parseProfile(validProfile({ roles }))).toThrow(/model-pricing/u);
+    });
+});
+
+describe("readProfile validates configurable profiles", () => {
+    it("falls back to the default profile when none is injected", () => {
+        expect(readProfile(undefined).name).toBe("default");
+        expect(readProfile({ configurable: {} }).name).toBe("default");
+    });
+
+    it("re-validates an unvalidated profile injected via configurable", () => {
+        const roles = validRoles();
+        delete roles.sme;
+        const invalid = validProfile({ roles });
+        expect(() => readProfile({ configurable: { profile: invalid } })).toThrow();
+    });
+
+    it("trusts a profile that already passed parseProfile", () => {
+        const profile = parseProfile(validProfile());
+        expect(readProfile({ configurable: { profile } })).toBe(profile);
+    });
+});
+
+describe("callLlm transport guard", () => {
+    it("rejects a binding that resolves to a transport other than openclaw", async () => {
+        const profile = parseProfile(validProfile({ transport: { default: "direct" } }));
+        await expect(callLlm(ModelRole.CODER, "system", "user", {}, { configurable: { profile } })).rejects.toThrow(
+            /transport/iu,
+        );
     });
 });
 

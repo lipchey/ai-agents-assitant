@@ -81,6 +81,13 @@ export type ModelBinding = z.infer<typeof modelBindingSchema>;
 export type ProfileTuning = z.infer<typeof tuningSchema>;
 export type Profile = z.infer<typeof profileSchema>;
 
+/* Profiles that have passed parseProfile, so the configurable accessor can trust a
+   re-injected object by identity without re-validating on every hot-path read. */
+const validatedProfiles = new WeakSet<object>();
+
+export const isValidatedProfile = (value: unknown): value is Profile =>
+    typeof value === "object" && value !== null && validatedProfiles.has(value);
+
 let pricingKeyCache: Set<string> | undefined;
 
 const pricingKeys = (): Set<string> => {
@@ -107,6 +114,7 @@ const assertPricingEntries = (profile: Profile, sourceLabel: string): void => {
 export const parseProfile = (raw: unknown, sourceLabel = "<inline>"): Profile => {
     const profile = profileSchema.parse(raw);
     assertPricingEntries(profile, sourceLabel);
+    validatedProfiles.add(profile);
     return profile;
 };
 

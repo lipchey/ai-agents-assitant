@@ -3,6 +3,7 @@ import {
     ChatRole,
     DEFAULT_OPENCLAW_MODEL,
     ModelProvider,
+    ModelTransport,
     OpenClawControl,
     STRONG_REASONING_AGENT_ID,
     ThinkingMode,
@@ -46,7 +47,15 @@ export const callLlm = async (
     options: LlmCallOptions = {},
     config?: LangGraphRunnableConfig,
 ): Promise<LlmCallResult> => {
-    const binding = resolveBinding(role, readProfile(config));
+    const profile = readProfile(config);
+    const binding = resolveBinding(role, profile);
+    /* R2 ships only the OpenClaw transport; the direct seam lands in R3. Fail fast
+       so a profile that validates with transport:"direct" cannot silently route
+       through OpenClaw with the wrong model headers. */
+    const transport = binding.transport ?? profile.transport.default;
+    if (transport !== ModelTransport.OPENCLAW) {
+        throw new OpenClawError(`Transport "${transport}" is not yet supported for role "${role}" (R3 adds direct).`);
+    }
     const { provider, model: modelRef } = binding;
     /* binding.params carries the role/model-tied tuning (temperature, thinking,
        effort); per-call options (maxTokens, responseFormat) override per request. */

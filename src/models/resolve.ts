@@ -13,19 +13,21 @@ import {
     PROFILE_CONFIG_KEY,
 } from "../consts";
 import type { ModelRole } from "../consts";
-import { loadProfile, type ModelBinding, type Profile } from "./profile.ts";
+import { isValidatedProfile, loadProfile, parseProfile, type ModelBinding, type Profile } from "./profile.ts";
 
 let defaultProfileCache: Profile | undefined;
 
 /* Module-default profile, lazily loaded once and reused. */
 export const getDefaultProfile = (): Profile => (defaultProfileCache ??= loadProfile());
 
-const isProfile = (value: unknown): value is Profile =>
-    typeof value === "object" && value !== null && "roles" in value && "transport" in value;
-
 export const readProfile = (config?: LangGraphRunnableConfig): Profile => {
     const candidate = config?.configurable?.[PROFILE_CONFIG_KEY];
-    return isProfile(candidate) ? candidate : getDefaultProfile();
+    if (candidate === undefined || candidate === null) {
+        return getDefaultProfile();
+    }
+    /* A profile injected via configurable must satisfy the same contract as the
+       loader; parseProfile is skipped only for objects it already validated. */
+    return isValidatedProfile(candidate) ? candidate : parseProfile(candidate, "configurable.profile");
 };
 
 export const resolveBinding = (role: ModelRole, profile: Profile): ModelBinding => {
